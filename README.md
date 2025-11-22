@@ -1,19 +1,75 @@
 # Intune Hydration Kit
 
-> **⚠️ IMPORTANT**: This script provides a comprehensive **framework and templates** for Intune hydration. The current version includes all the structure, data models, and logic for creating policies, with Microsoft Graph API calls documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use this as a reference for building their own automation. This approach provides maximum flexibility while demonstrating best practices for Intune configuration management.
+> **⚠️ IMPORTANT**: This is now a **PowerShell module** following PSStucco best practices. The original standalone script (`Invoke-IntuneHydration.ps1`) remains for backwards compatibility, but the recommended approach is to use the module.
 
-Quick way to import starter configurations into Microsoft Intune. This PowerShell script automates the process of "hydrating" a new or existing Intune tenant with best-practice configurations, policies, profiles, and groups.
+Quick way to import starter configurations into Microsoft Intune. This PowerShell module automates the process of "hydrating" a new or existing Intune tenant with best-practice configurations, policies, profiles, and groups.
+
+## Quick Start
+
+### Using the Module (Recommended)
+
+```powershell
+# Import the module
+Import-Module .\IntuneHydrationKit\IntuneHydrationKit.psd1
+
+# Run the hydration
+Invoke-IntuneHydration
+
+# Or with specific options
+Invoke-IntuneHydration -SkipEnrollment -SkipGroups
+```
+
+### Using the Standalone Script (Legacy)
+
+```powershell
+.\Invoke-IntuneHydration.ps1
+```
 
 ## Overview
 
-The Intune Hydration Kit imports and configures:
+**The Intune Hydration Kit is now available as a PowerShell module!**
+
+This module provides a comprehensive framework for hydrating Microsoft Intune tenants with best-practice configurations:
 
 - **OpenIntuneBaseline Policies**: All configuration policies from the OpenIntuneBaseline repository
 - **Compliance Baselines**: Multi-platform compliance policies (Windows, iOS, Android, macOS)
 - **Microsoft Security Baselines**: Windows, Edge, Windows 365, and Defender for Endpoint baselines
 - **Enrollment Profiles**: Autopilot and Enrollment Status Page (ESP) profiles
-- **Dynamic Groups**: Automated grouping by OS, manufacturer, model, Autopilot status, and compliance state
+- **Dynamic Groups**: Automated grouping by OS, manufacturer, model, Autopilot status, and compliance state (14 groups)
 - **Conditional Access Policies**: 10-policy starter pack (all disabled by default for safe deployment)
+
+> **Framework Approach**: This module provides comprehensive templates and structure with Microsoft Graph API calls documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use as a reference for building their own automation.
+
+## Module Structure
+
+The kit is now organized as a proper PowerShell module:
+
+```
+Intune-Hydration-Kit/
+├── IntuneHydrationKit/          # PowerShell Module
+│   ├── IntuneHydrationKit.psd1  # Module manifest
+│   ├── IntuneHydrationKit.psm1  # Root module file
+│   ├── README.md                # Module documentation
+│   ├── Private/                 # Private helper functions
+│   │   ├── Connect-IntuneGraph.ps1
+│   │   ├── Get-IntuneGitHubRepository.ps1
+│   │   ├── Test-IntunePrerequisites.ps1
+│   │   └── Write-IntuneLog.ps1
+│   └── Public/                  # Public exported functions
+│       ├── Import-IntuneComplianceBaselines.ps1
+│       ├── Import-IntuneConditionalAccessPolicies.ps1
+│       ├── Import-IntuneOpenBaseline.ps1
+│       ├── Import-IntuneSecurityBaselines.ps1
+│       ├── Invoke-IntuneHydration.ps1
+│       ├── New-IntuneDynamicGroups.ps1
+│       └── New-IntuneEnrollmentProfiles.ps1
+├── Invoke-IntuneHydration.ps1   # Legacy standalone script
+├── Config.json                  # Configuration file
+├── README.md                    # This file
+├── QUICKSTART.md                # Quick start guide
+├── EXAMPLES.md                  # Usage examples
+└── IMPLEMENTATION.md            # Technical details
+```
 
 ## Prerequisites
 
@@ -40,38 +96,70 @@ You need an account with the following Microsoft Graph permissions:
 
 ## Installation
 
-1. Clone this repository:
+### Using the Module (Recommended)
+
 ```powershell
+# Clone the repository
 git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
 cd Intune-Hydration-Kit
+
+# Import the module
+Import-Module .\IntuneHydrationKit\IntuneHydrationKit.psd1
+
+# Or install to PowerShell modules directory
+$modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\IntuneHydrationKit"
+Copy-Item -Path .\IntuneHydrationKit -Destination $modulePath -Recurse -Force
+Import-Module IntuneHydrationKit
 ```
 
-2. Review and customize `Config.json` (optional)
+### Using the Standalone Script (Legacy)
 
-## Usage
-
-### Basic Usage
-
-Run the full hydration process:
 ```powershell
+# Clone the repository
+git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
+cd Intune-Hydration-Kit
+
+# No installation needed - just run the script
 .\Invoke-IntuneHydration.ps1
 ```
 
-You will be prompted to authenticate with Microsoft Graph.
+## Usage
 
-### Advanced Usage
+### Module Usage (Recommended)
 
-Skip specific components:
 ```powershell
-# Skip enrollment profiles and groups
-.\Invoke-IntuneHydration.ps1 -SkipEnrollment -SkipGroups
+# Import the module
+Import-Module IntuneHydrationKit
 
-# Skip all except Conditional Access
-.\Invoke-IntuneHydration.ps1 -SkipPolicies -SkipCompliance -SkipSecurityBaselines -SkipEnrollment -SkipGroups
+# Run full hydration
+Invoke-IntuneHydration
+
+# Run with selective components
+Invoke-IntuneHydration -SkipPolicies -SkipConditionalAccess
+
+# Use individual functions
+Import-IntuneComplianceBaselines
+New-IntuneDynamicGroups
+Import-IntuneConditionalAccessPolicies
+
+# Custom logging and options
+Invoke-IntuneHydration -LogPath "C:\Logs" -KeepTempFiles
+```
+
+### Standalone Script Usage (Legacy)
+
+```powershell
+# Run the full hydration process
+.\Invoke-IntuneHydration.ps1
+
+# Skip specific components
+.\Invoke-IntuneHydration.ps1 -SkipEnrollment -SkipGroups
 
 # Specify a tenant ID
 .\Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id-here"
 ```
+
+For detailed usage examples, see [EXAMPLES.md](EXAMPLES.md) and [QUICKSTART.md](QUICKSTART.md).
 
 ### Parameters
 
