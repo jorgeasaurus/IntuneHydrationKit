@@ -1,0 +1,31 @@
+{
+  "@odata.type": "#microsoft.graph.iosCompliancePolicy",
+  "displayName": "iOS - Baseline Compliance Policy",
+  "description": "Baseline compliance requirements for iOS devices",
+  "scheduledActionsForRule": [
+    {
+      "ruleName": "PasswordRequired",
+      "scheduledActionConfigurations": [
+        {
+          "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
+          "actionType": "block",
+          "gracePeriodHours": 0,
+          "notificationTemplateId": ""
+        }
+      ]
+    }
+  ],
+  "passcodeRequired": true,
+  "passcodeMinimumLength": 6,
+  "passcodeRequiredType": "deviceDefault",
+  "passcodeMinutesOfInactivityBeforeLock": 15,
+  "passcodeExpirationDays": null,
+  "passcodeBlockSimple": true,
+  "passcodePreviousPasscodeBlockCount": null,
+  "securityBlockJailbrokenDevices": true,
+  "osMinimumVersion": "15.0",
+  "osMaximumVersion": null,
+  "deviceThreatProtectionEnabled": false,
+  "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+  "managedEmailProfileRequired": false
+}

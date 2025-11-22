@@ -1,0 +1,7 @@
+{
+  "displayName": "Intune Enrolled Devices",
+  "description": "Dynamic group containing all Intune enrolled devices",
+  "mailNickname": "IntuneEnrolledDevices",
+  "membershipRule": "(device.managementType -eq \"MDM\")",
+  "membershipRuleProcessingState": "On"
+}

@@ -1,239 +1,256 @@
-# Quick Start Guide - Intune Hydration Kit
+# Intune Hydration Kit - Quick Start Guide
 
-## 🚀 Quick Start (5 Minutes)
+This guide will help you quickly get started with the Intune Hydration Kit for any tenant type.
 
-### Prerequisites Check
+## Prerequisites Checklist
+
+Before you begin, ensure you have:
+
+- [ ] PowerShell 5.1 or later installed
+- [ ] Microsoft.Graph PowerShell SDK modules installed
+- [ ] Your Azure AD Tenant ID
+- [ ] Administrative credentials for Intune
+- [ ] Appropriate network access for your tenant type
+- [ ] Required security clearances (for government tenants)
+
+## Step 1: Install Required Modules
+
 ```powershell
-# Check PowerShell version (need 5.1+)
-$PSVersionTable.PSVersion
+# Install Microsoft Graph PowerShell SDK
+Install-Module Microsoft.Graph -Scope CurrentUser -Force
 
-# Check if git is installed
-git --version
+# Verify installation
+Get-Module Microsoft.Graph -ListAvailable
 ```
 
-### Basic Usage
+## Step 2: Get Your Tenant ID
+
+If you don't know your Tenant ID, you can find it in the Azure portal:
+
+1. Navigate to [Azure Portal](https://portal.azure.com)
+2. Go to **Azure Active Directory**
+3. Click **Properties**
+4. Copy the **Tenant ID** (it's a GUID)
+
+Alternatively, use PowerShell:
 ```powershell
-# 1. Clone the repository
+Connect-AzureAD
+(Get-AzureADTenantDetail).ObjectId
+```
+
+## Step 3: Download the Hydration Kit
+
+```powershell
+# Clone the repository
 git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
+
+# Navigate to the directory
 cd Intune-Hydration-Kit
-
-# 2. Run the full hydration
-.\Invoke-IntuneHydration.ps1
-
-# 3. Authenticate when prompted (need Intune Administrator role)
-
-# 4. Review the log file
-Get-Content .\Logs\IntuneHydration_*.log -Tail 50
 ```
 
-## 📋 Common Commands
+Or download as ZIP from GitHub and extract to your desired location.
 
-### Full Hydration
+## Step 4: Review Configuration Files (Optional)
+
+Before importing, you may want to review the baseline configurations:
+
 ```powershell
-.\Invoke-IntuneHydration.ps1
+# View available configurations
+Get-ChildItem -Path .\Configurations -Recurse -Filter "*.json"
+
+# Review a specific configuration
+Get-Content .\Configurations\CompliancePolicies\Windows10-BaselineCompliance.json | ConvertFrom-Json
 ```
 
-### Groups Only
+## Step 5: Run the Hydration Script
+
+### For Commercial Tenants
+
 ```powershell
-.\Invoke-IntuneHydration.ps1 -SkipPolicies -SkipCompliance -SkipSecurityBaselines -SkipEnrollment -SkipConditionalAccess
+.\Start-IntuneHydration.ps1 -TenantType Commercial -TenantId "YOUR-TENANT-ID-HERE" -ImportAll
 ```
 
-### Skip Conditional Access
+### For GCC Tenants
+
 ```powershell
-.\Invoke-IntuneHydration.ps1 -SkipConditionalAccess
+.\Start-IntuneHydration.ps1 -TenantType GCC -TenantId "YOUR-TENANT-ID-HERE" -ImportAll
 ```
 
-### Specify Tenant
+### For GCC High Tenants
+
+**Important**: Ensure you're connected to an authorized government network.
+
 ```powershell
-.\Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id"
+.\Start-IntuneHydration.ps1 -TenantType GCCHigh -TenantId "YOUR-TENANT-ID-HERE" -ImportAll
 ```
 
-## ⚙️ Parameters Quick Reference
+### For DoD Tenants
 
-| Parameter | Effect |
-|-----------|--------|
-| `-SkipPolicies` | Skip OpenIntuneBaseline import |
-| `-SkipCompliance` | Skip compliance baselines |
-| `-SkipSecurityBaselines` | Skip security baselines |
-| `-SkipEnrollment` | Skip Autopilot & ESP |
-| `-SkipGroups` | Skip dynamic groups |
-| `-SkipConditionalAccess` | Skip CA policies |
-| `-TenantId <id>` | Specify tenant ID |
+**Important**: Ensure you're connected to the DoD network infrastructure.
 
-## 🔑 Required Permissions
-
-Your account needs these Microsoft Graph permissions:
-- ✅ DeviceManagementConfiguration.ReadWrite.All
-- ✅ DeviceManagementManagedDevices.ReadWrite.All
-- ✅ DeviceManagementServiceConfig.ReadWrite.All
-- ✅ Group.ReadWrite.All
-- ✅ Policy.ReadWrite.ConditionalAccess
-- ✅ Directory.Read.All
-
-**Role Required**: Intune Administrator or Global Administrator
-
-## 📊 What Gets Created
-
-### Dynamic Groups (16)
-- **OS**: Windows, iOS, Android, macOS
-- **Manufacturers**: Microsoft, Dell, HP, Lenovo
-- **Autopilot**: Autopilot devices, Non-Autopilot devices
-- **Compliance**: Compliant, Non-compliant
-- **Models**: Surface Laptop, Surface Pro
-
-### Compliance Policies (4)
-- Windows Compliance Baseline
-- iOS Compliance Baseline
-- Android Compliance Baseline
-- macOS Compliance Baseline
-
-### Enrollment Profiles (2)
-- Corporate Autopilot Profile
-- Corporate ESP Profile
-
-### Conditional Access Policies (10)
-All created **disabled** - review and enable manually:
-1. MFA for Administrators
-2. Block Legacy Authentication
-3. MFA for Azure Management
-4. Require Compliant Device
-5. Block Unknown Locations
-6. App Protection for Mobile
-7. MFA for All Users
-8. Block Risky Sign-ins
-9. Require Terms of Use
-10. Password Change for Risky Users
-
-## ⚠️ Important Notes
-
-### Before Running
-1. ✅ Test in non-production tenant first
-2. ✅ Have Intune Administrator permissions
-3. ✅ Internet connectivity required
-4. ✅ Git must be installed
-
-### After Running
-1. 🔍 Review the log file
-2. 🔍 Check created groups in Azure AD
-3. 🔍 Review compliance policies
-4. ⚠️ **Enable CA policies one at a time**
-5. 🧪 Test with pilot devices first
-
-### Safety Features
-- ✅ All CA policies disabled by default
-- ✅ No data deletion operations
-- ✅ No hardcoded credentials
-- ✅ Comprehensive logging
-- ✅ Cleanup of temporary files
-
-## 🛠️ Troubleshooting
-
-### Authentication Failed
 ```powershell
-# Manually authenticate first
-Connect-MgGraph -Scopes "DeviceManagementConfiguration.ReadWrite.All","Group.ReadWrite.All"
-
-# Then run the script
-.\Invoke-IntuneHydration.ps1
+.\Start-IntuneHydration.ps1 -TenantType DoD -TenantId "YOUR-TENANT-ID-HERE" -ImportAll
 ```
+
+## Step 6: Authenticate
+
+When prompted:
+
+1. A browser window will open for authentication
+2. Sign in with your Intune administrator credentials
+3. Consent to the requested permissions if this is your first time
+4. Return to the PowerShell window
+
+**Note**: For GCC High and DoD tenants, ensure you use your government email address (e.g., user@agency.gov or user@mail.mil).
+
+## Step 7: Monitor Progress
+
+The script will:
+1. Validate tenant access
+2. Display security and compliance notices
+3. Import configurations
+4. Show progress for each configuration type
+5. Display a summary of results
+
+Watch for:
+- **Green messages**: Successful imports
+- **Yellow messages**: Warnings or skipped items
+- **Red messages**: Errors that need attention
+
+## Step 8: Review Results
+
+After completion:
+
+```powershell
+# View the log file
+$LogFile = Get-ChildItem -Path .\Logs | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+notepad $LogFile.FullName
+```
+
+## Step 9: Verify in Intune Portal
+
+1. Navigate to [Microsoft Endpoint Manager admin center](https://endpoint.microsoft.com)
+   - GCC High: [https://endpoint.microsoft.us](https://endpoint.microsoft.us)
+   - DoD: [https://endpoint.microsoft.us](https://endpoint.microsoft.us)
+
+2. Check imported items:
+   - **Devices > Compliance policies** - Review compliance policies
+   - **Devices > Configuration profiles** - Review configuration profiles
+   - **Groups > All groups** - Review dynamic groups
+
+## Testing with WhatIf
+
+To preview what would be imported without making actual changes:
+
+```powershell
+.\Start-IntuneHydration.ps1 -TenantType Commercial -TenantId "YOUR-TENANT-ID-HERE" -WhatIf
+```
+
+This is useful for:
+- Understanding what will be imported
+- Testing the script in production environments
+- Creating documentation of changes
+
+## Customizing Configurations
+
+### Using Custom Configuration Path
+
+```powershell
+.\Start-IntuneHydration.ps1 -TenantType Commercial `
+                            -TenantId "YOUR-TENANT-ID-HERE" `
+                            -ConfigurationPath "C:\MyConfigs" `
+                            -ImportAll
+```
+
+### Creating Tenant-Specific Configurations
+
+Create subfolders for tenant-specific configs:
+
+```powershell
+# Create tenant-specific folder
+New-Item -Path ".\Configurations\CompliancePolicies\GCCHigh" -ItemType Directory
+
+# Copy and modify configuration
+Copy-Item ".\Configurations\CompliancePolicies\Windows10-BaselineCompliance.json" `
+          ".\Configurations\CompliancePolicies\GCCHigh\Windows10-GCCHighCompliance.json"
+
+# Edit the configuration for GCC High requirements
+notepad ".\Configurations\CompliancePolicies\GCCHigh\Windows10-GCCHighCompliance.json"
+```
+
+## Troubleshooting Quick Fixes
 
 ### Module Not Found
 ```powershell
-# Install modules manually
-Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
-Install-Module Microsoft.Graph.DeviceManagement -Scope CurrentUser
-Install-Module Microsoft.Graph.Groups -Scope CurrentUser
-Install-Module Microsoft.Graph.Identity.SignIns -Scope CurrentUser
+# Reinstall Microsoft.Graph modules
+Install-Module Microsoft.Graph -Force -AllowClobber
 ```
 
-### Git Not Found
+### Authentication Fails
 ```powershell
-# Windows: Install Git from https://git-scm.com/download/win
-# macOS: brew install git
-# Linux: sudo apt-get install git
+# Clear cached credentials
+Disconnect-MgGraph
+Clear-AzureRmContext -Force
+
+# Try authenticating manually first
+Connect-MgGraph -Scopes "DeviceManagementConfiguration.ReadWrite.All"
 ```
 
-### Review Logs
-```powershell
-# View latest log
-Get-ChildItem .\Logs\ | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content
+### Network Connectivity Issues (Government Tenants)
+- Verify VPN connection to government network
+- Check proxy settings
+- Confirm firewall rules allow access to government endpoints
 
-# View errors only
-Get-Content .\Logs\IntuneHydration_*.log | Select-String "ERROR"
+### Permission Denied Errors
+- Ensure you have Intune Administrator role
+- Check that required Graph API permissions are granted
+- Verify your account is active in the target tenant
 
-# View warnings
-Get-Content .\Logs\IntuneHydration_*.log | Select-String "WARNING"
-```
+## Next Steps
 
-## 📚 More Information
+After successful hydration:
 
-- **Full Documentation**: See [README.md](README.md)
-- **Usage Examples**: See [EXAMPLES.md](EXAMPLES.md)
-- **Implementation Details**: See [IMPLEMENTATION.md](IMPLEMENTATION.md)
+1. **Review and customize** imported configurations
+2. **Assign configurations** to appropriate groups
+3. **Test on pilot devices** before full deployment
+4. **Monitor compliance** in the Intune portal
+5. **Document any customizations** for your organization
 
-## 🔄 Update the Script
+## Getting Help
 
-```powershell
-# Pull latest changes
-git pull origin main
+- Review detailed examples: [EXAMPLES.md](EXAMPLES.md)
+- Check full documentation: [README.md](README.md)
+- Open an issue on GitHub for bugs or questions
+- Consult Microsoft Intune documentation for policy details
 
-# Run updated version
-.\Invoke-IntuneHydration.ps1
-```
+## Best Practices
 
-## 💡 Pro Tips
+✅ **Do:**
+- Always use `-WhatIf` first in production environments
+- Review logs after each run
+- Test configurations on pilot devices
+- Keep backups of existing configurations
+- Document any customizations
 
-1. **Start Small**: Use skip parameters to test components individually
-2. **Review First**: Check Config.json before running
-3. **Log Everything**: Always keep logs for audit purposes
-4. **Test Thoroughly**: Never enable CA policies without testing
-5. **Document Changes**: Keep track of customizations
-6. **Backup First**: Export existing policies before running
-7. **Pilot Devices**: Test with small group first
+❌ **Don't:**
+- Run in production without testing
+- Ignore warning messages
+- Skip security notices for government tenants
+- Share credentials or tenant IDs publicly
+- Modify baseline files directly (copy them first)
 
-## 🎯 Common Scenarios
+## Quick Reference Card
 
-### New Tenant Setup
-```powershell
-# Full hydration for brand new tenant
-.\Invoke-IntuneHydration.ps1
-```
+| Tenant Type | Required Access | Network Requirements |
+|-------------|----------------|---------------------|
+| Commercial | Standard M365 Admin | Any network |
+| GCC | FedRAMP Moderate | Govt network recommended |
+| GCC High | FedRAMP High, US Person | US Govt network required |
+| DoD | DoD IL5, Security Clearance | DoD network required |
 
-### Existing Tenant - Add Groups Only
-```powershell
-# Add dynamic groups to existing tenant
-.\Invoke-IntuneHydration.ps1 -SkipPolicies -SkipCompliance -SkipSecurityBaselines -SkipEnrollment -SkipConditionalAccess
-```
+## Support
 
-### Compliance Refresh
-```powershell
-# Update compliance policies only
-.\Invoke-IntuneHydration.ps1 -SkipPolicies -SkipSecurityBaselines -SkipEnrollment -SkipGroups -SkipConditionalAccess
-```
-
-## 📞 Getting Help
-
-1. Check the log file in `Logs\` directory
-2. Review [README.md](README.md) troubleshooting section
-3. Review [EXAMPLES.md](EXAMPLES.md) for scenarios
-4. Open an issue on GitHub (remove sensitive data from logs)
-
-## ✅ Post-Hydration Checklist
-
-- [ ] Review log file for errors/warnings
-- [ ] Verify dynamic groups created in Azure AD
-- [ ] Check compliance policies in Intune portal
-- [ ] Review Autopilot profile settings
-- [ ] Review ESP profile settings
-- [ ] Check CA policies (all should be disabled)
-- [ ] Test with pilot devices
-- [ ] Enable CA policies one at a time
-- [ ] Document any customizations made
-- [ ] Schedule regular reviews
-
----
-
-**Remember**: This is a framework that provides templates and structure. Review all configurations before deploying to production!
-
-**Version**: 1.0.0  
-**Last Updated**: 2025
+For additional assistance:
+- Microsoft Intune Support: [https://aka.ms/intunesupport](https://aka.ms/intunesupport)
+- Azure Government Support: [https://aka.ms/azuregovsupport](https://aka.ms/azuregovsupport)
+- GitHub Issues: [Repository Issues](https://github.com/jorgeasaurus/Intune-Hydration-Kit/issues)

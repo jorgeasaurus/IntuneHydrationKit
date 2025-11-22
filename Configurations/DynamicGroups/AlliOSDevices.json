@@ -1,0 +1,7 @@
+{
+  "displayName": "All iOS Devices",
+  "description": "Dynamic group containing all iOS and iPadOS devices",
+  "mailNickname": "AlliOSDevices",
+  "membershipRule": "(device.deviceOSType -eq \"iPad\") or (device.deviceOSType -eq \"iPhone\")",
+  "membershipRuleProcessingState": "On"
+}

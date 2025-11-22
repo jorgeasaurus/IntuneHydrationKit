@@ -1,0 +1,7 @@
+{
+  "displayName": "All macOS Devices",
+  "description": "Dynamic group containing all macOS devices",
+  "mailNickname": "AllmacOSDevices",
+  "membershipRule": "(device.deviceOSType -eq \"MacMDM\")",
+  "membershipRuleProcessingState": "On"
+}

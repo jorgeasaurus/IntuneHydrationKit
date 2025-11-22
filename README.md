@@ -1,336 +1,225 @@
 # Intune Hydration Kit
 
-> **⚠️ IMPORTANT**: This is now a **PowerShell module** following PSStucco best practices. The original standalone script (`Invoke-IntuneHydration.ps1`) remains for backwards compatibility, but the recommended approach is to use the module.
+A PowerShell-based toolkit for quickly importing baseline Intune configurations into Microsoft 365 tenants. Supports Commercial, GCC, GCC High, and DoD tenant environments.
 
-Quick way to import starter configurations into Microsoft Intune. This PowerShell module automates the process of "hydrating" a new or existing Intune tenant with best-practice configurations, policies, profiles, and groups.
+## Features
 
-## Quick Start
-
-### Using the Module (Recommended)
-
-```powershell
-# Import the module
-Import-Module .\IntuneHydrationKit\IntuneHydrationKit.psd1
-
-# Run the hydration
-Invoke-IntuneHydration
-
-# Or with specific options
-Invoke-IntuneHydration -SkipEnrollment -SkipGroups
-```
-
-### Using the Standalone Script (Legacy)
-
-```powershell
-.\Invoke-IntuneHydration.ps1
-```
-
-## Overview
-
-**The Intune Hydration Kit is now available as a PowerShell module!**
-
-This module provides a comprehensive framework for hydrating Microsoft Intune tenants with best-practice configurations:
-
-- **OpenIntuneBaseline Policies**: All configuration policies from the OpenIntuneBaseline repository
-- **Compliance Baselines**: Multi-platform compliance policies (Windows, iOS, Android, macOS)
-- **Microsoft Security Baselines**: Windows, Edge, Windows 365, and Defender for Endpoint baselines
-- **Enrollment Profiles**: Autopilot and Enrollment Status Page (ESP) profiles
-- **Dynamic Groups**: Automated grouping by OS, manufacturer, model, Autopilot status, and compliance state (14 groups)
-- **Conditional Access Policies**: 10-policy starter pack (all disabled by default for safe deployment)
-
-> **Framework Approach**: This module provides comprehensive templates and structure with Microsoft Graph API calls documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use as a reference for building their own automation.
-
-## Module Structure
-
-The kit is now organized as a proper PowerShell module:
-
-```
-Intune-Hydration-Kit/
-├── IntuneHydrationKit/          # PowerShell Module
-│   ├── IntuneHydrationKit.psd1  # Module manifest
-│   ├── IntuneHydrationKit.psm1  # Root module file
-│   ├── README.md                # Module documentation
-│   ├── Private/                 # Private helper functions
-│   │   ├── Connect-IntuneGraph.ps1
-│   │   ├── Get-IntuneGitHubRepository.ps1
-│   │   ├── Test-IntunePrerequisites.ps1
-│   │   └── Write-IntuneLog.ps1
-│   └── Public/                  # Public exported functions
-│       ├── Import-IntuneComplianceBaselines.ps1
-│       ├── Import-IntuneConditionalAccessPolicies.ps1
-│       ├── Import-IntuneOpenBaseline.ps1
-│       ├── Import-IntuneSecurityBaselines.ps1
-│       ├── Invoke-IntuneHydration.ps1
-│       ├── New-IntuneDynamicGroups.ps1
-│       └── New-IntuneEnrollmentProfiles.ps1
-├── Invoke-IntuneHydration.ps1   # Legacy standalone script
-├── Config.json                  # Configuration file
-├── README.md                    # This file
-├── QUICKSTART.md                # Quick start guide
-├── EXAMPLES.md                  # Usage examples
-└── IMPLEMENTATION.md            # Technical details
-```
+- **Multi-Tenant Support**: Works with Commercial, GCC, GCC High, and DoD Microsoft 365 tenants
+- **Comprehensive Baselines**: Includes compliance policies, configuration profiles, and dynamic groups
+- **Tenant-Specific Endpoints**: Automatically configures Microsoft Graph API endpoints based on tenant type
+- **Security Compliance**: Built with government cloud security requirements in mind
+- **Flexible Import Options**: Import all configurations or select specific types
+- **Detailed Logging**: Comprehensive logging for auditing and troubleshooting
 
 ## Prerequisites
 
-### Software Requirements
-- **PowerShell 5.1** or higher
-- **Git** (for cloning baseline repositories)
-- **Internet connectivity** to access GitHub and Microsoft Graph
+- PowerShell 5.1 or PowerShell 7+
+- Microsoft.Graph PowerShell SDK modules:
+  ```powershell
+  Install-Module Microsoft.Graph -Scope CurrentUser
+  ```
+- Administrative permissions in the target Intune tenant
+- Network access to the appropriate Microsoft Graph endpoint for your tenant type
 
-### Required PowerShell Modules
-The script will automatically install these if missing:
-- `Microsoft.Graph.Authentication`
-- `Microsoft.Graph.DeviceManagement`
-- `Microsoft.Graph.Groups`
-- `Microsoft.Graph.Identity.SignIns`
+## Tenant Type Requirements
 
-### Permissions Required
-You need an account with the following Microsoft Graph permissions:
-- `DeviceManagementConfiguration.ReadWrite.All`
-- `DeviceManagementManagedDevices.ReadWrite.All`
-- `DeviceManagementServiceConfig.ReadWrite.All`
-- `Group.ReadWrite.All`
-- `Policy.ReadWrite.ConditionalAccess`
-- `Directory.Read.All`
+### Commercial
+- Standard Microsoft 365 subscription
+- No special network requirements
 
-## Installation
+### GCC (Government Community Cloud)
+- FedRAMP Moderate authorization required
+- Access from approved government networks recommended
 
-### Using the Module (Recommended)
+### GCC High (Government Community Cloud High)
+- FedRAMP High authorization required
+- **US Person** status required
+- Must connect from US Government network or approved VPN
+- Suitable for CUI (Controlled Unclassified Information) and ITAR data
 
-```powershell
-# Clone the repository
-git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
-cd Intune-Hydration-Kit
+### DoD (Department of Defense)
+- DoD IL5 authorization required
+- Active security clearance required
+- Must connect from DoD network infrastructure
+- Suitable for classified data up to IL5
 
-# Import the module
-Import-Module .\IntuneHydrationKit\IntuneHydrationKit.psd1
+## Quick Start
 
-# Or install to PowerShell modules directory
-$modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\IntuneHydrationKit"
-Copy-Item -Path .\IntuneHydrationKit -Destination $modulePath -Recurse -Force
-Import-Module IntuneHydrationKit
-```
+1. **Clone or download this repository:**
+   ```powershell
+   git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
+   cd Intune-Hydration-Kit
+   ```
 
-### Using the Standalone Script (Legacy)
+2. **Run the hydration script:**
+   ```powershell
+   # For Commercial tenants
+   .\Start-IntuneHydration.ps1 -TenantType Commercial -TenantId "your-tenant-id-here"
+   
+   # For GCC High tenants
+   .\Start-IntuneHydration.ps1 -TenantType GCCHigh -TenantId "your-tenant-id-here"
+   
+   # For DoD tenants
+   .\Start-IntuneHydration.ps1 -TenantType DoD -TenantId "your-tenant-id-here"
+   ```
 
-```powershell
-# Clone the repository
-git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
-cd Intune-Hydration-Kit
+3. **Authenticate when prompted** with credentials that have Intune Administrator privileges
 
-# No installation needed - just run the script
-.\Invoke-IntuneHydration.ps1
-```
+4. **Review the results** in the console and log files
 
 ## Usage
 
-### Module Usage (Recommended)
+### Basic Usage
 
 ```powershell
-# Import the module
-Import-Module IntuneHydrationKit
-
-# Run full hydration
-Invoke-IntuneHydration
-
-# Run with selective components
-Invoke-IntuneHydration -SkipPolicies -SkipConditionalAccess
-
-# Use individual functions
-Import-IntuneComplianceBaselines
-New-IntuneDynamicGroups
-Import-IntuneConditionalAccessPolicies
-
-# Custom logging and options
-Invoke-IntuneHydration -LogPath "C:\Logs" -KeepTempFiles
+.\Start-IntuneHydration.ps1 -TenantType <TenantType> -TenantId <TenantId>
 ```
-
-### Standalone Script Usage (Legacy)
-
-```powershell
-# Run the full hydration process
-.\Invoke-IntuneHydration.ps1
-
-# Skip specific components
-.\Invoke-IntuneHydration.ps1 -SkipEnrollment -SkipGroups
-
-# Specify a tenant ID
-.\Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id-here"
-```
-
-For detailed usage examples, see [EXAMPLES.md](EXAMPLES.md) and [QUICKSTART.md](QUICKSTART.md).
 
 ### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `-SkipPolicies` | Switch | Skip importing OpenIntuneBaseline policies |
-| `-SkipCompliance` | Switch | Skip importing compliance baselines |
-| `-SkipSecurityBaselines` | Switch | Skip importing Microsoft Security Baselines |
-| `-SkipEnrollment` | Switch | Skip creating Autopilot and ESP profiles |
-| `-SkipGroups` | Switch | Skip creating dynamic groups |
-| `-SkipConditionalAccess` | Switch | Skip importing Conditional Access policies |
-| `-TenantId` | String | Azure AD Tenant ID (optional) |
+- **TenantType** (Required): The type of Microsoft 365 tenant
+  - Valid values: `Commercial`, `GCC`, `GCCHigh`, `DoD`
+  - Default: `Commercial`
 
-## What Gets Created
+- **TenantId** (Required): Your Azure AD Tenant ID (GUID format)
 
-### Dynamic Groups
+- **ConfigurationPath** (Optional): Custom path to configuration files
+  - Default: `./Configurations`
 
-**OS-based Groups:**
-- All Windows Devices
-- All iOS Devices
-- All Android Devices
-- All macOS Devices
+- **ImportAll** (Optional): Import all available configurations without prompting
 
-**Manufacturer-based Groups:**
-- Devices - Microsoft
-- Devices - Dell
-- Devices - HP
-- Devices - Lenovo
+- **WhatIf** (Optional): Preview what would be imported without making changes
 
-**Autopilot Groups:**
-- Autopilot Devices
-- Non-Autopilot Windows Devices
+### Examples
 
-**Compliance Groups:**
-- Compliant Devices
-- Non-Compliant Devices
-
-**Model-based Groups (examples):**
-- Devices - Surface Laptop
-- Devices - Surface Pro
-
-### Compliance Policies
-
-Multi-platform compliance policies with security baselines:
-- Windows - Compliance Baseline
-- iOS - Compliance Baseline
-- Android - Compliance Baseline
-- macOS - Compliance Baseline
-
-### Enrollment Profiles
-
-- **Autopilot Profile**: Corporate Autopilot configuration with device naming and OOBE customization
-- **ESP Profile**: Enrollment Status Page with installation tracking and timeout settings
-
-### Conditional Access Policies (All Disabled by Default)
-
-1. **CA001**: Require MFA for Administrators
-2. **CA002**: Block Legacy Authentication
-3. **CA003**: Require MFA for Azure Management
-4. **CA004**: Require Compliant or Hybrid Joined Device
-5. **CA005**: Block Access from Unknown Locations
-6. **CA006**: Require App Protection Policy for Mobile
-7. **CA007**: Require MFA for All Users
-8. **CA008**: Block Access from Risky Sign-ins
-9. **CA009**: Require Terms of Use
-10. **CA010**: Require Password Change for Risky Users
-
-⚠️ **Important**: All Conditional Access policies are created in a disabled state. Review, test, and enable them individually based on your organization's requirements.
-
-### Security Baselines
-
-- Windows Security Baseline
-- Edge Security Baseline
-- Windows 365 Security Baseline
-- Microsoft Defender for Endpoint Baseline
-
-## Configuration
-
-The `Config.json` file allows you to customize various settings:
-
-```json
-{
-  "HydrationSettings": {
-    "Description": "Configuration file for Intune Hydration Kit",
-    "Version": "1.0.0"
-  },
-  "Features": {
-    "ImportPolicies": true,
-    "ImportCompliance": true,
-    "ImportSecurityBaselines": true,
-    "CreateEnrollmentProfiles": true,
-    "CreateDynamicGroups": true,
-    "ImportConditionalAccess": true
-  }
-}
+**Import all configurations to a Commercial tenant:**
+```powershell
+.\Start-IntuneHydration.ps1 -TenantType Commercial -TenantId "12345678-1234-1234-1234-123456789012" -ImportAll
 ```
+
+**Preview what would be imported to a GCC High tenant:**
+```powershell
+.\Start-IntuneHydration.ps1 -TenantType GCCHigh -TenantId "12345678-1234-1234-1234-123456789012" -WhatIf
+```
+
+**Use custom configuration path:**
+```powershell
+.\Start-IntuneHydration.ps1 -TenantType DoD -TenantId "12345678-1234-1234-1234-123456789012" -ConfigurationPath "C:\CustomConfigs"
+```
+
+For more detailed examples, see [EXAMPLES.md](EXAMPLES.md).
+
+## Configuration Files
+
+The toolkit includes baseline configurations organized by type:
+
+- **Compliance Policies**: `/Configurations/CompliancePolicies/`
+  - Windows 10/11 baseline compliance
+  - iOS/iPadOS baseline compliance
+  - Android baseline compliance
+
+- **Configuration Profiles**: `/Configurations/ConfigurationProfiles/`
+  - Device restriction policies
+  - Email and Wi-Fi profiles
+  - Certificate deployment profiles
+
+- **Device Configurations**: `/Configurations/DeviceConfigurations/`
+  - Endpoint protection settings
+  - Windows Update policies
+  - Kiosk mode configurations
+
+- **Dynamic Groups**: `/Configurations/DynamicGroups/`
+  - Platform-specific device groups
+  - Conditional access groups
+
+- **Security Baselines**: `/Configurations/SecurityBaselines/`
+  - Windows security baselines
+  - Microsoft Edge security baseline
+  - Microsoft Defender for Endpoint baseline
+
+### Tenant-Specific Configurations
+
+You can create tenant-specific configuration folders for any configuration type. The script will automatically use tenant-specific configurations when available:
+
+```
+Configurations/
+├── CompliancePolicies/
+│   ├── Windows10-BaselineCompliance.json (applies to all tenants)
+│   ├── GCCHigh/
+│   │   └── Windows10-GCCHighCompliance.json (GCC High only)
+│   └── DoD/
+│       └── Windows10-DoDCompliance.json (DoD only)
+```
+
+## Microsoft Graph API Endpoints
+
+The toolkit automatically configures the correct Microsoft Graph endpoints:
+
+| Tenant Type | Graph Endpoint | Login Endpoint |
+|-------------|---------------|----------------|
+| Commercial | `https://graph.microsoft.com` | `https://login.microsoftonline.com` |
+| GCC | `https://graph.microsoft.com` | `https://login.microsoftonline.com` |
+| GCC High | `https://graph.microsoft.us` | `https://login.microsoftonline.us` |
+| DoD | `https://dod-graph.microsoft.us` | `https://login.microsoftonline.us` |
 
 ## Logging
 
-Logs are automatically saved to the `Logs` directory with timestamps:
-```
-Logs/IntuneHydration_YYYYMMDD_HHMMSS.log
-```
-
-The log includes:
-- Timestamp for each operation
+All operations are logged to the `Logs` directory with timestamps. Log files include:
+- Connection status
+- Import operations
 - Success/failure status
-- Warnings and errors
-- Summary of created resources
+- Error messages and stack traces
 
-## Source Repositories
-
-This script leverages configurations from:
-- **OpenIntuneBaseline**: [https://github.com/SkipToTheEndpoint/OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline)
-- **IntuneManagement**: [https://github.com/Micke-K/IntuneManagement](https://github.com/Micke-K/IntuneManagement)
-
-## Best Practices
-
-1. **Test in a non-production environment first**
-2. **Review all policies before enabling** (especially Conditional Access)
-3. **Customize device naming templates** in the Autopilot profile
-4. **Adjust compliance requirements** based on your organization's needs
-5. **Review dynamic group membership rules** to ensure they match your environment
-6. **Monitor the Logs directory** for any warnings or errors during execution
+Log file format: `IntuneHydration_YYYYMMDD_HHMMSS.log`
 
 ## Troubleshooting
 
-### Common Issues
+### Authentication Issues
+- Ensure you have the required permissions in the target tenant
+- For GCC High/DoD: Verify you're connecting from an authorized network
+- Check that your account has the necessary security clearances
 
-**Authentication Fails:**
+### Import Failures
+- Review the log file for detailed error messages
+- Verify configuration JSON files are valid
 - Ensure you have the required Microsoft Graph permissions
-- Check if your account has Intune Administrator or Global Administrator role
 
-**Module Installation Fails:**
-- Run PowerShell as Administrator
-- Manually install required modules: `Install-Module Microsoft.Graph -Scope CurrentUser`
-
-**Git Clone Fails:**
-- Ensure Git is installed and in your PATH
-- Check internet connectivity and proxy settings
-
-**Policies Not Importing:**
-- Verify Microsoft Graph connectivity
-- Check that you have write permissions in Intune
-- Review the log file for specific errors
+### Network Issues
+- Confirm network connectivity to the appropriate Microsoft Graph endpoint
+- Check firewall rules and proxy settings
+- For government clouds, verify VPN/network authorization
 
 ## Security Considerations
 
-- The script uses Microsoft Graph API with delegated permissions
-- No credentials are stored in the script or configuration files
-- All Conditional Access policies are created in a disabled state
-- Review and test each policy before enabling in production
+- **Never commit credentials** to source control
+- Store configuration files securely, especially for government tenants
+- Review all configurations before importing to production
+- Use the `-WhatIf` parameter to preview changes
+- Regularly audit imported configurations
+- Follow your organization's security policies and procedures
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome! Please ensure:
+- Code follows PowerShell best practices
+- Documentation is updated
+- Tenant-specific considerations are addressed
+- Security implications are considered
 
 ## License
 
-This project is provided as-is for use in your Intune environment.
+This project is provided as-is for use with Microsoft Intune environments.
 
-## Disclaimer
+## Support
 
-This script creates policies and configurations in your Intune tenant. Always test in a non-production environment first. The authors are not responsible for any issues that may arise from using this script.
+For issues and questions:
+- Open an issue on GitHub
+- Review existing documentation in [EXAMPLES.md](EXAMPLES.md) and [QUICKSTART.md](QUICKSTART.md)
+- Check Microsoft's official Intune documentation
 
-## Version History
+## Additional Resources
 
-- **1.0.0** - Initial release
-  - OpenIntuneBaseline policy import
-  - Compliance baseline pack
-  - Microsoft Security Baselines
-  - Autopilot and ESP profiles
-  - Dynamic groups
-  - Conditional Access starter pack
+- [Microsoft Intune Documentation](https://docs.microsoft.com/en-us/mem/intune/)
+- [Microsoft Graph API Reference](https://docs.microsoft.com/en-us/graph/api/overview)
+- [GCC High Technical Documentation](https://docs.microsoft.com/en-us/office365/servicedescriptions/office-365-platform-service-description/office-365-us-government/gcc-high-and-dod)
+- [Azure Government Documentation](https://docs.microsoft.com/en-us/azure/azure-government/)
