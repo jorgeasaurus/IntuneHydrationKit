@@ -160,7 +160,7 @@ function Test-Prerequisites {
     
     # Check internet connectivity
     try {
-        $null = Test-NetConnection -ComputerName "graph.microsoft.com" -Port 443 -InformationLevel Quiet -ErrorAction Stop
+        $null = Test-Connection -ComputerName "graph.microsoft.com" -Count 1 -Quiet -ErrorAction Stop
         Write-Log "Internet connectivity verified" -Level SUCCESS
     }
     catch {
@@ -239,11 +239,15 @@ function Get-GitHubRepository {
         if (Test-Path $DestinationPath) {
             Write-Log "Repository already exists at $DestinationPath. Updating..." -Level INFO
             Push-Location $DestinationPath
-            git pull origin main 2>&1 | Out-Null
-            if (-not $?) {
-                git pull origin master 2>&1 | Out-Null
+            try {
+                git pull origin main 2>&1 | Out-Null
+                if (-not $?) {
+                    git pull origin master 2>&1 | Out-Null
+                }
             }
-            Pop-Location
+            finally {
+                Pop-Location
+            }
         }
         else {
             Write-Log "Cloning repository to $DestinationPath..." -Level INFO
@@ -303,9 +307,14 @@ function Import-OpenIntuneBaseline {
                 
                 $policyContent = Get-Content -Path $file.FullName -Raw | ConvertFrom-Json
                 
-                # Create the policy based on its type
-                # Note: This is a simplified version. Real implementation would need type-specific logic
-                Write-Log "Policy imported: $($file.Name)" -Level SUCCESS
+                # NOTE: This is a template/framework for policy import.
+                # Actual implementation would require Graph API calls specific to each policy type.
+                # The OpenIntuneBaseline repository structure may vary and should be reviewed.
+                # Example implementation for reference:
+                # $uri = "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies"
+                # Invoke-MgGraphRequest -Method POST -Uri $uri -Body $policyContent
+                
+                Write-Log "Policy template prepared: $($file.Name)" -Level SUCCESS
             }
             catch {
                 Write-Log "Failed to import policy $($file.Name): $_" -Level WARNING
@@ -388,9 +397,17 @@ function Import-ComplianceBaselines {
         try {
             Write-Log "Creating compliance policy: $($policy.Name)" -Level INFO
             
-            # Note: Actual Graph API calls would be made here
-            # This is a template showing the structure
-            Write-Log "Compliance policy created: $($policy.Name)" -Level SUCCESS
+            # NOTE: This is a template showing the structure for compliance policies.
+            # Actual implementation requires Graph API calls:
+            # $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies"
+            # $body = @{
+            #     "@odata.type" = "#microsoft.graph.$($policy.Platform)CompliancePolicy"
+            #     displayName = $policy.Name
+            #     description = $policy.Description
+            # } + $policy.Settings
+            # Invoke-MgGraphRequest -Method POST -Uri $uri -Body ($body | ConvertTo-Json -Depth 10)
+            
+            Write-Log "Compliance policy template prepared: $($policy.Name)" -Level SUCCESS
         }
         catch {
             Write-Log "Failed to create compliance policy $($policy.Name): $_" -Level WARNING
@@ -439,8 +456,13 @@ function Import-SecurityBaselines {
         try {
             Write-Log "Creating security baseline: $($baseline.Name)" -Level INFO
             
-            # Note: Actual Graph API calls would be made here
-            # Microsoft provides official baseline templates that should be imported
+            # NOTE: Microsoft Security Baselines are typically imported via templates.
+            # Actual implementation would use:
+            # $uri = "https://graph.microsoft.com/beta/deviceManagement/templates"
+            # Get the baseline template ID, then create an instance:
+            # $uri = "https://graph.microsoft.com/beta/deviceManagement/templates/{templateId}/createInstance"
+            # Invoke-MgGraphRequest -Method POST -Uri $uri -Body $body
+            
             Write-Log "Security baseline template prepared: $($baseline.Name)" -Level SUCCESS
         }
         catch {
@@ -483,8 +505,11 @@ function New-EnrollmentProfiles {
             }
         }
         
-        # Note: Actual Graph API call would be made here
-        Write-Log "Autopilot profile created successfully" -Level SUCCESS
+        # NOTE: Actual implementation requires Graph API call:
+        # $uri = "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles"
+        # Invoke-MgGraphRequest -Method POST -Uri $uri -Body ($autopilotProfile | ConvertTo-Json -Depth 10)
+        
+        Write-Log "Autopilot profile template prepared" -Level SUCCESS
     }
     catch {
         Write-Log "Failed to create Autopilot profile: $_" -Level WARNING
@@ -509,8 +534,14 @@ function New-EnrollmentProfiles {
             disableUserStatusTrackingAfterFirstUser = $true
         }
         
-        # Note: Actual Graph API call would be made here
-        Write-Log "ESP profile created successfully" -Level SUCCESS
+        # NOTE: Actual implementation requires Graph API call:
+        # $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations"
+        # $body = @{
+        #     "@odata.type" = "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration"
+        # } + $espProfile
+        # Invoke-MgGraphRequest -Method POST -Uri $uri -Body ($body | ConvertTo-Json -Depth 10)
+        
+        Write-Log "ESP profile template prepared" -Level SUCCESS
     }
     catch {
         Write-Log "Failed to create ESP profile: $_" -Level WARNING
@@ -627,9 +658,10 @@ function New-DynamicGroups {
                 MembershipRuleProcessingState = "On"
             }
             
-            # Note: Actual Graph API call would be made here
+            # NOTE: Actual implementation requires Graph API call:
             # New-MgGroup -BodyParameter $groupParams
-            Write-Log "Dynamic group created: $($group.Name)" -Level SUCCESS
+            
+            Write-Log "Dynamic group template prepared: $($group.Name)" -Level SUCCESS
         }
         catch {
             Write-Log "Failed to create dynamic group $($group.Name): $_" -Level WARNING
@@ -833,9 +865,10 @@ function Import-ConditionalAccessPolicies {
         try {
             Write-Log "Creating Conditional Access policy: $($policy.DisplayName) (disabled)" -Level INFO
             
-            # Note: Actual Graph API call would be made here
+            # NOTE: Actual implementation requires Graph API call:
             # New-MgIdentityConditionalAccessPolicy -BodyParameter $policy
-            Write-Log "CA policy created: $($policy.DisplayName)" -Level SUCCESS
+            
+            Write-Log "CA policy template prepared: $($policy.DisplayName)" -Level SUCCESS
         }
         catch {
             Write-Log "Failed to create CA policy $($policy.DisplayName): $_" -Level WARNING

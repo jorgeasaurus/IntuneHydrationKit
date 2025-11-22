@@ -13,6 +13,8 @@ The Intune Hydration Kit imports and configures:
 - **Dynamic Groups**: Automated grouping by OS, manufacturer, model, Autopilot status, and compliance state
 - **Conditional Access Policies**: 10-policy starter pack (all disabled by default for safe deployment)
 
+> **Note**: This script provides a comprehensive framework and templates for Intune hydration. The current version includes all the structure, data models, and logic for creating policies, but the actual Microsoft Graph API calls are documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use this as a reference for building their own automation. This approach provides maximum flexibility while demonstrating best practices for Intune configuration management.
+
 ## Prerequisites
 
 ### Software Requirements
