@@ -1,0 +1,40 @@
+{
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "displayName": "Windows Compliance Policy",
+    "description": "Windows Compliance Policy using GUI settings",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "activeFirewallRequired": true,
+    "antiSpywareRequired": true,
+    "antivirusRequired": true,
+    "bitLockerEnabled": true,
+    "codeIntegrityEnabled": true,
+    "defenderEnabled": true,
+    "deviceThreatProtectionEnabled": false,
+    "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+    "passwordRequiredType": "deviceDefault",
+    "rtpEnabled": true,
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 12,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "retire",
+                    "gracePeriodHours": 4320,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "secureBootEnabled": true,
+    "signatureOutOfDate": true,
+    "tpmRequired": true
+}

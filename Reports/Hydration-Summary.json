@@ -1,0 +1,1039 @@
+{
+  "Environment": "Global",
+  "Mode": "Live",
+  "Summary": {
+    "Created": 0,
+    "Skipped": 126,
+    "Total": 126,
+    "ByType": {
+      "DeviceFilter": {
+        "Total": 12,
+        "Skipped": 12,
+        "Created": 0,
+        "Failed": 0,
+        "Updated": 0
+      },
+      "BaselinePolicy": {
+        "Total": 114,
+        "Skipped": 114,
+        "Created": 0,
+        "Failed": 0,
+        "Updated": 0
+      }
+    },
+    "Failed": 0,
+    "Updated": 0
+  },
+  "Timestamp": "2025-11-22 13:05:51",
+  "Results": [
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Windows - Dell Devices",
+      "Action": "Skipped",
+      "Id": "87532933-c752-4fd7-b356-ed891488a1c9",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Windows - HP Devices",
+      "Action": "Skipped",
+      "Id": "a53af22b-842d-4d84-aee2-7c7fd1764647",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Windows - Lenovo Devices",
+      "Action": "Skipped",
+      "Id": "064e1a3c-2b70-45c6-a203-43fd49e829f9",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "macOS - Apple Devices",
+      "Action": "Skipped",
+      "Id": "1c1c9354-4be8-4be7-abbc-29f2b8c549e4",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "macOS - MacBook Devices",
+      "Action": "Skipped",
+      "Id": "fc9d0590-0787-4179-8f33-bf2f5a28d98d",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "macOS - iMac Devices",
+      "Action": "Skipped",
+      "Id": "4293e98a-e56d-4ac4-8fa4-b477e49e154e",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "iOS - iPhone Devices",
+      "Action": "Skipped",
+      "Id": "17dc0097-28a1-4dab-8188-0d16b2e7bb6a",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "iOS - iPad Devices",
+      "Action": "Skipped",
+      "Id": "4630a2e5-9611-4ec7-a747-45787629db53",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "iOS - Corporate Owned",
+      "Action": "Skipped",
+      "Id": "5372b4d8-6bc5-4169-923c-a642eb7c55b2",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Android - Samsung Devices",
+      "Action": "Skipped",
+      "Id": "8b7d6633-55b1-4ce8-991c-b3ae19c33c6e",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Android - Google Pixel Devices",
+      "Action": "Skipped",
+      "Id": "38865e13-15bb-4b49-8d98-dc4025f8b337",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:37",
+      "Type": "DeviceFilter",
+      "Name": "Android - Corporate Owned",
+      "Action": "Skipped",
+      "Id": "0d19a1e2-c3e5-4478-b4cd-83737f85613b",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Android - Baseline - BYOD - App Protection",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "iOS - Baseline - BYOD - App Protection",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Compliance - U - Device Health - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Compliance - U - Device Security - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Compliance - U - Password - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Authentication - D - Platform SSO - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Defender Antivirus - D - Antivirus Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Defender Antivirus - D - MDE Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Device Security - D - Accounts and Login - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Device Security - D - Restrictions - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Disk Encryption - D - FileVault - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Firewall - D - Gatekeeper - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft AutoUpdate - D - MAU Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - D - Password Management - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - D - Security - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Extensions - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Profiles, Sign-In and Sync - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Updates - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Office - D - Office Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft OneDrive - D - Service and Access - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft OneDrive - U - Known Folder Move - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Updates - D - Update Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Authentication - D - Platform SSO - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Defender Antivirus - D - Antivirus Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Defender Antivirus - D - MDE Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Device Security - D - Accounts and Login - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Device Security - D - Restrictions - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Disk Encryption - D - FileVault - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Firewall - D - Gatekeeper - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft AutoUpdate - D - MAU Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - D - Password Management - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - D - Security - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Extensions - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Profiles, Sign-In and Sync - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Edge - U - Updates - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft Office - D - Office Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft OneDrive - D - Service and Access - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Microsoft OneDrive - U - Known Folder Move - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "MacOS - OIB - Updates - D - Update Configuration - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - Compliance - U - Defender for Endpoint - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - Compliance - U - Device Health - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - Compliance - U - Device Security - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - Compliance - U - Password - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Attack Surface Reduction - D - ASR Rules (Audit Mode) - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Attack Surface Reduction - D - ASR Rules (L2) - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Defender Antivirus - D - AV Configuration - v3.3",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Defender Antivirus - D - Security Experience - v3.3",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Defender Antivirus Updates - Ring 1 - Pilot - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Defender Antivirus Updates - Ring 2 - UAT - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Defender Antivirus Updates - Ring 3 - Production - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Encryption - D - BitLocker (OS Disk) - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Encryption - U - Personal Data Encryption - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Local Group Membership - D - Local Administrators - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Windows Firewall - D - Firewall Configuration - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Windows Hello for Business - D - WHfB Configuration - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Windows LAPS - D - LAPS Configuration - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - ES - Windows LAPS - D - LAPS Configuration (24H2+) - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Credential Management - D - Passwordless - v3.3",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Defender Antivirus - D - Additional Configuration - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Administrator Protection - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Audit and Event Logging - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Config Refresh - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Enhanced Phishing Protection - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Local Security Policies - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Local Security Policies (24H2+) - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Location and Privacy - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Login and Lock Screen - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Printing - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Remote Desktop Services and RPC - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Script File Associations - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Security Hardening - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Timezone - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - User Rights - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Windows Package Manager  - v3.5",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - D - Windows Subsystem for Linux - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - U - Device Guard, Credential Guard and HVCI - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - U - Power and Device Lock - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - U - Windows Sandbox - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Device Security - U - Windows Spotlight and Org Messages - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Internet Explorer (Legacy) - D - Security - v3.1.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Accounts - D - Configuration - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - D - Security - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - D - Updates - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - U - Extensions - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - U - Password Management - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - U - Profiles, Sign-In and Sync - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Edge - U - User Experience - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Office - D - Security - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Office - D - Updates - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Office - U - Config and Experience - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Office - U - Security - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft OneDrive - D - Configuration - v3.2",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft OneDrive - U - Configuration - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Store - D - Configuration - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Microsoft Store - U - Configuration - v3.3",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows Apps - D - In-Box App Removal - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows Hello for Business - D - Cloud Kerberos Trust - v3.5",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows Update for Business - D - Delivery Optimisation - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows Update for Business - D - Reports and Telemetry - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows User Experience - D - Feature Configuration - v3.1",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows User Experience - D - Settings Sync - v3.7",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - SC - Windows User Experience - U - Copilot - v3.6",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB - Ring 1 - Pilot - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB - Ring 2 - UAT - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB - Ring 3 - Production - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - TP - Health Monitoring - D - Endpoint Analytics - v3.4",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB Drivers - Ring 1 - Pilot - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.windowsDriverUpdateProfile"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB Drivers - Ring 2 - UAT - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.windowsDriverUpdateProfile"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win - OIB - WUfB Drivers - Ring 3 - Production - v3.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.windowsDriverUpdateProfile"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win365 - OIB - Compliance - U - Device Health - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win365 - OIB - Device Security - D - Connectivity Settings - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win365 - OIB - Device Security - D - Resource Redirection - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Unsupported @odata.type: #microsoft.graph.deviceManagementConfigurationPolicy"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win365 - OIB - Device Security - D - Connectivity Settings - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    },
+    {
+      "Timestamp": "2025-11-22 13:05:51",
+      "Type": "BaselinePolicy",
+      "Name": "Win365 - OIB - Device Security - D - Resource Redirection - v1.0",
+      "Action": "Skipped",
+      "Id": "",
+      "Details": "Already exists"
+    }
+  ],
+  "Tenant": "0e3028c5-ada7-4d5d-b767-eea5ff7417b5"
+}

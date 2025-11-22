@@ -1,0 +1,16 @@
+{
+    "@odata.type": "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration",
+    "displayName": "Intune - Default Enrollment Status Page",
+    "description": "Default Enrollment Status Page configuration for Windows devices",
+    "showInstallationProgress": true,
+    "blockDeviceSetupRetryByUser": false,
+    "allowDeviceResetOnInstallFailure": true,
+    "allowLogCollectionOnInstallFailure": true,
+    "customErrorMessage": "Setup encountered an error. Please contact your IT administrator.",
+    "installProgressTimeoutInMinutes": 60,
+    "allowDeviceUseOnInstallFailure": false,
+    "allowNonBlockingAppInstallation": true,
+    "selectedMobileAppIds": [],
+    "trackInstallProgressForAutopilotOnly": true,
+    "disableUserStatusTrackingAfterFirstUser": true
+}

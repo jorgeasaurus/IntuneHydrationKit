@@ -1,0 +1,69 @@
+{
+    "@odata.type": "#microsoft.graph.iosCompliancePolicy",
+    "displayName": "iOS Compliance - Strict",
+    "description": "iOS Compliance Policy (strict)",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "advancedThreatProtectionRequiredSecurityLevel": "secured",
+    "deviceThreatProtectionEnabled": true,
+    "deviceThreatProtectionRequiredSecurityLevel": "secured",
+    "managedEmailProfileRequired": true,
+    "osMaximumBuildVersion": "16G1114",
+    "osMaximumVersion": "16.0",
+    "osMinimumBuildVersion": "18A291",
+    "osMinimumVersion": "14.0",
+    "passcodeBlockSimple": true,
+    "passcodeExpirationDays": 60,
+    "passcodeMinimumCharacterSetCount": 1,
+    "passcodeMinimumLength": 6,
+    "passcodeMinutesOfInactivityBeforeLock": 0,
+    "passcodeMinutesOfInactivityBeforeScreenTimeout": 0,
+    "passcodePreviousPasscodeBlockCount": 4,
+    "passcodeRequired": true,
+    "passcodeRequiredType": "alphanumeric",
+    "restrictedApps": [
+        {
+            "appId": "com.apple.clips",
+            "name": "Clips"
+        }
+    ],
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "notification",
+                    "gracePeriodHours": 120,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": "6790e94e-ccb9-4936-bbcc-017958b54210"
+                },
+                {
+                    "actionType": "pushNotification",
+                    "gracePeriodHours": 240,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "remoteLock",
+                    "gracePeriodHours": 360,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "retire",
+                    "gracePeriodHours": 720,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "securityBlockJailbrokenDevices": true
+}

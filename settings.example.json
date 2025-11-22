@@ -1,0 +1,41 @@
+{
+    "$schema": "./settings.schema.json",
+    "tenant": {
+        "tenantId": "00000000-0000-0000-0000-000000000000",
+        "tenantName": "contoso.onmicrosoft.com"
+    },
+    "authentication": {
+        "mode": "interactive",
+        "clientId": null,
+        "certificateThumbprint": null,
+        "certificatePath": null,
+        "environment": "Global"
+    },
+    "options": {
+        "dryRun": false,
+        "forceUpdate": false,
+        "verbose": false
+    },
+    "imports": {
+        "openIntuneBaseline": true,
+        "complianceTemplates": true,
+        "appProtection": true,
+        "notificationTemplates": true,
+        "enrollmentProfiles": true,
+        "dynamicGroups": true,
+        "conditionalAccess": true
+    },
+    "openIntuneBaseline": {
+        "repoUrl": "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+        "branch": "main",
+        "downloadPath": null
+    },
+    "dynamicGroups": {
+        "includeModelGroups": false,
+        "customModels": []
+    },
+    "reporting": {
+        "outputPath": "./Reports",
+        "formats": ["markdown", "json"]
+    }
+}

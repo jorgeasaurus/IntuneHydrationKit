@@ -1,0 +1,29 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Windows 10 Devices",
+            "description": "All Windows 10 devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.1\")"
+        },
+        {
+            "displayName": "Intune - Windows 11 Devices",
+            "description": "All Windows 11 devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.2\")"
+        },
+        {
+            "displayName": "Intune - macOS Devices",
+            "description": "All macOS devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\")"
+        },
+        {
+            "displayName": "Intune - iOS iPadOS Devices",
+            "description": "All iOS and iPadOS devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iOS\") or (device.deviceOSType -eq \"iPad\")"
+        },
+        {
+            "displayName": "Intune - Android Devices",
+            "description": "All Android devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Android\") or (device.deviceOSType -eq \"AndroidEnterprise\") or (device.deviceOSType -eq \"AndroidForWork\")"
+        }
+    ]
+}

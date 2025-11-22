@@ -1,0 +1,98 @@
+{
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "displayName": "Windows Custom Compliance",
+    "description": "Checks Manufacturer, Firewall, Malware and Bitlocker",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "deviceThreatProtectionEnabled": false,
+    "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+    "passwordRequiredType": "deviceDefault",
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "deviceCompliancePolicyScript": {
+        "displayName": "Windows Custom Compliance Script",
+        "deviceComplianceScriptId": "REPLACE_SCRIPT_ID",
+        "rulesContent": "REPLACE_RULES_BASE64"
+    },
+    "deviceCompliancePolicyScriptDefinition": {
+        "displayName": "Windows Custom Compliance Script",
+        "description": "Returns manufacturer, firewall, malware, BitLocker state",
+        "publisher": "Publisher",
+        "runAs32Bit": false,
+        "runAsAccount": "system",
+        "enforceSignatureCheck": false,
+        "detectionScriptContentBase64": "JGJpb3NpbmZvID0gR2V0LUNpbUluc3RhbmNlIC1DbGFzc05hbWUgV2luMzJfQ29tcHV0ZXJTeXN0ZW0KJG1hbnVmYWN0dXJlciA9ICRiaW9zaW5mby5NYW51ZmFjdHVyZXIKCiRkb21haW5maXJld2FsbD0gKChHZXQtTmV0RmlyZXdhbGxQcm9maWxlIHwgc2VsZWN0IE5hbWUsIEVuYWJsZWQgfCB3aGVyZS1vYmplY3QgTmFtZSAtZXEgRG9tYWluIHwgc2VsZWN0IEVuYWJsZWQpLkVuYWJsZWQpLlRvU3RyaW5nKCkKCiRub2FjdGl2ZW1hbHdhcmUgPSBHZXQtTXBUaHJlYXREZXRlY3Rpb24KaWYgKCRudWxsIC1lcSAkbm9hY3RpdmVtYWx3YXJlKSB7CiAgICAkbm9hY3RpdmVtYWx3YXJlID0gIlRydWUiCn0KZWxzZSB7CiAgICAkbm9hY3RpdmVtYWx3YXJlID0gIkZhbHNlIgp9CgokYml0bG9ja2VycHJvdGVjdGVkID0gKGdldC1iaXRsb2NrZXJ2b2x1bWUpLlByb3RlY3Rpb25TdGF0dXMKJGJpdGxvY2tlcmVuY3J5cHRpb24gPSAoZ2V0LWJpdGxvY2tlcnZvbHVtZSkuVm9sdW1lU3RhdHVzCgppZiAoKCRiaXRsb2NrZXJwcm90ZWN0ZWQgLWVxICJPbiIpIC1hbmQgKCRiaXRsb2NrZXJlbmNyeXB0aW9uIC1lcSAiRnVsbHlFbmNyeXB0ZWQiKSkgewogICAgJGJpdGxvY2tlciA9ICJUcnVlIgp9CmVsc2UgewogICAgJGJpdGxvY2tlciA9ICJGYWxzZSIKfQoKJGhhc2ggPSBAeyAKICAgIE1hbnVmYWN0dXJlciA9ICRtYW51ZmFjdHVyZXIKICAgIERvbWFpbkZpcmV3YWxsID0gJGRvbWFpbmZpcmV3YWxsCiAgICBOb0FjdGl2ZU1hbHdhcmUgPSAkbm9hY3RpdmVtYWx3YXJlCgogICAgQml0bG9ja2VyID0gJGJpdGxvY2tlcgp9CgpyZXR1cm4gJGhhc2ggfCBDb252ZXJ0VG8tSnNvbiAtQ29tcHJlc3M=",
+        "rules": {
+            "Rules": [
+                {
+                    "SettingName": "Manufacturer",
+                    "Operator": "IsEquals",
+                    "DataType": "String",
+                    "Operand": "Dell",
+                    "MoreInfoUrl": "https://www.google.com",
+                    "RemediationStrings": [
+                        {
+                            "Language": "en_US",
+                            "Title": "This machine is not a Dell.",
+                            "Description": "We only support Dell devices, please contact us for more information.  You are on an {ActualValue}"
+                        }
+                    ]
+                },
+                {
+                    "SettingName": "DomainFirewall",
+                    "Operator": "IsEquals",
+                    "DataType": "String",
+                    "Operand": "True",
+                    "MoreInfoUrl": "https://support.microsoft.com/en-us/windows/turn-microsoft-defender-firewall-on-or-off-ec0844f7-aebd-0583-67fe-601ecf5d774f",
+                    "RemediationStrings": [
+                        {
+                            "Language": "en_US",
+                            "Title": "Domain Firewall is Off",
+                            "Description": "Your domain firewall is switched off, please re-enable."
+                        }
+                    ]
+                },
+                {
+                    "SettingName": "NoActiveMalware",
+                    "Operator": "IsEquals",
+                    "DataType": "String",
+                    "Operand": "True",
+                    "MoreInfoUrl": "https://support.microsoft.com/en-us/windows/stay-protected-with-windows-security-2ae0363d-0ada-c064-8b56-6a39afb6a963",
+                    "RemediationStrings": [
+                        {
+                            "Language": "en_US",
+                            "Title": "Active Malware Detected",
+                            "Description": "Active Malware detected, please remediate."
+                        }
+                    ]
+                },
+                {
+                    "SettingName": "Bitlocker",
+                    "Operator": "IsEquals",
+                    "DataType": "String",
+                    "Operand": "True",
+                    "MoreInfoUrl": "https://support.microsoft.com/en-us/windows/turn-on-device-encryption-0c453637-bc88-5f74-5105-741561aae838",
+                    "RemediationStrings": [
+                        {
+                            "Language": "en_US",
+                            "Title": "Unencrypted",
+                            "Description": "Your device is not fully encrypted, please encrypt."
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

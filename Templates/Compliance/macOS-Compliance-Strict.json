@@ -1,0 +1,39 @@
+{
+    "@odata.type": "#microsoft.graph.macOSCompliancePolicy",
+    "displayName": "macOS Compliance - Strict",
+    "description": "Compliance Policy for macOS Devices (strict)",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "firewallBlockAllIncoming": true,
+    "firewallEnabled": true,
+    "firewallEnableStealthMode": true,
+    "gatekeeperAllowedAppSource": "macAppStoreAndIdentifiedDevelopers",
+    "osMaximumBuildVersion": "20E772520a",
+    "osMaximumVersion": "16.0",
+    "osMinimumBuildVersion": "18A291",
+    "osMinimumVersion": "13.0",
+    "passwordBlockSimple": true,
+    "passwordExpirationDays": 41,
+    "passwordMinimumCharacterSetCount": 1,
+    "passwordMinimumLength": 6,
+    "passwordMinutesOfInactivityBeforeLock": 5,
+    "passwordPreviousPasswordBlockCount": 5,
+    "passwordRequired": true,
+    "passwordRequiredType": "alphanumeric",
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "storageRequireEncryption": true,
+    "systemIntegrityProtectionEnabled": true
+}

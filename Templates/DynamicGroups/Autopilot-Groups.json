@@ -1,0 +1,14 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Autopilot Devices",
+            "description": "All devices enrolled via Windows Autopilot",
+            "membershipRule": "(device.devicePhysicalIDs -any (_ -startsWith \"[ZTDID]\"))"
+        },
+        {
+            "displayName": "Intune - Non-Autopilot Devices",
+            "description": "All Windows devices not enrolled via Autopilot",
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.devicePhysicalIDs -all (_ -notStartsWith \"[ZTDID]\"))"
+        }
+    ]
+}

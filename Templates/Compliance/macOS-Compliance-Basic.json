@@ -1,0 +1,45 @@
+{
+    "@odata.type": "#microsoft.graph.macOSCompliancePolicy",
+    "displayName": "macOS Compliance",
+    "description": "Compliance Policy for macOS Devices",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "firewallEnabled": true,
+    "firewallEnableStealthMode": true,
+    "gatekeeperAllowedAppSource": "macAppStoreAndIdentifiedDevelopers",
+    "passwordBlockSimple": true,
+    "passwordExpirationDays": 41,
+    "passwordMinimumCharacterSetCount": 1,
+    "passwordMinutesOfInactivityBeforeLock": 5,
+    "passwordPreviousPasswordBlockCount": 3,
+    "passwordRequired": true,
+    "passwordRequiredType": "alphanumeric",
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "remoteLock",
+                    "gracePeriodHours": 480,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "retire",
+                    "gracePeriodHours": 1080,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "storageRequireEncryption": true,
+    "systemIntegrityProtectionEnabled": true
+}

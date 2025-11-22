@@ -1,0 +1,50 @@
+{
+    "@odata.type": "#microsoft.graph.androidDeviceOwnerCompliancePolicy",
+    "displayName": "Android-Compliance-FullyManaged",
+    "description": "Android Compliance Policy for Fully Managed Devices",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
+    "deviceThreatProtectionEnabled": false,
+    "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+    "localActions": [],
+    "passwordMinimumLength": 6,
+    "passwordMinimumLetterCharacters": 6,
+    "passwordMinimumLowerCaseCharacters": 1,
+    "passwordMinimumNonLetterCharacters": 1,
+    "passwordMinimumNumericCharacters": 1,
+    "passwordMinimumSymbolCharacters": 1,
+    "passwordMinimumUpperCaseCharacters": 1,
+    "passwordMinutesOfInactivityBeforeLock": 5,
+    "passwordRequired": true,
+    "passwordRequiredType": "alphanumericWithSymbols",
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "pushNotification",
+                    "gracePeriodHours": 120,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "remoteLock",
+                    "gracePeriodHours": 240,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "securityRequireSafetyNetAttestationBasicIntegrity": true,
+    "securityRequireSafetyNetAttestationCertifiedDevice": true,
+    "storageRequireEncryption": true
+}

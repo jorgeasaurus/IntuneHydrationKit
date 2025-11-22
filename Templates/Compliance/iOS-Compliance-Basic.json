@@ -1,0 +1,53 @@
+{
+    "@odata.type": "#microsoft.graph.iosCompliancePolicy",
+    "displayName": "iOS Compliance",
+    "description": "iOS Compliance Policy",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
+    "deviceThreatProtectionEnabled": false,
+    "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+    "managedEmailProfileRequired": true,
+    "passcodeBlockSimple": true,
+    "passcodeExpirationDays": 30,
+    "passcodeMinimumCharacterSetCount": 1,
+    "passcodeMinimumLength": 6,
+    "passcodeMinutesOfInactivityBeforeLock": 0,
+    "passcodeMinutesOfInactivityBeforeScreenTimeout": 2,
+    "passcodePreviousPasscodeBlockCount": 3,
+    "passcodeRequired": true,
+    "passcodeRequiredType": "alphanumeric",
+    "scheduledActionsForRule": [
+        {
+            "ruleName": "PasswordRequired",
+            "scheduledActionConfigurations": [
+                {
+                    "actionType": "block",
+                    "gracePeriodHours": 0,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "pushNotification",
+                    "gracePeriodHours": 48,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "remoteLock",
+                    "gracePeriodHours": 120,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                },
+                {
+                    "actionType": "retire",
+                    "gracePeriodHours": 720,
+                    "notificationMessageCCList": [],
+                    "notificationTemplateId": ""
+                }
+            ]
+        }
+    ],
+    "securityBlockJailbrokenDevices": true
+}

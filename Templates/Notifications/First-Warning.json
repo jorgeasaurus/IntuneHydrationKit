@@ -1,0 +1,15 @@
+{
+    "displayName": "First Alert",
+    "brandingOptions": "includeCompanyLogo,includeCompanyName,includeContactInformation",
+    "roleScopeTagIds": [
+        "0"
+    ],
+    "localizedMessages": [
+        {
+            "isDefault": true,
+            "locale": "en-US",
+            "messageTemplate": "Your device is now showing as non-compliant.  Please contact IT to resolve the issue.\nYour access will be blocked in xx days",
+            "subject": "First Warning"
+        }
+    ]
+}

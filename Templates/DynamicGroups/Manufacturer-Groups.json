@@ -1,0 +1,29 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Dell Devices",
+            "description": "All Dell devices managed by Intune",
+            "membershipRule": "(device.deviceManufacturer -eq \"Dell Inc.\")"
+        },
+        {
+            "displayName": "Intune - HP Devices",
+            "description": "All HP devices managed by Intune",
+            "membershipRule": "(device.deviceManufacturer -eq \"HP\") or (device.deviceManufacturer -eq \"Hewlett-Packard\")"
+        },
+        {
+            "displayName": "Intune - Lenovo Devices",
+            "description": "All Lenovo devices managed by Intune",
+            "membershipRule": "(device.deviceManufacturer -eq \"LENOVO\")"
+        },
+        {
+            "displayName": "Intune - Microsoft Surface Devices",
+            "description": "All Microsoft Surface devices managed by Intune",
+            "membershipRule": "(device.deviceManufacturer -eq \"Microsoft Corporation\") and (device.deviceModel -startsWith \"Surface\")"
+        },
+        {
+            "displayName": "Intune - Apple Devices",
+            "description": "All Apple devices managed by Intune",
+            "membershipRule": "(device.deviceManufacturer -eq \"Apple\")"
+        }
+    ]
+}

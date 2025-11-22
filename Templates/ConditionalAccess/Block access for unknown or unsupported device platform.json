@@ -1,0 +1,34 @@
+{
+  "displayName": "Block access for unknown or unsupported device platform",
+  "conditions": {
+    "userRiskLevels": [],
+    "signInRiskLevels": [],
+    "clientAppTypes": ["all"],
+    "servicePrincipalRiskLevels": [],
+    "applications": {
+      "includeApplications": ["All"],
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": []
+    },
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": [],
+      "includeGroups": [],
+      "excludeGroups": [],
+      "includeRoles": [],
+      "excludeRoles": ["62e90394-69f5-4237-9190-012177145e10"]
+    },
+    "platforms": {
+      "includePlatforms": ["all"],
+      "excludePlatforms": ["android", "iOS", "windows", "macOS", "linux"]
+    }
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["block"],
+    "customAuthenticationFactors": [],
+    "termsOfUse": []
+  },
+  "sessionControls": null
+}
