@@ -7,6 +7,59 @@
     compliance policies, configuration profiles, and dynamic groups.
 #>
 
+# Module-scoped variable to store the Graph endpoint
+$script:GraphEndpoint = $null
+
+function Set-GraphEndpoint {
+    <#
+    .SYNOPSIS
+        Sets the Graph endpoint to use for API calls.
+    
+    .PARAMETER Endpoint
+        The Graph API endpoint URL.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Endpoint
+    )
+    
+    $script:GraphEndpoint = $Endpoint
+}
+
+function Get-GraphEndpoint {
+    <#
+    .SYNOPSIS
+        Gets the current Graph endpoint.
+    
+    .OUTPUTS
+        The Graph API endpoint URL or default.
+    #>
+    [CmdletBinding()]
+    param()
+    
+    if ($script:GraphEndpoint) {
+        return $script:GraphEndpoint
+    }
+    
+    # Try to get from context
+    $Context = Get-MgContext
+    if ($Context) {
+        # Map environment names to endpoints
+        switch ($Context.Environment) {
+            'Global' { return 'https://graph.microsoft.com' }
+            'USGov' { return 'https://graph.microsoft.com' }
+            'USGovDoD' { return 'https://graph.microsoft.us' }
+            'China' { return 'https://microsoftgraph.chinacloudapi.cn' }
+            'Germany' { return 'https://graph.microsoft.de' }
+            default { return 'https://graph.microsoft.com' }
+        }
+    }
+    
+    # Default to commercial endpoint
+    return 'https://graph.microsoft.com'
+}
+
 function Get-AvailableConfigurations {
     <#
     .SYNOPSIS
@@ -173,8 +226,11 @@ function Import-CompliancePolicy {
         $Config.PSObject.Properties.Remove('createdDateTime')
         $Config.PSObject.Properties.Remove('lastModifiedDateTime')
         
+        # Get the Graph endpoint
+        $GraphEndpoint = Get-GraphEndpoint
+        
         # Create compliance policy using Microsoft Graph
-        $Uri = "https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies"
+        $Uri = "$GraphEndpoint/beta/deviceManagement/deviceCompliancePolicies"
         $Policy = Invoke-MgGraphRequest -Method POST -Uri $Uri -Body ($Config | ConvertTo-Json -Depth 10)
         
         return @{
@@ -211,8 +267,11 @@ function Import-ConfigurationProfile {
         $Config.PSObject.Properties.Remove('createdDateTime')
         $Config.PSObject.Properties.Remove('lastModifiedDateTime')
         
+        # Get the Graph endpoint
+        $GraphEndpoint = Get-GraphEndpoint
+        
         # Create configuration profile using Microsoft Graph
-        $Uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations"
+        $Uri = "$GraphEndpoint/beta/deviceManagement/deviceConfigurations"
         $Profile = Invoke-MgGraphRequest -Method POST -Uri $Uri -Body ($Config | ConvertTo-Json -Depth 10)
         
         return @{
@@ -249,8 +308,11 @@ function Import-DeviceConfiguration {
         $Config.PSObject.Properties.Remove('createdDateTime')
         $Config.PSObject.Properties.Remove('lastModifiedDateTime')
         
+        # Get the Graph endpoint
+        $GraphEndpoint = Get-GraphEndpoint
+        
         # Create device configuration using Microsoft Graph
-        $Uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations"
+        $Uri = "$GraphEndpoint/beta/deviceManagement/deviceConfigurations"
         $DeviceConfig = Invoke-MgGraphRequest -Method POST -Uri $Uri -Body ($Config | ConvertTo-Json -Depth 10)
         
         return @{
@@ -330,8 +392,11 @@ function Import-SecurityBaseline {
         $Config.PSObject.Properties.Remove('createdDateTime')
         $Config.PSObject.Properties.Remove('lastModifiedDateTime')
         
+        # Get the Graph endpoint
+        $GraphEndpoint = Get-GraphEndpoint
+        
         # Create security baseline using Microsoft Graph
-        $Uri = "https://graph.microsoft.com/beta/deviceManagement/intents"
+        $Uri = "$GraphEndpoint/beta/deviceManagement/intents"
         $Baseline = Invoke-MgGraphRequest -Method POST -Uri $Uri -Body ($Config | ConvertTo-Json -Depth 10)
         
         return @{
@@ -348,4 +413,4 @@ function Import-SecurityBaseline {
     }
 }
 
-Export-ModuleMember -Function Get-AvailableConfigurations, Import-IntuneConfiguration
+Export-ModuleMember -Function Get-AvailableConfigurations, Import-IntuneConfiguration, Set-GraphEndpoint

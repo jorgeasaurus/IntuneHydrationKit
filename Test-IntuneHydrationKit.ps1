@@ -20,7 +20,7 @@ $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Test 1: Validate PowerShell syntax
 Write-Host "[TEST 1] Validating PowerShell syntax..." -ForegroundColor Yellow
 
-$PSFiles = Get-ChildItem -Path $ScriptRoot -Recurse -Filter "*.ps*1" -File
+$PSFiles = Get-ChildItem -Path $ScriptRoot -Recurse -Include "*.ps1","*.psm1" -File
 foreach ($File in $PSFiles) {
     $Errors = $null
     $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $File.FullName -Raw), [ref]$Errors)

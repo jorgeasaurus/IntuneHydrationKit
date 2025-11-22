@@ -100,7 +100,7 @@ function Write-Log {
         [string]$Level = 'Info'
     )
     
-    $TimeStamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $TimeStamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $LogMessage = "[$TimeStamp] [$Level] $Message"
     
     # Console output with color
@@ -158,6 +158,9 @@ Write-Log "Connecting to Microsoft Graph API..." -Level Info
 try {
     Connect-MgGraphForTenant -TenantId $TenantId -TenantType $TenantType -EndpointConfig $EndpointConfig
     Write-Log "Successfully connected to Microsoft Graph" -Level Success
+    
+    # Set the Graph endpoint for import operations
+    Set-GraphEndpoint -Endpoint $EndpointConfig.GraphEndpoint
 }
 catch {
     Write-Log "Failed to connect to Microsoft Graph: $($_.Exception.Message)" -Level Error
@@ -195,7 +198,7 @@ if ($AvailableConfigs.Count -eq 0) {
 
 Write-Log "Found $($AvailableConfigs.Count) configuration type(s)" -Level Info
 $AvailableConfigs | ForEach-Object {
-    Write-Log "  - $($_.Name): $($_.FileCount) file(s)" -Level Info
+    Write-Log "  - $($_.Name) - $($_.FileCount) file(s)" -Level Info
 }
 
 # Determine which configurations to import
@@ -253,7 +256,7 @@ foreach ($Config in $ConfigsToImport) {
             }
         }
         catch {
-            Write-Log "  Error importing $FileName : $($_.Exception.Message)" -Level Error
+            Write-Log "  Error importing ${FileName}: $($_.Exception.Message)" -Level Error
             $ImportResults.Failed++
             $ImportResults.Details += @{
                 File = $FileName
