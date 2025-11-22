@@ -97,11 +97,14 @@ function Invoke-IntuneHydration {
             $Script:LogPath = $LogPath
         }
         else {
-            $Script:LogPath = Join-Path $PSScriptRoot "Logs"
+            # Default to user's temp directory for logs
+            $Script:LogPath = Join-Path $env:TEMP "IntuneHydrationKit\Logs"
         }
         
         $Script:LogFile = Join-Path $Script:LogPath "IntuneHydration_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-        $Script:TempPath = Join-Path $PSScriptRoot "Temp"
+        
+        # Use temp directory for cloned repositories
+        $Script:TempPath = Join-Path $env:TEMP "IntuneHydrationKit\Repositories"
         
         Write-IntuneLog "========== Starting Intune Hydration Process ==========" -Level INFO
         Write-IntuneLog "Module Version: 1.0.0" -Level INFO
