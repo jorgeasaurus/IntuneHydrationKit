@@ -1,0 +1,7 @@
+{
+  "displayName": "All Windows Devices",
+  "description": "Dynamic group containing all Windows 10 and Windows 11 devices",
+  "mailNickname": "AllWindowsDevices",
+  "membershipRule": "(device.deviceOSType -eq \"Windows\") and ((device.deviceOSVersion -startsWith \"10.0\") or (device.deviceOSVersion -startsWith \"11.0\"))",
+  "membershipRuleProcessingState": "On"
+}

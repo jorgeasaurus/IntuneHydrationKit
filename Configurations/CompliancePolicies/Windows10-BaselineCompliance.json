@@ -1,0 +1,47 @@
+{
+  "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+  "displayName": "Windows 10 - Baseline Compliance Policy",
+  "description": "Baseline compliance requirements for Windows 10 devices",
+  "scheduledActionsForRule": [
+    {
+      "ruleName": "PasswordRequired",
+      "scheduledActionConfigurations": [
+        {
+          "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
+          "actionType": "block",
+          "gracePeriodHours": 0,
+          "notificationTemplateId": ""
+        }
+      ]
+    }
+  ],
+  "passwordRequired": true,
+  "passwordMinimumLength": 8,
+  "passwordRequiredType": "deviceDefault",
+  "passwordMinutesOfInactivityBeforeLock": 15,
+  "passwordExpirationDays": null,
+  "passwordPreviousPasswordBlockCount": null,
+  "requireHealthyDeviceReport": true,
+  "osMinimumVersion": "10.0.19041",
+  "osMaximumVersion": null,
+  "mobileOsMinimumVersion": null,
+  "mobileOsMaximumVersion": null,
+  "earlyLaunchAntiMalwareDriverEnabled": true,
+  "bitLockerEnabled": true,
+  "secureBootEnabled": true,
+  "codeIntegrityEnabled": true,
+  "storageRequireEncryption": true,
+  "activeFirewallRequired": true,
+  "defenderEnabled": true,
+  "defenderVersion": null,
+  "signatureOutOfDate": false,
+  "rtpEnabled": true,
+  "antivirusRequired": true,
+  "antiSpywareRequired": true,
+  "deviceThreatProtectionEnabled": false,
+  "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+  "configurationManagerComplianceRequired": false,
+  "tpmRequired": false,
+  "deviceCompliancePolicyScript": null,
+  "validOperatingSystemBuildRanges": []
+}

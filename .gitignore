@@ -1,0 +1,46 @@
+# Logs
+Logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# PowerShell specific
+*.ps1xml
+*.psc1
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sensitive data
+*.credentials
+*.secrets
+*.key
+*.pfx
+*.cer
+
+# Test results
+TestResults/
+*.trx
+
+# Build outputs
+bin/
+obj/
+out/
+
+# Module cache
+*.psm1.cache

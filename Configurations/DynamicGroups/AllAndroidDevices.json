@@ -1,0 +1,7 @@
+{
+  "displayName": "All Android Devices",
+  "description": "Dynamic group containing all Android devices",
+  "mailNickname": "AllAndroidDevices",
+  "membershipRule": "(device.deviceOSType -eq \"Android\") or (device.deviceOSType -eq \"AndroidForWork\")",
+  "membershipRuleProcessingState": "On"
+}
