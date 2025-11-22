@@ -1,7 +1,0 @@
-{
-  "displayName": "Corporate Owned Devices",
-  "description": "Dynamic group for corporate owned devices",
-  "mailNickname": "CorporateOwnedDevices",
-  "membershipRule": "(device.deviceOwnership -eq \"Company\")",
-  "membershipRuleProcessingState": "On"
-}
