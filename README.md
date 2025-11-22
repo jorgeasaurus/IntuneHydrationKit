@@ -1,5 +1,7 @@
 # Intune Hydration Kit
 
+> **⚠️ IMPORTANT**: This script provides a comprehensive **framework and templates** for Intune hydration. The current version includes all the structure, data models, and logic for creating policies, with Microsoft Graph API calls documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use this as a reference for building their own automation. This approach provides maximum flexibility while demonstrating best practices for Intune configuration management.
+
 Quick way to import starter configurations into Microsoft Intune. This PowerShell script automates the process of "hydrating" a new or existing Intune tenant with best-practice configurations, policies, profiles, and groups.
 
 ## Overview
@@ -12,8 +14,6 @@ The Intune Hydration Kit imports and configures:
 - **Enrollment Profiles**: Autopilot and Enrollment Status Page (ESP) profiles
 - **Dynamic Groups**: Automated grouping by OS, manufacturer, model, Autopilot status, and compliance state
 - **Conditional Access Policies**: 10-policy starter pack (all disabled by default for safe deployment)
-
-> **Note**: This script provides a comprehensive framework and templates for Intune hydration. The current version includes all the structure, data models, and logic for creating policies, but the actual Microsoft Graph API calls are documented as comments. Users can uncomment and customize these API calls based on their specific needs, or use this as a reference for building their own automation. This approach provides maximum flexibility while demonstrating best practices for Intune configuration management.
 
 ## Prerequisites
 

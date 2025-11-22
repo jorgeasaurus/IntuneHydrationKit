@@ -133,7 +133,8 @@ function Test-Prerequisites {
     Write-Log "Checking prerequisites..." -Level INFO
     
     # Check PowerShell version
-    if ($PSVersionTable.PSVersion.Major -lt 5) {
+    if (($PSVersionTable.PSVersion.Major -lt 5) -or 
+        (($PSVersionTable.PSVersion.Major -eq 5) -and ($PSVersionTable.PSVersion.Minor -lt 1))) {
         Write-Log "PowerShell 5.1 or higher is required. Current version: $($PSVersionTable.PSVersion)" -Level ERROR
         return $false
     }
@@ -240,10 +241,16 @@ function Get-GitHubRepository {
             Write-Log "Repository already exists at $DestinationPath. Updating..." -Level INFO
             Push-Location $DestinationPath
             try {
-                git pull origin main 2>&1 | Out-Null
-                if (-not $?) {
-                    git pull origin master 2>&1 | Out-Null
+                # Try to pull from the default branch
+                $gitOutput = git pull 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Log "Git pull failed: $gitOutput" -Level WARNING
+                    Write-Log "Repository may be out of sync, but will proceed with existing content" -Level WARNING
                 }
+            }
+            catch {
+                Write-Log "Error during git pull: $_" -Level WARNING
+                Write-Log "Will proceed with existing repository content" -Level WARNING
             }
             finally {
                 Pop-Location
@@ -251,7 +258,11 @@ function Get-GitHubRepository {
         }
         else {
             Write-Log "Cloning repository to $DestinationPath..." -Level INFO
-            git clone $RepositoryUrl $DestinationPath 2>&1 | Out-Null
+            $gitOutput = git clone $RepositoryUrl $DestinationPath 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                Write-Log "Git clone failed: $gitOutput" -Level ERROR
+                return $false
+            }
         }
         
         if (Test-Path $DestinationPath) {
@@ -651,12 +662,19 @@ function New-DynamicGroups {
                 DisplayName = $group.Name
                 Description = $group.Description
                 MailEnabled = $false
-                MailNickname = ($group.Name -replace '[^a-zA-Z0-9]', '').ToLower()
+                MailNickname = $null
                 SecurityEnabled = $true
                 GroupTypes = @("DynamicMembership")
                 MembershipRule = $group.MembershipRule
                 MembershipRuleProcessingState = "On"
             }
+            
+            # Generate a valid MailNickname (alphanumeric only, no spaces)
+            $mailNickname = ($group.Name -replace '[^a-zA-Z0-9]', '').ToLower()
+            if ([string]::IsNullOrEmpty($mailNickname) -or $mailNickname.Length -lt 3) {
+                $mailNickname = "group$(Get-Random -Minimum 1000 -Maximum 9999)"
+            }
+            $groupParams.MailNickname = $mailNickname
             
             # NOTE: Actual implementation requires Graph API call:
             # New-MgGroup -BodyParameter $groupParams
