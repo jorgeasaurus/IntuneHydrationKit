@@ -1,0 +1,34 @@
+{
+  "@odata.type": "#microsoft.graph.macOSCompliancePolicy",
+  "displayName": "macOS - Baseline Compliance Policy",
+  "description": "Baseline compliance requirements for macOS devices",
+  "scheduledActionsForRule": [
+    {
+      "ruleName": "PasswordRequired",
+      "scheduledActionConfigurations": [
+        {
+          "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
+          "actionType": "block",
+          "gracePeriodHours": 0,
+          "notificationTemplateId": ""
+        }
+      ]
+    }
+  ],
+  "passwordRequired": true,
+  "passwordMinimumLength": 8,
+  "passwordRequiredType": "deviceDefault",
+  "passwordMinutesOfInactivityBeforeLock": 15,
+  "passwordExpirationDays": null,
+  "passwordBlockSimple": false,
+  "passwordPreviousPasswordBlockCount": null,
+  "osMinimumVersion": "12.0",
+  "osMaximumVersion": null,
+  "systemIntegrityProtectionEnabled": true,
+  "deviceThreatProtectionEnabled": false,
+  "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+  "storageRequireEncryption": true,
+  "firewallEnabled": true,
+  "firewallBlockAllIncoming": false,
+  "firewallEnableStealthMode": false
+}
