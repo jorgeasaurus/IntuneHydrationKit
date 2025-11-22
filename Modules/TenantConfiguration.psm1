@@ -192,6 +192,16 @@ function Connect-MgGraphForTenant {
         'Directory.Read.All'
     )
     
+    # Validate tenant type and set environment
+    $Config = Get-TenantEndpointConfiguration -TenantType $TenantType
+    
+    if (-not $Config) {
+        return @{
+            Success = $false
+            Message = "Invalid tenant type: $TenantType"
+        }
+    }
+    
     # Connection parameters
     $ConnectParams = @{
         TenantId = $TenantId
@@ -201,7 +211,7 @@ function Connect-MgGraphForTenant {
     
     # Add environment-specific parameters
     if ($TenantType -in @('GCCHigh', 'DoD')) {
-        $ConnectParams.Environment = $EndpointConfig.Environment
+        $ConnectParams.Environment = $Config.Environment
     }
     
     # Connect to Microsoft Graph

@@ -256,7 +256,7 @@ foreach ($Config in $ConfigsToImport) {
             }
         }
         catch {
-            Write-Log "  Error importing ${FileName}: $($_.Exception.Message)" -Level Error
+            Write-Log "  Error importing $($FileName): $($_.Exception.Message)" -Level Error
             $ImportResults.Failed++
             $ImportResults.Details += @{
                 File = $FileName
