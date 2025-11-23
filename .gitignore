@@ -4,3 +4,5 @@ settings.json
 C*.md
 .C*
 Reports/*.json
+dev.ps1
+Reports/Hydration-Summary.md

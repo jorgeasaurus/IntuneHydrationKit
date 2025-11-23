@@ -35,20 +35,34 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
+        # Core hydration functions
         'Invoke-IntuneHydration',
         'Connect-IntuneHydration',
         'Test-IntunePrerequisites',
+        'Get-HydrationSummary',
+        # Import functions
         'New-IntuneDynamicGroup',
         'Get-OpenIntuneBaseline',
         'Import-IntuneBaseline',
         'Import-IntuneCompliancePolicy',
         'Import-IntuneAppProtectionPolicy',
         'Import-IntuneNotificationTemplate',
-        'Import-ExamplePolicyScripts',
         'Import-IntuneEnrollmentProfile',
         'Import-IntuneDeviceFilter',
         'Import-IntuneConditionalAccessPolicy',
-        'Get-HydrationSummary'
+        # Helper functions
+        'Initialize-HydrationLogging',
+        'Write-HydrationLog',
+        'Invoke-GraphRequestWithRetry',
+        'Get-TemplateFiles',
+        'Import-TemplateFile',
+        'Resolve-TemplateTokens',
+        'Get-UpsertDecision',
+        'Import-HydrationSettings',
+        # Result helpers (used by orchestrator)
+        'New-HydrationResult',
+        'Get-ResultSummary',
+        'Get-GraphErrorMessage'
     )
 
     # Cmdlets to export from this module

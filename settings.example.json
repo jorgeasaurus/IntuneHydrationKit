@@ -13,8 +13,11 @@
     },
     "options": {
         "dryRun": false,
-        "forceUpdate": false,
-        "verbose": false
+        "create": true,
+        "update": true,
+        "delete": false,
+        "testMode": false,
+        "verbose": true
     },
     "imports": {
         "openIntuneBaseline": true,
@@ -23,6 +26,7 @@
         "notificationTemplates": true,
         "enrollmentProfiles": true,
         "dynamicGroups": true,
+        "deviceFilters": true,
         "conditionalAccess": true
     },
     "openIntuneBaseline": {
@@ -30,12 +34,11 @@
         "branch": "main",
         "downloadPath": null
     },
-    "dynamicGroups": {
-        "includeModelGroups": false,
-        "customModels": []
-    },
     "reporting": {
         "outputPath": "./Reports",
-        "formats": ["markdown", "json"]
+        "formats": [
+            "markdown",
+            "json"
+        ]
     }
 }
