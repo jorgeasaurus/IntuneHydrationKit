@@ -3,3 +3,4 @@ Logs/*.log
 settings.json
 C*.md
 .C*
+Reports/*.json

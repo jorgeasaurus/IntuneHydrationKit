@@ -552,6 +552,10 @@ function Import-IntuneBaseline {
         '#microsoft.graph.androidCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
         '#microsoft.graph.androidWorkProfileCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
         '#microsoft.graph.androidDeviceOwnerCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
+        # Settings Catalog / Configuration Policies
+        '#microsoft.graph.deviceManagementConfigurationPolicy' = 'deviceManagement/configurationPolicies'
+        # Windows Update for Business - Driver Updates
+        '#microsoft.graph.windowsDriverUpdateProfile' = 'deviceManagement/windowsDriverUpdateProfiles'
     }
 
     # Folders that previously required IntuneManagement tool - now we try to import via Graph API
@@ -621,17 +625,38 @@ function Import-IntuneBaseline {
                             $displayName = $policyName
                         }
 
-                        # Check if policy exists
-                        $existingPolicy = $existingPolicies.ContainsKey($displayName)
-                        if (-not $existingPolicy) {
-                            # Fetch from this specific endpoint
+                        # Check if policy exists - use 'name' for configurationPolicies, 'displayName' for others
+                        $existingPolicy = $null
+
+                        # For Settings Catalog, check by 'name' property
+                        if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') {
                             try {
                                 $checkUri = "beta/$typeEndpoint"
-                                $checkResponse = Invoke-MgGraphRequest -Method GET -Uri $checkUri -ErrorAction Stop
-                                $existingPolicy = $checkResponse.value | Where-Object { $_.displayName -eq $displayName }
+                                $listUri = $checkUri
+                                do {
+                                    $checkResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
+                                    $existingPolicy = $checkResponse.value | Where-Object { $_.name -eq $displayName }
+                                    if ($existingPolicy) { break }
+                                    $listUri = $checkResponse.'@odata.nextLink'
+                                } while ($listUri)
                             }
                             catch {
                                 $existingPolicy = $null
+                            }
+                        }
+                        else {
+                            # For other types, check cached list first
+                            $existingPolicy = $existingPolicies.ContainsKey($displayName)
+                            if (-not $existingPolicy) {
+                                # Fetch from this specific endpoint
+                                try {
+                                    $checkUri = "beta/$typeEndpoint"
+                                    $checkResponse = Invoke-MgGraphRequest -Method GET -Uri $checkUri -ErrorAction Stop
+                                    $existingPolicy = $checkResponse.value | Where-Object { $_.displayName -eq $displayName }
+                                }
+                                catch {
+                                    $existingPolicy = $null
+                                }
                             }
                         }
 
@@ -650,7 +675,7 @@ function Import-IntuneBaseline {
                                            'deviceManagementApplicabilityRuleDeviceMode',
                                            '@odata.context', '@odata.id', '@odata.editLink',
                                            'creationSource', 'settingCount', 'priorityMetaData',
-                                           'assignments')
+                                           'assignments', 'settingDefinitions', 'isAssigned')
 
                         foreach ($prop in $propsToRemove) {
                             if ($importBody.PSObject.Properties[$prop]) {
@@ -658,10 +683,83 @@ function Import-IntuneBaseline {
                             }
                         }
 
-                        # Remove properties with @odata.type annotations (metadata)
-                        $metadataProps = $importBody.PSObject.Properties | Where-Object { $_.Name -match '@odata\.' -and $_.Name -ne '@odata.type' }
+                        # Remove properties with @odata annotations (metadata) except @odata.type
+                        # Also remove #microsoft.graph.* action properties
+                        $metadataProps = @($importBody.PSObject.Properties | Where-Object {
+                            ($_.Name -match '^@odata\.' -and $_.Name -ne '@odata.type') -or
+                            ($_.Name -match '@odata\.') -or
+                            ($_.Name -match '^#microsoft\.graph\.')
+                        })
                         foreach ($prop in $metadataProps) {
-                            $importBody.PSObject.Properties.Remove($prop.Name)
+                            if ($prop.Name -ne '@odata.type') {
+                                $importBody.PSObject.Properties.Remove($prop.Name)
+                            }
+                        }
+
+                        # Special handling for Settings Catalog (configurationPolicies)
+                        if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') {
+                            Write-Verbose "  Processing Settings Catalog policy: $displayName"
+                            Write-Verbose "  Original properties: $($importBody.PSObject.Properties.Name -join ', ')"
+
+                            # Build a clean body with only the required properties
+                            $cleanBody = @{
+                                name = $importBody.name
+                                description = $importBody.description
+                                platforms = $importBody.platforms
+                                technologies = $importBody.technologies
+                                settings = @()
+                            }
+
+                            Write-Verbose "  Building clean body with: name, description, platforms, technologies"
+
+                            # Add optional properties if present
+                            if ($importBody.roleScopeTagIds) {
+                                $cleanBody.roleScopeTagIds = $importBody.roleScopeTagIds
+                                Write-Verbose "  Added roleScopeTagIds"
+                            }
+                            if ($importBody.templateReference -and $importBody.templateReference.templateId) {
+                                $cleanBody.templateReference = @{
+                                    templateId = $importBody.templateReference.templateId
+                                }
+                                Write-Verbose "  Added templateReference with templateId: $($importBody.templateReference.templateId)"
+                            }
+
+                            # Clean settings - remove id and odata navigation properties from each setting
+                            if ($importBody.settings) {
+                                Write-Verbose "  Processing $($importBody.settings.Count) settings"
+                                $settingIndex = 0
+                                foreach ($setting in $importBody.settings) {
+                                    $settingJson = $setting | ConvertTo-Json -Depth 100 -Compress
+                                    $cleanSetting = $settingJson | ConvertFrom-Json
+
+                                    # Remove 'id' and odata navigation link properties from the setting
+                                    $propsToRemoveFromSetting = @($cleanSetting.PSObject.Properties | Where-Object {
+                                        $_.Name -eq 'id' -or
+                                        $_.Name -match '@odata\.' -or
+                                        $_.Name -match 'settingDefinitions'
+                                    })
+
+                                    if ($propsToRemoveFromSetting.Count -gt 0) {
+                                        Write-Verbose "  Setting[$settingIndex] - Removing properties: $($propsToRemoveFromSetting.Name -join ', ')"
+                                    }
+
+                                    foreach ($prop in $propsToRemoveFromSetting) {
+                                        $cleanSetting.PSObject.Properties.Remove($prop.Name)
+                                    }
+
+                                    $cleanBody.settings += $cleanSetting
+                                    $settingIndex++
+                                }
+                            }
+
+                            $importBody = [PSCustomObject]$cleanBody
+
+                            # Debug: Show final body properties
+                            Write-Verbose "  Final body properties: $($importBody.PSObject.Properties.Name -join ', ')"
+
+                            # Debug: Show first 500 chars of JSON being sent
+                            $debugJson = $importBody | ConvertTo-Json -Depth 100 -Compress
+                            Write-Verbose "  Request body preview (first 500 chars): $($debugJson.Substring(0, [Math]::Min(500, $debugJson.Length)))"
                         }
 
                         # Clean up scheduledActionsForRule - remove nested @odata.context and IDs
