@@ -38,7 +38,7 @@ function Import-IntuneCompliancePolicy {
     # Test mode - only process first template
     if ($TestMode -and $templateFiles.Count -gt 0) {
         $templateFiles = $templateFiles | Select-Object -First 1
-        Write-Information "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
     }
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No compliance templates found in: $TemplatePath"
@@ -87,10 +87,10 @@ function Import-IntuneCompliancePolicy {
         $policiesToRemove = $existingByName.Keys | Where-Object { $_ -in $templateNames }
 
         if ($policiesToRemove.Count -gt 0) {
-            Write-Information "Removing $($policiesToRemove.Count) managed compliance policies..." -InformationAction Continue
+            Write-Host "Removing $($policiesToRemove.Count) managed compliance policies..." -InformationAction Continue
         }
         else {
-            Write-Information "No managed compliance policies found to delete" -InformationAction Continue
+            Write-Host "No managed compliance policies found to delete" -InformationAction Continue
             $summary = Get-ResultSummary -Results $results
             return $results
         }
@@ -104,7 +104,7 @@ function Import-IntuneCompliancePolicy {
             if ($PSCmdlet.ShouldProcess($policyName, "Delete compliance policy")) {
                 try {
                     Invoke-MgGraphRequest -Method DELETE -Uri $deleteEndpoint -ErrorAction Stop
-                    Write-Information "Deleted compliance policy: $policyName (ID: $policyId)" -InformationAction Continue
+                    Write-Host "Deleted compliance policy: $policyName (ID: $policyId)" -InformationAction Continue
                     $results += New-HydrationResult -Name $policyName -Type 'CompliancePolicy' -Action 'Deleted' -Status 'Success'
                 }
                 catch {
@@ -112,7 +112,7 @@ function Import-IntuneCompliancePolicy {
                     try {
                         $deleteEndpoint = "beta/deviceManagement/compliancePolicies/$policyId"
                         Invoke-MgGraphRequest -Method DELETE -Uri $deleteEndpoint -ErrorAction Stop
-                        Write-Information "Deleted compliance policy: $policyName (ID: $policyId)" -InformationAction Continue
+                        Write-Host "Deleted compliance policy: $policyName (ID: $policyId)" -InformationAction Continue
                         $results += New-HydrationResult -Name $policyName -Type 'CompliancePolicy' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
@@ -129,7 +129,7 @@ function Import-IntuneCompliancePolicy {
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Compliance removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Compliance removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -167,7 +167,7 @@ function Import-IntuneCompliancePolicy {
 
             if ($alreadyExists) {
                 if (-not $Force) {
-                    Write-Information "  Skipped: $displayName (already exists)" -InformationAction Continue
+                    Write-Host "  Skipped: $displayName (already exists)" -InformationAction Continue
                     $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Skipped' -Status 'Already exists'
                     continue
                 }
@@ -177,7 +177,7 @@ function Import-IntuneCompliancePolicy {
                 if ($PSCmdlet.ShouldProcess($displayName, "Delete existing compliance policy for upgrade")) {
                     try {
                         Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$existingId" -ErrorAction Stop
-                        Write-Information "Deleted existing compliance policy: $displayName (ID: $existingId)" -InformationAction Continue
+                        Write-Host "Deleted existing compliance policy: $displayName (ID: $existingId)" -InformationAction Continue
                     }
                     catch {
                         $errMessage = Get-GraphErrorMessage -ErrorRecord $_
@@ -228,7 +228,7 @@ function Import-IntuneCompliancePolicy {
 
                     if ($existingScript) {
                         $scriptId = $existingScript.id
-                        Write-Information "Using existing compliance script: $scriptDisplayName (ID: $scriptId)" -InformationAction Continue
+                        Write-Host "Using existing compliance script: $scriptDisplayName (ID: $scriptId)" -InformationAction Continue
                     }
                     elseif ($scriptDefinition -and $scriptDefinition.detectionScriptContentBase64) {
                         # Create the compliance script
@@ -244,7 +244,7 @@ function Import-IntuneCompliancePolicy {
 
                         $newScript = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceComplianceScripts" -Body ($scriptBody | ConvertTo-Json -Depth 10) -ContentType "application/json" -ErrorAction Stop
                         $scriptId = $newScript.id
-                        Write-Information "Created compliance script: $scriptDisplayName (ID: $scriptId)" -InformationAction Continue
+                        Write-Host "Created compliance script: $scriptDisplayName (ID: $scriptId)" -InformationAction Continue
                     }
                     else {
                         Write-Warning "Skipping compliance policy '$displayName' - no script definition found with detectionScriptContentBase64"
@@ -279,13 +279,13 @@ function Import-IntuneCompliancePolicy {
 
             # Remove internal helper definition before sending
             if ($importBody.PSObject.Properties['deviceCompliancePolicyScriptDefinition']) {
-                $importBody.PSObject.Properties.Remove('deviceCompliancePolicyScriptDefinition') | Out-Null
+                $null = $importBody.PSObject.Properties.Remove('deviceCompliancePolicyScriptDefinition')
             }
 
             if ($PSCmdlet.ShouldProcess($displayName, "Create compliance policy")) {
-                $response = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
+                $null = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
                 $action = if ($alreadyExists) { 'Updated' } else { 'Created' }
-                Write-Information "  $action : $displayName" -InformationAction Continue
+                Write-Host "  $action : $displayName" -InformationAction Continue
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action $action -Status 'Success'
             }
             else {
@@ -302,7 +302,7 @@ function Import-IntuneCompliancePolicy {
 
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "Compliance import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "Compliance import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
 
     return $results
 }

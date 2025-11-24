@@ -5,15 +5,31 @@ function New-HydrationResult {
     .DESCRIPTION
         Internal helper function for creating consistent result objects across all hydration operations
     #>
+    [CmdletBinding()]
     param(
+        [Parameter()]
         [string]$Name,
+
+        [Parameter()]
         [string]$Path,
+
+        [Parameter()]
         [string]$Type,
+
+        [Parameter()]
         [string]$Action,
+
+        [Parameter()]
         [Alias('Details')]
         [string]$Status,
+
+        [Parameter()]
         [string]$Id,
+
+        [Parameter()]
         [string]$Platform,
+
+        [Parameter()]
         [string]$State
     )
     $result = [PSCustomObject]@{

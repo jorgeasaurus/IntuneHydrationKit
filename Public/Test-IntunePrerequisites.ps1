@@ -10,19 +10,19 @@ function Test-IntunePrerequisites {
     [CmdletBinding()]
     param()
 
-    Write-Information "Validating Intune prerequisites..." -InformationAction Continue
+    Write-Host "Validating Intune prerequisites..." -InformationAction Continue
 
     $issues = @()
 
     try {
         # Check organization info and licenses
-        $org = Invoke-MgGraphRequest -Method GET -Uri "v1.0/organization" -ErrorAction Stop
+        $org = Invoke-MgGraphRequest -Method GET -Uri "beta/organization" -ErrorAction Stop
         $orgDetails = $org.value[0]
 
-        Write-Information "Connected to: $($orgDetails.displayName)" -InformationAction Continue
+        Write-Host "Connected to: $($orgDetails.displayName)" -InformationAction Continue
 
         # Check for Intune service plan
-        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "v1.0/subscribedSkus" -ErrorAction Stop
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
 
         $intuneServicePlans = @(
             'INTUNE_A',           # Intune Plan 1
@@ -37,7 +37,7 @@ function Test-IntunePrerequisites {
             foreach ($plan in $sku.servicePlans) {
                 if ($plan.servicePlanName -in $intuneServicePlans -and $plan.provisioningStatus -eq 'Success') {
                     $hasIntune = $true
-                    Write-Information "Found Intune license: $($plan.servicePlanName)" -InformationAction Continue
+                    Write-Host "Found Intune license: $($plan.servicePlanName)" -InformationAction Continue
                     break
                 }
             }
@@ -60,7 +60,7 @@ function Test-IntunePrerequisites {
             $issues += "Microsoft Intune MDM policy exists but is not valid. Please verify MDM authority configuration."
         }
         else {
-            Write-Information "MDM Authority: Microsoft Intune (OK)" -InformationAction Continue
+            Write-Host "MDM Authority: Microsoft Intune (OK)" -InformationAction Continue
         }
 
         # Report results
@@ -71,7 +71,7 @@ function Test-IntunePrerequisites {
             throw "Prerequisite checks failed. Please resolve the issues above before continuing."
         }
 
-        Write-Information "All prerequisite checks passed" -InformationAction Continue
+        Write-Host "All prerequisite checks passed" -InformationAction Continue
         return $true
     }
     catch {

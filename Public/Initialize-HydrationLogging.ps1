@@ -23,10 +23,13 @@ function Initialize-HydrationLogging {
     $script:LogPath = $LogPath
     $script:VerboseLogging = $EnableVerbose
 
-    if ($(whoami) -ne 'jorgeasaurus') {
-        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    }
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
     $script:CurrentLogFile = Join-Path -Path $LogPath -ChildPath "hydration-$timestamp.log"
+
+    # Clear existing log file
+    if (Test-Path -Path $script:CurrentLogFile) {
+        Clear-Content -Path $script:CurrentLogFile
+    }
 
     Write-HydrationLog -Message "Logging initialized" -Level Info
 }

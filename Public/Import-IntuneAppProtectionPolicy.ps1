@@ -38,7 +38,7 @@ function Import-IntuneAppProtectionPolicy {
     # Test mode - only process first template
     if ($TestMode -and $templateFiles.Count -gt 0) {
         $templateFiles = $templateFiles | Select-Object -First 1
-        Write-Information "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
     }
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
@@ -64,7 +64,7 @@ function Import-IntuneAppProtectionPolicy {
             }
         }
 
-        Write-Information "Removing managed app protection policies..." -InformationAction Continue
+        Write-Host "Removing managed app protection policies..." -InformationAction Continue
 
         foreach ($endpoint in $typeToEndpoint.Values) {
             $listUri = $endpoint
@@ -83,7 +83,7 @@ function Import-IntuneAppProtectionPolicy {
                         if ($PSCmdlet.ShouldProcess($policyName, "Delete app protection policy")) {
                             try {
                                 Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$policyId" -ErrorAction Stop
-                                Write-Information "Deleted app protection policy: $policyName (ID: $policyId)" -InformationAction Continue
+                                Write-Host "Deleted app protection policy: $policyName (ID: $policyId)" -InformationAction Continue
                                 $results += New-HydrationResult -Name $policyName -Type 'AppProtection' -Action 'Deleted' -Status 'Success'
                             }
                             catch {
@@ -106,7 +106,7 @@ function Import-IntuneAppProtectionPolicy {
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "App protection removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "App protection removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -142,7 +142,7 @@ function Import-IntuneAppProtectionPolicy {
             } while ($listUri)
 
             if ($existingMatch) {
-                Write-Information "  Skipped: $displayName (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $displayName (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status 'Already exists'
                 continue
             }
@@ -180,7 +180,7 @@ function Import-IntuneAppProtectionPolicy {
 
             if ($PSCmdlet.ShouldProcess($displayName, "Create app protection policy")) {
                 $response = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
-                Write-Information "  Created: $displayName" -InformationAction Continue
+                Write-Host "  Created: $displayName" -InformationAction Continue
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'AppProtection' -Action 'Created' -Status 'Success'
             }
             else {
@@ -196,7 +196,7 @@ function Import-IntuneAppProtectionPolicy {
 
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "App protection import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "App protection import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
 
     return $results
 }

@@ -5,7 +5,11 @@ function Get-GraphErrorMessage {
     .DESCRIPTION
         Internal helper function for parsing Graph API error details
     #>
-    param($ErrorRecord)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.ErrorRecord]$ErrorRecord
+    )
     if ($ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
         return $ErrorRecord.ErrorDetails.Message
     }

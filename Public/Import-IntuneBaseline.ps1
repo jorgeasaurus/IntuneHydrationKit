@@ -129,7 +129,7 @@ function Import-IntuneBaseline {
 
     # Remove existing baseline policies if requested - ONLY OIB policies (matching naming convention)
     if ($RemoveExisting) {
-        Write-Information "Removing OpenIntuneBaseline policies..." -InformationAction Continue
+        Write-Host "Removing OpenIntuneBaseline policies..." -InformationAction Continue
 
         # OIB policies follow naming convention: "OS - OIB - Category - Type - Name - Version"
         # Examples: "MacOS - OIB - Compliance - U - Device Health - v1.0"
@@ -174,7 +174,7 @@ function Import-IntuneBaseline {
                         if ($PSCmdlet.ShouldProcess($policyName, "Delete baseline policy")) {
                             try {
                                 Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$policyId" -ErrorAction Stop
-                                Write-Information "Deleted: $policyName" -InformationAction Continue
+                                Write-Host "Deleted: $policyName" -InformationAction Continue
                                 $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'Deleted' -Status 'Success'
                             }
                             catch {
@@ -197,7 +197,7 @@ function Import-IntuneBaseline {
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Baseline removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Baseline removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -224,20 +224,20 @@ function Import-IntuneBaseline {
                 OsFolder = $osFolder.Name
                 PolicyType = $subFolder.Name
             }
-            Write-Information "Found $($jsonFiles.Count) policies in $($osFolder.Name)/$($subFolder.Name)" -InformationAction Continue
+            Write-Host "Found $($jsonFiles.Count) policies in $($osFolder.Name)/$($subFolder.Name)" -InformationAction Continue
         }
     }
 
-    Write-Information "Total policies to import: $totalPolicies" -InformationAction Continue
+    Write-Host "Total policies to import: $totalPolicies" -InformationAction Continue
 
     # Test mode - only process first policy folder
     if ($TestMode -and $policyTypefolders.Count -gt 0) {
         $policyTypefolders = @($policyTypefolders[0])
-        Write-Information "Test mode: Processing only first policy folder: $($policyTypefolders[0].OsFolder)/$($policyTypefolders[0].PolicyType)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first policy folder: $($policyTypefolders[0].OsFolder)/$($policyTypefolders[0].PolicyType)" -InformationAction Continue
     }
 
     if ($PSCmdlet.ShouldProcess("$totalPolicies policies from OpenIntuneBaseline", "Import to Intune")) {
-        Write-Information "Starting direct Graph API import..." -InformationAction Continue
+        Write-Host "Starting direct Graph API import..." -InformationAction Continue
 
         foreach ($policyFolder in $policyTypefolders) {
             $folder = $policyFolder.Folder
@@ -247,7 +247,7 @@ function Import-IntuneBaseline {
 
             # For IntuneManagement folders, try to import using @odata.type routing
             if ($folderName -in $intuneManagementFolders) {
-                Write-Information "Processing $osName/$folderName - attempting Graph API import..." -InformationAction Continue
+                Write-Host "Processing $osName/$folderName - attempting Graph API import..." -InformationAction Continue
 
                 foreach ($jsonFile in $jsonFiles) {
                     $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
@@ -290,23 +290,23 @@ function Import-IntuneBaseline {
                             }
                         }
                         else {
-                            # For other types, check cached list first
-                            $existingPolicy = $existingPolicies.ContainsKey($displayName)
-                            if (-not $existingPolicy) {
-                                # Fetch from this specific endpoint
-                                try {
-                                    $checkUri = "beta/$typeEndpoint"
-                                    $checkResponse = Invoke-MgGraphRequest -Method GET -Uri $checkUri -ErrorAction Stop
+                            # For other types, fetch from this specific endpoint with pagination
+                            try {
+                                $listUri = "beta/$typeEndpoint"
+                                do {
+                                    $checkResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
                                     $existingPolicy = $checkResponse.value | Where-Object { $_.displayName -eq $displayName }
-                                }
-                                catch {
-                                    $existingPolicy = $null
-                                }
+                                    if ($existingPolicy) { break }
+                                    $listUri = $checkResponse.'@odata.nextLink'
+                                } while ($listUri)
+                            }
+                            catch {
+                                $existingPolicy = $null
                             }
                         }
 
                         if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
-                            Write-Information "  Skipping existing: $displayName" -InformationAction Continue
+                            Write-Host "  Skipping existing: $displayName" -InformationAction Continue
                             $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Skipped' -Status 'Already exists'
                             continue
                         }
@@ -446,7 +446,7 @@ function Import-IntuneBaseline {
                         # Create the policy
                         $response = Invoke-MgGraphRequest -Method POST -Uri "beta/$typeEndpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
 
-                        Write-Information "  Created: $displayName" -InformationAction Continue
+                        Write-Host "  Created: $displayName" -InformationAction Continue
                         $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Created' -Status 'Success'
                     }
                     catch {
@@ -471,7 +471,11 @@ function Import-IntuneBaseline {
                 continue
             }
 
-            Write-Information "Importing $($jsonFiles.Count) items from $osName/$folderName..." -InformationAction Continue
+            Write-Host "Importing $($jsonFiles.Count) items from $osName/$folderName..." -InformationAction Continue
+
+            # Progress tracking for this folder
+            $folderTotal = $jsonFiles.Count
+            $folderCurrent = 0
 
             # Pre-fetch existing policies for this endpoint to avoid repeated API calls (page through all results)
             $existingPolicies = @{}
@@ -493,6 +497,9 @@ function Import-IntuneBaseline {
             }
 
             foreach ($jsonFile in $jsonFiles) {
+                $folderCurrent++
+                Write-Progress -Activity "Importing $osName/$folderName" -Status "$folderCurrent of $folderTotal" -PercentComplete (($folderCurrent / $folderTotal) * 100)
+
                 $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
                 try {
@@ -512,7 +519,7 @@ function Import-IntuneBaseline {
                     $existingPolicy = $existingPolicies.ContainsKey($displayName)
 
                     if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
-                        Write-Information "  Skipping existing: $displayName" -InformationAction Continue
+                        Write-Host "  Skipping existing: $displayName" -InformationAction Continue
                         $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Skipped' -Status 'Already exists'
                         continue
                     }
@@ -552,7 +559,7 @@ function Import-IntuneBaseline {
                         $action = 'Created'
                     }
 
-                    Write-Information "  $action : $displayName" -InformationAction Continue
+                    Write-Host "  $action : $displayName" -InformationAction Continue
 
                     $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action $action -Status 'Success'
                 }
@@ -566,11 +573,12 @@ function Import-IntuneBaseline {
                 # Small delay to avoid rate limiting
                 Start-Sleep -Milliseconds 100
             }
+            Write-Progress -Activity "Importing $osName/$folderName" -Completed
         }
 
         $summary = Get-ResultSummary -Results $results
 
-        Write-Information "Import completed. Created: $($summary.Created), Updated: $($summary.Updated), Skipped: $($summary.Skipped), Failed: $($summary.Failed)" -InformationAction Continue
+        Write-Host "Import completed. Created: $($summary.Created), Updated: $($summary.Updated), Skipped: $($summary.Skipped), Failed: $($summary.Failed)" -InformationAction Continue
     }
     else {
         # WhatIf mode - just report what would be imported

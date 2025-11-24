@@ -30,6 +30,7 @@ param(
     [switch]$Force
 )
 
+
 $ErrorActionPreference = 'Stop'
 $InformationPreference = 'Continue'
 
@@ -52,16 +53,20 @@ try {
     $settings = Import-HydrationSettings -Path $SettingsPath
 
     # Display current settings
-    Write-Host "Loaded settings from: $SettingsPath" -ForegroundColor Green
-    Write-Host "Target Tenant: $($settings.tenant.tenantId)" -ForegroundColor Green
-    Write-Host "Authentication Mode: $($settings.authentication.mode)" -ForegroundColor Green
-    Write-Host "Options:" -ForegroundColor Green
-    Write-Host $settings.options 
-    Write-Host "Imports Enabled:" -ForegroundColor Green
-    Write-Host $settings.imports 
-    Write-Host ""
+    Write-Host "Loaded settings from: $SettingsPath" -InformationAction Continue
+    Write-Host "Target Tenant: $($settings.tenant.tenantId)" -InformationAction Continue
+    Write-Host "Authentication Mode: $($settings.authentication.mode)" -InformationAction Continue
+    Write-Host "Options:" -InformationAction Continue
+    Write-Host ($settings.options | Out-String) -InformationAction Continue
+    Write-Host "Imports Enabled:" -InformationAction Continue
+    Write-Host ($settings.imports | Out-String) -InformationAction Continue
 
     # Apply options from settings file (command-line switches take precedence)
+    # Initialize variables with defaults (these will be set below if $settings.options exists)
+    $createEnabled = $false
+    $RemoveExisting = $false
+    $TestMode = $false
+
     if ($settings.options) {
         # Validate CUD options - only one can be true
         $createEnabled = $settings.options.create -eq $true
@@ -112,7 +117,7 @@ try {
     }
 
     if ($RemoveExisting) {
-        if (-not $CreateEnabled) {
+        if (-not $createEnabled) {
             Write-HydrationLog -Message "DELETE-ONLY mode - configurations will be deleted without recreation" -Level Warning
         }
         else {
@@ -180,7 +185,7 @@ try {
 
             try {
                 # Get all dynamic groups
-                $existingGroups = Invoke-MgGraphRequest -Method GET -Uri "v1.0/groups?`$filter=groupTypes/any(c:c eq 'DynamicMembership')&`$select=id,displayName" -ErrorAction Stop
+                $existingGroups = Invoke-MgGraphRequest -Method GET -Uri "beta/groups?`$filter=groupTypes/any(c:c eq 'DynamicMembership')&`$select=id,displayName" -ErrorAction Stop
                 foreach ($group in $existingGroups.value) {
                     # Only delete if it matches a managed group name
                     if ($group.displayName -notin $managedGroupNames) {
@@ -189,7 +194,7 @@ try {
 
                     if ($PSCmdlet.ShouldProcess($group.displayName, "Delete dynamic group")) {
                         try {
-                            Invoke-MgGraphRequest -Method DELETE -Uri "v1.0/groups/$($group.id)" -ErrorAction Stop
+                            Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
                             Write-HydrationLog -Message "  Deleted: $($group.displayName)" -Level Info
                             $allResults += New-HydrationResult -Type 'DynamicGroup' -Name $group.displayName -Action 'Deleted' -Status 'Success'
                         }
@@ -249,7 +254,7 @@ try {
         Write-HydrationLog -Message "Step 4: Creating Device Filters" -Level Info
 
         # Import function handles ShouldProcess internally for each filter
-        $filterResults = Import-IntuneDeviceFilter -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $filterResults = Import-IntuneDeviceFilter -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $filterResults
     }
 
@@ -267,6 +272,7 @@ try {
         $baselineParams['Force'] = $Force
         $baselineParams['RemoveExisting'] = $RemoveExisting
         $baselineParams['TestMode'] = $TestMode
+        $baselineParams['WhatIf'] = $WhatIfPreference
         $baselineResults = Import-IntuneBaseline @baselineParams
         $allResults += $baselineResults
     }
@@ -276,7 +282,7 @@ try {
         Write-HydrationLog -Message "Step 6: Importing Compliance templates" -Level Info
 
         # Import function handles ShouldProcess internally for each policy
-        $complianceResults = Import-IntuneCompliancePolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $complianceResults = Import-IntuneCompliancePolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $complianceResults
     }
 
@@ -285,7 +291,7 @@ try {
         Write-HydrationLog -Message "Step 7: Importing Notification Templates" -Level Info
 
         # Import function handles ShouldProcess internally for each template
-        $notificationResults = Import-IntuneNotificationTemplate -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $notificationResults = Import-IntuneNotificationTemplate -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $notificationResults
     }
 
@@ -294,7 +300,7 @@ try {
         Write-HydrationLog -Message "Step 8: Importing App Protection policies" -Level Info
 
         # Import function handles ShouldProcess internally for each policy
-        $mamResults = Import-IntuneAppProtectionPolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $mamResults = Import-IntuneAppProtectionPolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $mamResults
     }
 
@@ -303,7 +309,7 @@ try {
         Write-HydrationLog -Message "Step 9: Importing Enrollment Profiles" -Level Info
 
         # Import function handles ShouldProcess internally for each profile
-        $enrollmentResults = Import-IntuneEnrollmentProfile -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $enrollmentResults = Import-IntuneEnrollmentProfile -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $enrollmentResults
     }
 
@@ -312,7 +318,7 @@ try {
         Write-HydrationLog -Message "Step 10: Importing Conditional Access Starter Pack" -Level Info
 
         # Import function handles ShouldProcess internally for each policy
-        $caResults = Import-IntuneConditionalAccessPolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode
+        $caResults = Import-IntuneConditionalAccessPolicy -Force:$Force -RemoveExisting:$RemoveExisting -TestMode:$TestMode -WhatIf:$WhatIfPreference
         $allResults += $caResults
     }
 
@@ -424,19 +430,19 @@ try {
     Write-HydrationLog -Message "=== Intune Hydration Kit Completed ===" -Level Info
 
     # Friendly console summary
-    Write-Host ""
-    Write-Host "---------------- Summary ----------------" -ForegroundColor Cyan
+    Write-Host "" -InformationAction Continue
+    Write-Host "---------------- Summary ----------------" -InformationAction Continue
     if ($WhatIfPreference) {
-        Write-Host ("Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed) -ForegroundColor Yellow
+        Write-Host ("Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed) -InformationAction Continue
     }
     else {
-        Write-Host ("Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed) -ForegroundColor Cyan
+        Write-Host ("Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed) -InformationAction Continue
     }
-    Write-Host "Reports: $reportPath" -ForegroundColor Green
+    Write-Host "Reports: $reportPath" -InformationAction Continue
     if ($jsonReportPath) {
-        Write-Host "JSON:    $jsonReportPath" -ForegroundColor Green
+        Write-Host "JSON:    $jsonReportPath" -InformationAction Continue
     }
-    Write-Host "----------------------------------------" -ForegroundColor Cyan
+    Write-Host "----------------------------------------" -InformationAction Continue
 
     # Exit with appropriate code
     if ($summary.Failed -gt 0) {
@@ -445,7 +451,7 @@ try {
     }
     else {
         if ($WhatIfPreference) {
-            Write-HydrationLog -Message "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.Skipped) skipped" -Level Info
+            Write-HydrationLog -Message "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.WouldDelete) would delete, $($summary.Skipped) skipped" -Level Info
         }
         else {
             Write-HydrationLog -Message "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Skipped) skipped" -Level Info

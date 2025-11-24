@@ -24,6 +24,8 @@ function New-IntuneDynamicGroup {
         [string]$Description = "",
 
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({ $_ -match '^\(' }, ErrorMessage = "MembershipRule must start with a parenthesis")]
         [string]$MembershipRule,
 
         [Parameter()]
@@ -32,13 +34,23 @@ function New-IntuneDynamicGroup {
     )
 
     try {
-        # Check if group already exists
-        $existingGroups = Invoke-MgGraphRequest -Method GET -Uri "v1.0/groups?`$filter=displayName eq '$DisplayName'" -ErrorAction Stop
+        # Check if group already exists (escape single quotes for OData filter)
+        # Use pagination to handle large result sets
+        $safeDisplayName = $DisplayName -replace "'", "''"
+        $listUri = "beta/groups?`$filter=displayName eq '$safeDisplayName'"
+        $existingGroup = $null
+        do {
+            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
+            if ($response.value.Count -gt 0) {
+                $existingGroup = $response.value[0]
+                break
+            }
+            $listUri = $response.'@odata.nextLink'
+        } while ($listUri)
 
-        if ($existingGroups.value.Count -gt 0) {
-            $existingGroup = $existingGroups.value[0]
-            Write-Information "Group already exists: $DisplayName (ID: $($existingGroup.id))" -InformationAction Continue
-            return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Action 'Skipped' -Status 'Group already exists'
+        if ($existingGroup) {
+            Write-Host "Group already exists: $DisplayName (ID: $($existingGroup.id))" -InformationAction Continue
+            return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'DynamicGroup' -Action 'Skipped' -Status 'Group already exists'
         }
 
         # Create new dynamic group
@@ -55,18 +67,18 @@ function New-IntuneDynamicGroup {
                 membershipRuleProcessingState = $MembershipRuleProcessingState
             }
 
-            $newGroup = Invoke-MgGraphRequest -Method POST -Uri "v1.0/groups" -Body $groupBody -ErrorAction Stop
+            $newGroup = Invoke-MgGraphRequest -Method POST -Uri "beta/groups" -Body $groupBody -ErrorAction Stop
 
-            Write-Information "Created group: $DisplayName (ID: $($newGroup.id))" -InformationAction Continue
+            Write-Host "Created group: $DisplayName (ID: $($newGroup.id))" -InformationAction Continue
 
-            return New-HydrationResult -Name $newGroup.displayName -Id $newGroup.id -Action 'Created' -Status 'New group created'
+            return New-HydrationResult -Name $newGroup.displayName -Id $newGroup.id -Type 'DynamicGroup' -Action 'Created' -Status 'New group created'
         }
         else {
-            return New-HydrationResult -Name $DisplayName -Action 'Skipped' -Status 'WhatIf mode'
+            return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'WouldCreate' -Status 'DryRun'
         }
     }
     catch {
         Write-Error "Failed to create group '$DisplayName': $_"
-        return New-HydrationResult -Name $DisplayName -Action 'Failed' -Status $_.Exception.Message
+        return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'Failed' -Status $_.Exception.Message
     }
 }

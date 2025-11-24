@@ -38,7 +38,7 @@ function Import-IntuneNotificationTemplate {
     # Test mode - only process first template
     if ($TestMode -and $templateFiles.Count -gt 0) {
         $templateFiles = $templateFiles | Select-Object -First 1
-        Write-Information "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
     }
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
@@ -81,7 +81,7 @@ function Import-IntuneNotificationTemplate {
         $templatesToRemove = $existingByName.Keys | Where-Object { $_ -in $managedNames }
 
         if ($templatesToRemove.Count -gt 0) {
-            Write-Information "Removing $($templatesToRemove.Count) managed notification templates..." -InformationAction Continue
+            Write-Host "Removing $($templatesToRemove.Count) managed notification templates..." -InformationAction Continue
 
             foreach ($templateName in $templatesToRemove) {
                 $templateId = $existingByName[$templateName]
@@ -89,7 +89,7 @@ function Import-IntuneNotificationTemplate {
                 if ($PSCmdlet.ShouldProcess($templateName, "Delete notification template")) {
                     try {
                         Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/notificationMessageTemplates/$templateId" -ErrorAction Stop
-                        Write-Information "Deleted notification template: $templateName (ID: $templateId)" -InformationAction Continue
+                        Write-Host "Deleted notification template: $templateName (ID: $templateId)" -InformationAction Continue
                         $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
@@ -104,12 +104,12 @@ function Import-IntuneNotificationTemplate {
             }
         }
         else {
-            Write-Information "No managed notification templates found to delete" -InformationAction Continue
+            Write-Host "No managed notification templates found to delete" -InformationAction Continue
         }
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Notification template removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Notification template removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -125,7 +125,7 @@ function Import-IntuneNotificationTemplate {
             }
 
             if ($existingByName.ContainsKey($displayName)) {
-                Write-Information "  Skipped: $displayName (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $displayName (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
                 continue
             }
@@ -139,20 +139,16 @@ function Import-IntuneNotificationTemplate {
 
             $importBody = $template | ConvertTo-Json -Depth 50 | ConvertFrom-Json
 
-            # Add hydration kit tag to description
-            $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
-
             if ($PSCmdlet.ShouldProcess($displayName, "Create notification template")) {
                 $newTemplate = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates" -Body ($importBody | ConvertTo-Json -Depth 50) -ContentType "application/json" -ErrorAction Stop
-                Write-Information "  Created: $displayName" -InformationAction Continue
+                Write-Host "  Created: $displayName" -InformationAction Continue
 
                 # Create localized messages if present
                 foreach ($loc in $localizedMessages) {
                     try {
                         $locBody = $loc | ConvertTo-Json -Depth 20
                         Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
-                        Write-Information "  Added localized message ($($loc.locale))" -InformationAction Continue
+                        Write-Host "  Added localized message ($($loc.locale))" -InformationAction Continue
                     }
                     catch {
                         Write-Warning "  Failed to add localized message ($($loc.locale)): $($_.Exception.Message)"
@@ -174,7 +170,7 @@ function Import-IntuneNotificationTemplate {
 
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "Notification template import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "Notification template import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
 
     return $results
 }

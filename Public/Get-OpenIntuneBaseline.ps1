@@ -33,32 +33,32 @@ function Get-OpenIntuneBaseline {
     $zipPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OpenIntuneBaseline-$Branch.zip"
 
     try {
-        Write-Information "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
+        Write-Host "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
 
         # Download the repository
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
 
-        # Clean existing directory if present
+        # Clean existing directory if present (always execute, not affected by WhatIf)
         if (Test-Path -Path $DestinationPath) {
-            Remove-Item -Path $DestinationPath -Recurse -Force
+            Remove-Item -Path $DestinationPath -Recurse -Force -WhatIf:$false
         }
 
         # Extract
-        Expand-Archive -Path $zipPath -DestinationPath $DestinationPath -Force
+        Expand-Archive -Path $zipPath -DestinationPath $DestinationPath -Force -WhatIf:$false
 
         # The archive extracts to a subfolder, move contents up
         $extractedFolder = Get-ChildItem -Path $DestinationPath -Directory | Select-Object -First 1
         if ($extractedFolder) {
             $tempMove = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OIB-temp-$(Get-Random)"
-            Move-Item -Path $extractedFolder.FullName -Destination $tempMove
-            Remove-Item -Path $DestinationPath -Force
-            Move-Item -Path $tempMove -Destination $DestinationPath
+            Move-Item -Path $extractedFolder.FullName -Destination $tempMove -WhatIf:$false
+            Remove-Item -Path $DestinationPath -Force -Recurse -WhatIf:$false
+            Move-Item -Path $tempMove -Destination $DestinationPath -WhatIf:$false
         }
 
         # Clean up zip
-        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue -WhatIf:$false
 
-        Write-Information "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
+        Write-Host "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
 
         return $DestinationPath
     }

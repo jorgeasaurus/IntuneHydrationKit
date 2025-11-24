@@ -23,9 +23,10 @@ function Import-IntuneDeviceFilter {
     $results = @()
 
     # Get all existing filters first with pagination (OData filter on displayName not supported for this endpoint)
+    # Use $select to reduce payload size
     $existingFilterNames = @{}
     try {
-        $listUri = "beta/deviceManagement/assignmentFilters"
+        $listUri = "beta/deviceManagement/assignmentFilters?`$select=id,displayName"
         do {
             $existingFiltersResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
             foreach ($existingFilter in $existingFiltersResponse.value) {
@@ -127,7 +128,7 @@ function Import-IntuneDeviceFilter {
     # Apply test mode - only process first filter
     if ($TestMode -and $filterDefinitions.Count -gt 0) {
         $filterDefinitions = @($filterDefinitions[0])
-        Write-Information "Test mode: Processing only first filter: $($filterDefinitions[0].DisplayName)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first filter: $($filterDefinitions[0].DisplayName)" -InformationAction Continue
     }
 
     # Remove existing filters if requested - ONLY filters defined in this codebase
@@ -135,7 +136,7 @@ function Import-IntuneDeviceFilter {
         $filtersToDelete = $existingFilterNames.Keys | Where-Object { $_ -in $managedFilterNames }
 
         if ($filtersToDelete.Count -gt 0) {
-            Write-Information "Removing $($filtersToDelete.Count) managed device filters..." -InformationAction Continue
+            Write-Host "Removing $($filtersToDelete.Count) managed device filters..." -InformationAction Continue
 
             foreach ($filterName in $filtersToDelete) {
                 $filterId = $existingFilterNames[$filterName]
@@ -143,7 +144,7 @@ function Import-IntuneDeviceFilter {
                 if ($PSCmdlet.ShouldProcess($filterName, "Delete device filter")) {
                     try {
                         Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/assignmentFilters/$filterId" -ErrorAction Stop
-                        Write-Information "Deleted device filter: $filterName (ID: $filterId)" -InformationAction Continue
+                        Write-Host "Deleted device filter: $filterName (ID: $filterId)" -InformationAction Continue
                         $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
@@ -158,12 +159,12 @@ function Import-IntuneDeviceFilter {
             }
         }
         else {
-            Write-Information "No managed device filters found to delete" -InformationAction Continue
+            Write-Host "No managed device filters found to delete" -InformationAction Continue
         }
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Device filter removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Device filter removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -171,7 +172,7 @@ function Import-IntuneDeviceFilter {
         try {
             # Check if filter already exists using pre-fetched list
             if ($existingFilterNames.ContainsKey($filter.DisplayName)) {
-                Write-Information "  Skipped: $($filter.DisplayName) (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $($filter.DisplayName) (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $filter.DisplayName -Id $existingFilterNames[$filter.DisplayName] -Platform $filter.Platform -Action 'Skipped' -Status 'Already exists'
                 continue
             }
@@ -187,7 +188,7 @@ function Import-IntuneDeviceFilter {
 
                 $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
 
-                Write-Information "  Created: $($filter.DisplayName)" -InformationAction Continue
+                Write-Host "  Created: $($filter.DisplayName)" -InformationAction Continue
 
                 $results += New-HydrationResult -Name $filter.DisplayName -Id $newFilter.id -Platform $filter.Platform -Action 'Created' -Status 'Success'
             }
@@ -204,7 +205,7 @@ function Import-IntuneDeviceFilter {
     # Summary
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "Device filter import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "Device filter import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
 
     return $results
 }

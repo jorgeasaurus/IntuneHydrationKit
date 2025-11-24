@@ -43,7 +43,7 @@ function Import-IntuneEnrollmentProfile {
 
     # Remove existing enrollment profiles if requested - ONLY profiles that match our templates
     if ($RemoveExisting) {
-        Write-Information "Removing managed enrollment profiles..." -InformationAction Continue
+        Write-Host "Removing managed enrollment profiles..." -InformationAction Continue
 
         # Get managed profile names from templates
         $autopilotTemplatePath = Join-Path -Path $TemplatePath -ChildPath "Windows-Autopilot-Profile.json"
@@ -71,7 +71,7 @@ function Import-IntuneEnrollmentProfile {
                     if ($PSCmdlet.ShouldProcess($matchingProfile.displayName, "Delete Autopilot profile")) {
                         try {
                             Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($matchingProfile.id)" -ErrorAction Stop
-                            Write-Information "Deleted Autopilot profile: $($matchingProfile.displayName)" -InformationAction Continue
+                            Write-Host "Deleted Autopilot profile: $($matchingProfile.displayName)" -InformationAction Continue
                             $results += New-HydrationResult -Name $matchingProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Deleted' -Status 'Success'
                         }
                         catch {
@@ -103,7 +103,7 @@ function Import-IntuneEnrollmentProfile {
                     if ($PSCmdlet.ShouldProcess($matchingESP.displayName, "Delete ESP profile")) {
                         try {
                             Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$($matchingESP.id)" -ErrorAction Stop
-                            Write-Information "Deleted ESP profile: $($matchingESP.displayName)" -InformationAction Continue
+                            Write-Host "Deleted ESP profile: $($matchingESP.displayName)" -InformationAction Continue
                             $results += New-HydrationResult -Name $matchingESP.displayName -Type 'EnrollmentStatusPage' -Action 'Deleted' -Status 'Success'
                         }
                         catch {
@@ -124,16 +124,15 @@ function Import-IntuneEnrollmentProfile {
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Enrollment profile removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Enrollment profile removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
     # Test mode - only process Autopilot profile (first profile type)
-    $processAutopilot = $true
     $processESP = -not $TestMode  # Skip ESP in test mode
 
     if ($TestMode) {
-        Write-Information "Test mode: Processing only Autopilot profile" -InformationAction Continue
+        Write-Host "Test mode: Processing only Autopilot profile" -InformationAction Continue
     }
 
     #region Windows Autopilot Deployment Profile
@@ -144,42 +143,36 @@ function Import-IntuneEnrollmentProfile {
         $profileName = $autopilotTemplate.displayName
 
         try {
-            # Check if profile exists
-            $existingProfiles = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$filter=displayName eq '$profileName'" -ErrorAction Stop
+            # Check if profile exists (escape single quotes for OData filter)
+            $safeProfileName = $profileName -replace "'", "''"
+            $existingProfiles = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$filter=displayName eq '$safeProfileName'" -ErrorAction Stop
 
             if ($existingProfiles.value.Count -gt 0) {
-                Write-Information "  Skipped: $profileName (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $profileName (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $existingProfiles.value[0].id -Action 'Skipped' -Status 'Already exists'
             }
             elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot deployment profile")) {
-                # Build profile body with all required properties
-                $language = if ([string]::IsNullOrWhiteSpace($autopilotTemplate.language)) { 'en-US' } else { $autopilotTemplate.language }
-                $descriptionText = if ($autopilotTemplate.description) { "$($autopilotTemplate.description) - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
-                $profileBody = @{
-                    "@odata.type" = "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile"
-                    displayName = $autopilotTemplate.displayName
-                    description = $descriptionText
-                    deviceType = $autopilotTemplate.deviceType
-                    deviceNameTemplate = if ($DeviceNameTemplate) { $DeviceNameTemplate } else { $autopilotTemplate.deviceNameTemplate }
-                    language = $language
-                    enableWhiteGlove = $autopilotTemplate.enableWhiteGlove
-                    extractHardwareHash = $autopilotTemplate.extractHardwareHash
-                    hybridAzureADJoinSkipConnectivityCheck = $autopilotTemplate.hybridAzureADJoinSkipConnectivityCheck
-                    outOfBoxExperienceSettings = @{
-                        hidePrivacySettings = $autopilotTemplate.outOfBoxExperienceSettings.hidePrivacySettings
-                        hideEULA = $autopilotTemplate.outOfBoxExperienceSettings.hideEULA
-                        userType = $autopilotTemplate.outOfBoxExperienceSettings.userType
-                        deviceUsageType = $autopilotTemplate.outOfBoxExperienceSettings.deviceUsageType
-                        skipKeyboardSelectionPage = $autopilotTemplate.outOfBoxExperienceSettings.skipKeyboardSelectionPage
-                        hideEscapeLink = $autopilotTemplate.outOfBoxExperienceSettings.hideEscapeLink
-                    }
-                    roleScopeTagIds = @()
+                # Read template directly
+                $templateObj = Get-Content -Path $autopilotTemplatePath -Raw | ConvertFrom-Json
+
+                # Update description with hydration tag (use newline to avoid API issues with dashes)
+                $templateObj.description = if ($templateObj.description) {
+                    "$($templateObj.description)`nImported by Intune Hydration Kit"
+                } else {
+                    "Imported by Intune Hydration Kit"
                 }
 
-                $jsonBody = $profileBody | ConvertTo-Json -Depth 10
-                $newProfile = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -Body $jsonBody -ContentType "application/json" -ErrorAction Stop
+                # Apply custom device name template if provided
+                if ($DeviceNameTemplate) {
+                    $templateObj.deviceNameTemplate = $DeviceNameTemplate
+                }
 
-                Write-Information "  Created: $profileName" -InformationAction Continue
+                # Convert to JSON for API call
+                $jsonBody = $templateObj | ConvertTo-Json -Depth 10
+
+                $newProfile = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -Body $jsonBody -ContentType "application/json" -OutputType PSObject -ErrorAction Stop
+
+                Write-Host "  Created: $profileName" -InformationAction Continue
 
                 $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $newProfile.id -Action 'Created' -Status 'Success'
             }
@@ -202,13 +195,14 @@ function Import-IntuneEnrollmentProfile {
         $espName = $espTemplate.displayName
 
         try {
-            # Check if ESP exists
-            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=displayName eq '$espName'" -ErrorAction Stop
+            # Check if ESP exists (escape single quotes for OData filter)
+            $safeEspName = $espName -replace "'", "''"
+            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=displayName eq '$safeEspName'" -ErrorAction Stop
 
             $customESP = $existingESP.value | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration' -and $_.displayName -eq $espName }
 
             if ($customESP) {
-                Write-Information "  Skipped: $espName (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $espName (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $espName -Type 'EnrollmentStatusPage' -Id $customESP.id -Action 'Skipped' -Status 'Already exists'
             }
             elseif ($PSCmdlet.ShouldProcess($espName, "Create Enrollment Status Page profile")) {
@@ -231,7 +225,7 @@ function Import-IntuneEnrollmentProfile {
 
                 $newESP = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceEnrollmentConfigurations" -Body $espBody -ErrorAction Stop
 
-                Write-Information "  Created: $espName" -InformationAction Continue
+                Write-Host "  Created: $espName" -InformationAction Continue
 
                 $results += New-HydrationResult -Name $espName -Type 'EnrollmentStatusPage' -Id $newESP.id -Action 'Created' -Status 'Success'
             }
@@ -249,7 +243,7 @@ function Import-IntuneEnrollmentProfile {
     # Summary
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "Enrollment profile import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "Enrollment profile import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
 
     return $results
 }

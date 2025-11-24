@@ -6,3 +6,6 @@ C*.md
 Reports/*.json
 dev.ps1
 Reports/Hydration-Summary.md
+Reports/PowerShell-Code-Review.md
+Test*/*
+Hydration-Summary.md

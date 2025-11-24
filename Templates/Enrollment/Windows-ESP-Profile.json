@@ -1,6 +1,6 @@
 {
     "@odata.type": "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration",
-    "displayName": "Intune - Default Enrollment Status Page",
+    "displayName": "Intune Default Enrollment Status Page",
     "description": "Default Enrollment Status Page configuration for Windows devices",
     "showInstallationProgress": true,
     "blockDeviceSetupRetryByUser": false,

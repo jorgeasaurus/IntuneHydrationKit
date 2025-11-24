@@ -52,10 +52,10 @@ function Import-IntuneConditionalAccessPolicy {
     # Test mode - only process first template
     if ($TestMode -and $templateFiles.Count -gt 0) {
         $templateFiles = $templateFiles | Select-Object -First 1
-        Write-Information "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
+        Write-Host "Test mode: Processing only first template: $($templateFiles.Name)" -InformationAction Continue
     }
 
-    Write-Information "Found $($templateFiles.Count) Conditional Access policy templates" -InformationAction Continue
+    Write-Host "Found $($templateFiles.Count) Conditional Access policy templates" -InformationAction Continue
 
     $results = @()
 
@@ -68,10 +68,10 @@ function Import-IntuneConditionalAccessPolicy {
             $templateNames += $policyName
         }
 
-        Write-Information "Removing managed Conditional Access policies..." -InformationAction Continue
+        Write-Host "Removing managed Conditional Access policies..." -InformationAction Continue
 
         try {
-            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "v1.0/identity/conditionalAccess/policies" -ErrorAction Stop
+            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/identity/conditionalAccess/policies" -ErrorAction Stop
             foreach ($policy in $existingPolicies.value) {
                 # Only delete if it matches a template name
                 if ($policy.displayName -notin $templateNames) {
@@ -80,8 +80,8 @@ function Import-IntuneConditionalAccessPolicy {
 
                 if ($PSCmdlet.ShouldProcess($policy.displayName, "Delete Conditional Access policy")) {
                     try {
-                        Invoke-MgGraphRequest -Method DELETE -Uri "v1.0/identity/conditionalAccess/policies/$($policy.id)" -ErrorAction Stop
-                        Write-Information "Deleted CA policy: $($policy.displayName)" -InformationAction Continue
+                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/identity/conditionalAccess/policies/$($policy.id)" -ErrorAction Stop
+                        Write-Host "Deleted CA policy: $($policy.displayName)" -InformationAction Continue
                         $results += New-HydrationResult -Name $policy.displayName -Type 'ConditionalAccessPolicy' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
@@ -101,7 +101,7 @@ function Import-IntuneConditionalAccessPolicy {
 
         # RemoveExisting mode - only delete, don't create
         $summary = Get-ResultSummary -Results $results
-        Write-Information "Conditional Access removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
+        Write-Host "Conditional Access removal complete: $($summary.Deleted) deleted, $($summary.Failed) failed" -InformationAction Continue
         return $results
     }
 
@@ -114,11 +114,12 @@ function Import-IntuneConditionalAccessPolicy {
             $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8
             $policy = $templateContent | ConvertFrom-Json
 
-            # Check if policy already exists
-            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "v1.0/identity/conditionalAccess/policies?`$filter=displayName eq '$displayName'" -ErrorAction Stop
+            # Check if policy already exists (escape single quotes for OData filter)
+            $safeDisplayName = $displayName -replace "'", "''"
+            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/identity/conditionalAccess/policies?`$filter=displayName eq '$safeDisplayName'" -ErrorAction Stop
 
             if ($existingPolicies.value.Count -gt 0) {
-                Write-Information "  Skipped: $displayName (already exists)" -InformationAction Continue
+                Write-Host "  Skipped: $displayName (already exists)" -InformationAction Continue
                 $results += New-HydrationResult -Name $displayName -Id $existingPolicies.value[0].id -Action 'Skipped' -Status 'Already exists' -State $existingPolicies.value[0].state
                 continue
             }
@@ -143,9 +144,9 @@ function Import-IntuneConditionalAccessPolicy {
                 $jsonBody = $jsonBody -replace '"@odata\.[^"]*":\s*null,?\s*', ''
 
                 # Create the policy
-                $newPolicy = Invoke-MgGraphRequest -Method POST -Uri "v1.0/identity/conditionalAccess/policies" -Body $jsonBody -ContentType "application/json" -ErrorAction Stop
+                $newPolicy = Invoke-MgGraphRequest -Method POST -Uri "beta/identity/conditionalAccess/policies" -Body $jsonBody -ContentType "application/json" -ErrorAction Stop
 
-                Write-Information "  Created: $displayName" -InformationAction Continue
+                Write-Host "  Created: $displayName" -InformationAction Continue
 
                 $results += New-HydrationResult -Name $displayName -Id $newPolicy.id -Action 'Created' -Status 'Success' -State 'disabled'
             }
@@ -162,8 +163,8 @@ function Import-IntuneConditionalAccessPolicy {
     # Summary
     $summary = Get-ResultSummary -Results $results
 
-    Write-Information "Conditional Access import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
-    Write-Information "IMPORTANT: All policies were created in DISABLED state. Review and enable as needed." -InformationAction Continue
+    Write-Host "Conditional Access import complete: $($summary.Created) created, $($summary.Skipped) skipped, $($summary.Failed) failed" -InformationAction Continue
+    Write-Host "IMPORTANT: All policies were created in DISABLED state. Review and enable as needed." -InformationAction Continue
 
     return $results
 }

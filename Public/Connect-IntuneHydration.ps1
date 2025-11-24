@@ -61,7 +61,7 @@ function Connect-IntuneHydration {
         'China'     { 'https://microsoftgraph.chinacloudapi.cn' }
     }
 
-    Write-Information "Connecting to $Environment environment ($script:GraphEndpoint)" -InformationAction Continue
+    Write-Host "Connecting to $Environment environment ($script:GraphEndpoint)" -InformationAction Continue
 
     try {
         $connectParams = @{
@@ -84,7 +84,7 @@ function Connect-IntuneHydration {
         $script:HydrationState.TenantId = $TenantId
         $script:HydrationState.Environment = $Environment
 
-        Write-Information "Successfully connected to tenant: $TenantId ($Environment)" -InformationAction Continue
+        Write-Host "Successfully connected to tenant: $TenantId ($Environment)" -InformationAction Continue
     }
     catch {
         Write-Error "Failed to connect to Microsoft Graph: $_"
