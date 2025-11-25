@@ -53,7 +53,6 @@
         # Helper functions
         'Initialize-HydrationLogging',
         'Write-HydrationLog',
-        'Invoke-GraphRequestWithRetry',
         'Get-TemplateFiles',
         'Import-TemplateFile',
         'Resolve-TemplateTokens',
