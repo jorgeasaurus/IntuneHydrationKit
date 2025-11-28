@@ -2,19 +2,19 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion = '0.1.0'
+    ModuleVersion = '0.1.1'
 
     # ID used to uniquely identify this module
-    GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+    GUID = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
 
     # Author of this module
-    Author = 'Jorge Balderas'
+    Author = 'Jorgeasaurus'
 
     # Company or vendor of this module
-    CompanyName = 'Community'
+    CompanyName = 'Jorgeasaurus'
 
     # Copyright statement for this module
-    Copyright = '(c) 2025 Jorge Balderas. All rights reserved.'
+    Copyright = '(c) 2025 Jorgeasaurus. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Hydrates Microsoft Intune tenants with best-practice baseline configurations including policies, compliance packs, enrollment profiles, dynamic groups, security baselines, and conditional access starter packs.'
