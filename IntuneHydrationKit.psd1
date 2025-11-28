@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion = '0.1.2'
+    ModuleVersion = '0.1.3'
 
     # ID used to uniquely identify this module
     GUID = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
