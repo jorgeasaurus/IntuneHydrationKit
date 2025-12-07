@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.4-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.8-blue" alt="Version">
   <a href="https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jorgeasaurus/Intune-Hydration-Kit" alt="License"></a>
 </p>
 
@@ -58,14 +58,14 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 ### Recommendations
 
 1. **Test in a non-production tenant first** - Use a dev/test tenant before running against production
-2. **Always run with `-WhatIf` first** - Preview all changes before applying them
-3. **Review the settings file** - Understand what will be imported before running
+2. **Always preview changes first** - Use `-WhatIf` in parameter or settings mode
+3. **Review the configuration** - Understand what will be imported before running
 4. **Have a rollback plan** - Know how to manually remove configurations if needed
 5. **Backup existing configurations** - Export current settings before running
 
 ### Deletion Safety
 
-When using delete mode (`"delete": true`), the kit will **only delete objects that it created**:
+When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
 - Objects must have `"Imported by Intune-Hydration-Kit"` in their description
 - Conditional Access policies must also be in `disabled` state to be deleted
 - Manually created objects with the same names will NOT be deleted
@@ -75,7 +75,7 @@ When using delete mode (`"delete": true`), the kit will **only delete objects th
 ## Features
 
 - **Idempotent** - Safe to run multiple times; skips existing configurations
-- **Dry-Run Mode** - Preview all changes with `-WhatIf` before applying
+- **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
 - **Safe Deletion** - Only removes objects created by this kit
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
 - **OpenIntuneBaseline Integration** - Automatically downloads latest community baselines
@@ -108,6 +108,8 @@ The authenticated user/app needs these Microsoft Graph permissions:
 - `Policy.ReadWrite.ConditionalAccess`
 - `Application.Read.All`
 - `Directory.ReadWrite.All`
+- `LicenseAssignment.Read.All`
+- `Organization.Read.All`
 
 ---
 
@@ -123,7 +125,31 @@ Import-Module ./IntuneHydrationKit.psd1
 
 ## Quick Start
 
-### 1. Create Your Settings File
+The kit supports two invocation methods: **parameters** (recommended) or **settings file** (for complex configurations).
+
+### Option A: Using Parameters (Recommended)
+
+Run directly with command-line parameters:
+
+```powershell
+# Preview all targets with interactive auth
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
+
+# Run specific targets only
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -Interactive -Create `
+    -ComplianceTemplates -DynamicGroups -DeviceFilters
+
+# Use service principal authentication
+$secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -ClientId "app-id" -ClientSecret $secret `
+    -Create -All
+```
+
+### Option B: Using a Settings File
+
+For complex or repeated configurations, use a settings file:
+
+#### 1. Create Your Settings File
 ```powershell
 Copy-Item settings.example.json settings.json
 ```
@@ -141,17 +167,18 @@ Edit `settings.json` with your tenant details:
     "options": {
         "dryRun": false,
         "create": true,
-        "delete": false
+        "delete": false,
+        "force": false
     }
 }
 ```
 
-### 3. Preview Changes (Recommended First Step)
+#### 2. Preview Changes (Recommended First Step)
 ```powershell
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
 ```
 
-### 4. Run the Hydration
+#### 3. Run the Hydration
 ```powershell
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
 ```
@@ -218,6 +245,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 | `dryRun` | Preview changes without applying (same as `-WhatIf`) |
 | `create` | Create new configurations |
 | `delete` | Delete existing kit-created configurations |
+| `force` | Skip confirmation prompt when running delete mode |
 
 **Create mode (default):**
 ```json
@@ -231,13 +259,14 @@ Uses app registration credentials. Best for unattended/automated runs.
 ```json
 "options": {
     "create": false,
-    "delete": true
+    "delete": true,
+    "force": false
 }
 ```
 
-#### Selective Imports
+#### Selective Targets (create or delete)
 
-Enable or disable specific configuration types:
+Enable or disable specific configuration types (used for both create and delete workflows):
 ```json
 "imports": {
     "openIntuneBaseline": true,
@@ -250,6 +279,79 @@ Enable or disable specific configuration types:
     "conditionalAccess": true
 }
 ```
+
+---
+
+## Command-Line Parameters
+
+The kit supports two mutually exclusive invocation modes:
+
+1. **Settings File Mode**: Use `-SettingsPath` to load all configuration from a JSON file
+2. **Parameter Mode**: Use `-TenantId` with `-Interactive` or `-ClientId`/`-ClientSecret`
+
+These modes cannot be combined - choose one or the other.
+
+### Tenant Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-TenantId` | String | Azure AD tenant ID (GUID). Required for parameter mode. |
+| `-TenantName` | String | Tenant name for display purposes |
+
+### Authentication Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-Interactive` | Switch | Use interactive (browser-based) authentication |
+| `-ClientId` | String | Application ID for service principal auth |
+| `-ClientSecret` | SecureString | Client secret for service principal auth |
+| `-Environment` | String | Cloud environment: `Global`, `USGov`, `USGovDoD`, `Germany`, `China` (default: Global) |
+
+### Options Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-Create` | Switch | Enable creation of configurations |
+| `-Delete` | Switch | Enable deletion of kit-created objects |
+| `-Force` | Switch | Skip confirmation when running in delete mode |
+| `-VerboseOutput` | Switch | Enable verbose logging |
+| `-WhatIf` | Switch | PowerShell built-in preview mode (applies to any parameter set) |
+
+### Target Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-All` | Switch | Enable all targets |
+| `-OpenIntuneBaseline` | Switch | Process OpenIntuneBaseline policies |
+| `-ComplianceTemplates` | Switch | Process compliance policies |
+| `-AppProtection` | Switch | Process app protection policies |
+| `-NotificationTemplates` | Switch | Process notification templates |
+| `-EnrollmentProfiles` | Switch | Process Autopilot/ESP profiles |
+| `-DynamicGroups` | Switch | Process dynamic groups |
+| `-DeviceFilters` | Switch | Process device filters |
+| `-ConditionalAccess` | Switch | Process CA starter pack |
+
+### OpenIntuneBaseline Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-BaselineRepoUrl` | String | GitHub repository URL |
+| `-BaselineBranch` | String | Git branch to use |
+| `-BaselineDownloadPath` | String | Local download path |
+
+### Reporting Parameters (Parameter Mode Only)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-ReportOutputPath` | String | Output directory for reports |
+| `-ReportFormats` | String[] | Report formats: `markdown`, `json` |
+
+### Settings File Mode Parameter
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-SettingsPath` | String | Path to settings JSON file. Required for settings file mode. |
+| `-WhatIf` | Switch | Preview mode (same as `dryRun: true` in settings) |
 
 ---
 
@@ -274,11 +376,14 @@ Conditional Access policies receive additional protection:
 - **Deletion requires disabled state** - Cannot delete enabled CA policies
 - **Manual review required** - You must manually enable policies after review
 
-### WhatIf Support
+### WhatIf Support (Preview Mode)
 
-All operations support PowerShell's `-WhatIf` parameter:
+All operations support PowerShell `-WhatIf` preview mode in both parameter and settings modes:
 ```powershell
-# Preview what would be created
+# Parameter mode
+./Invoke-IntuneHydration.ps1 -TenantId "guid" -Interactive -Create -All -WhatIf
+
+# Settings file mode
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
 ```
 
@@ -372,6 +477,17 @@ Intune-Hydration-Kit/
 ---
 
 ## Changelog
+
+### v0.1.8
+- **New Feature:** Full parameter-based invocation support
+- Two mutually exclusive modes: settings file (`-SettingsPath`) or parameters (`-TenantId` + auth)
+- Added `-All` switch to enable all targets at once
+- Added PowerShell `-WhatIf` preview mode support across invocation modes
+- Added parameters for all configuration options (tenant, auth, targets, reporting)
+- Settings file mode continues to work unchanged
+- Added Windows Driver Update license pre-check to avoid 403 errors when importing driver update profiles without required licensing (Windows E3/E5, M365 Business Premium)
+- Added `LicenseAssignment.Read.All` scope for license validation checks
+- Added `Organization.Read.All` scope for tenant organization details
 
 ### v0.1.4
 - Added `DeviceManagementScripts.ReadWrite.All` scope for custom compliance scripts (required after Microsoft Graph API permission changes)

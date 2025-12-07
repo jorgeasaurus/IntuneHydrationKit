@@ -11,3 +11,4 @@ Hydration-Summary.md
 *.code-workspace
 Test-ModuleConfigurations.ps1
 settingsDelete.json
+Test-ModuleConfigurationsParams.ps1

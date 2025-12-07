@@ -29,6 +29,10 @@ $script:LogPath = $null
 $script:VerboseLogging = $false
 $script:CurrentLogFile = $null
 
+# Module-level state for Graph environment
+$script:GraphEnvironment = $null
+$script:GraphEndpoint = $null
+
 # Import private functions
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'
 if (Test-Path -Path $privatePath) {

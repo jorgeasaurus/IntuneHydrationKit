@@ -54,7 +54,9 @@ function Connect-IntuneHydration {
         "Policy.Read.All",
         "Policy.ReadWrite.ConditionalAccess",
         "Application.Read.All",
-        "Directory.ReadWrite.All"
+        "Directory.ReadWrite.All",
+        "LicenseAssignment.Read.All",
+        "Organization.Read.All"
     )
 
     # Store environment for use by other functions

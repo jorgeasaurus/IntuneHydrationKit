@@ -2,6 +2,8 @@ function Import-HydrationSettings {
     <#
     .SYNOPSIS
         Imports and validates hydration settings
+    .DESCRIPTION
+        Loads settings from a JSON file.
     .PARAMETER Path
         Path to the settings file
     #>
@@ -16,7 +18,7 @@ function Import-HydrationSettings {
         $content = Get-Content -Path $Path -Raw -Encoding utf8
         $settings = $content | ConvertFrom-Json -AsHashtable
 
-        # Validate required fields
+        # Validate required fields only when loading from file
         if (-not $settings.tenant.tenantId) {
             throw "Missing required field: tenant.tenantId"
         }
