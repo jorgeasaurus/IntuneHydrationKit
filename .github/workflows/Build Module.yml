@@ -1,0 +1,83 @@
+name: Build Module
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
+
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+          Write-Host "Working Directory: $PWD"
+
+      - name: Bootstrap Dependencies
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Import-Module InvokeBuild -Force
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task Analyze
+
+      - name: Run Pester Tests
+        shell: pwsh
+        run: |
+          Import-Module InvokeBuild -Force
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task Test
+
+      - name: Build Module
+        shell: pwsh
+        run: |
+          Import-Module InvokeBuild -Force
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task Build
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: test-results
+          path: build/TestResults/
+          if-no-files-found: warn
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: IntuneHydrationKit
+          path: build/IntuneHydrationKit/
+          if-no-files-found: error

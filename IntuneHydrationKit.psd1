@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion = '0.1.8'
+    ModuleVersion = '0.2.0'
 
     # ID used to uniquely identify this module
     GUID = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -32,6 +32,8 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
+        # Main entry point
+        'Invoke-IntuneHydration',
         # Core hydration functions
         'Connect-IntuneHydration',
         'Test-IntunePrerequisites',
@@ -85,6 +87,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+## v0.2.0 - PSGallery Publishing Support
+- Module now publishable to PowerShell Gallery (Install-Module IntuneHydrationKit)
+- Added Invoke-IntuneHydration as exported module function
+- Backward compatible wrapper script for users who clone the repo
+- InvokeBuild-based build system (build.ps1, IntuneHydrationKit.build.ps1)
+- GitHub Actions CI/CD workflows for automated testing and publishing
+- Added Pester tests for main orchestrator function
+- Fixed PSScriptAnalyzer warnings (variable naming conflicts)
+
 ## v0.1.8 - Parameter-Based Invocation
 - Added full parameter support for command-line invocation
 - Settings file is now optional when using parameters

@@ -1,0 +1,117 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Bootstrap Dependencies
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Build Module
+        shell: pwsh
+        run: |
+          Import-Module InvokeBuild -Force
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task Build
+
+      - name: Get Version and Release Notes
+        id: module_info
+        shell: pwsh
+        run: |
+          Import-Module InvokeBuild -Force
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task GetVersion
+          Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task GetReleaseNotes
+
+      - name: Validate Tag Matches Module Version
+        shell: pwsh
+        run: |
+          $manifestPath = './IntuneHydrationKit.psd1'
+          $manifestData = Import-PowerShellDataFile -Path $manifestPath
+          $moduleVersion = $manifestData.ModuleVersion
+
+          $tagVersion = '${{ github.ref_name }}' -replace '^v', ''
+
+          if ($moduleVersion -ne $tagVersion) {
+            throw "Tag version ($tagVersion) does not match module version ($moduleVersion). Please update the module manifest."
+          }
+
+          Write-Host "Version validated: $moduleVersion"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          name: v${{ steps.module_info.outputs.version }}
+          body: |
+            ## IntuneHydrationKit v${{ steps.module_info.outputs.version }}
+
+            ### Installation
+
+            ```powershell
+            Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+            ```
+
+            ### Release Notes
+
+            ${{ steps.module_info.outputs.release_notes }}
+
+          draft: false
+          prerelease: false
+          files: |
+            build/IntuneHydrationKit/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PSGallery
+        if: ${{ !inputs.dry_run }}
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          $modulePath = './build/IntuneHydrationKit'
+
+          Write-Host "Publishing module from: $modulePath"
+
+          # Validate the module before publishing
+          $manifest = Test-ModuleManifest -Path (Join-Path $modulePath 'IntuneHydrationKit.psd1')
+          Write-Host "Module: $($manifest.Name) v$($manifest.Version)"
+
+          # Publish to PSGallery
+          Publish-Module -Path $modulePath -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
+
+          Write-Host "Successfully published to PSGallery!"
+
+      - name: Dry Run Notice
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "Dry run mode - skipped PSGallery publish"
+          echo "Module would have been published from: ./build/IntuneHydrationKit"

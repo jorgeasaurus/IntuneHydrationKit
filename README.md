@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.8-blue" alt="Version">
+  <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/v/IntuneHydrationKit?label=PSGallery&color=blue" alt="PowerShell Gallery Version"></a>
+  <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/dt/IntuneHydrationKit?label=Downloads&color=green" alt="PowerShell Gallery Downloads"></a>
   <a href="https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jorgeasaurus/Intune-Hydration-Kit" alt="License"></a>
 </p>
 
@@ -115,6 +116,24 @@ The authenticated user/app needs these Microsoft Graph permissions:
 
 ## Installation
 
+### Option A: PowerShell Gallery (Recommended)
+
+Install directly from the PowerShell Gallery:
+
+```powershell
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+```
+
+To update to the latest version:
+
+```powershell
+Update-Module -Name IntuneHydrationKit
+```
+
+### Option B: Clone from GitHub
+
+For development or to use the latest unreleased changes:
+
 ```powershell
 git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
 cd Intune-Hydration-Kit
@@ -127,9 +146,33 @@ Import-Module ./IntuneHydrationKit.psd1
 
 The kit supports two invocation methods: **parameters** (recommended) or **settings file** (for complex configurations).
 
-### Option A: Using Parameters (Recommended)
+### Using the PSGallery Module
 
-Run directly with command-line parameters:
+After installing from PSGallery, use the `Invoke-IntuneHydration` function directly:
+
+```powershell
+# Preview all targets with interactive auth
+Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
+
+# Run specific targets only
+Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create `
+    -ComplianceTemplates -DynamicGroups -DeviceFilters
+
+# Use service principal authentication
+$secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
+Invoke-IntuneHydration -TenantId "your-tenant-id" -ClientId "app-id" -ClientSecret $secret `
+    -Create -All
+
+# Use a settings file for complex configurations
+Invoke-IntuneHydration -SettingsPath ./settings.json
+
+# Preview with settings file
+Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
+```
+
+### Using the Cloned Repository
+
+If you cloned the repository, use the wrapper script:
 
 ```powershell
 # Preview all targets with interactive auth
@@ -145,13 +188,16 @@ $secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
     -Create -All
 ```
 
-### Option B: Using a Settings File
+### Using a Settings File
 
 For complex or repeated configurations, use a settings file:
 
 #### 1. Create Your Settings File
 ```powershell
+# If using cloned repo
 Copy-Item settings.example.json settings.json
+
+# If using PSGallery module, create your own settings.json
 ```
 
 Edit `settings.json` with your tenant details:
@@ -175,11 +221,19 @@ Edit `settings.json` with your tenant details:
 
 #### 2. Preview Changes (Recommended First Step)
 ```powershell
+# PSGallery module
+Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
+
+# Cloned repo
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
 ```
 
 #### 3. Run the Hydration
 ```powershell
+# PSGallery module
+Invoke-IntuneHydration -SettingsPath ./settings.json
+
+# Cloned repo
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
 ```
 
@@ -455,11 +509,14 @@ $VerbosePreference = "Continue"
 
 ```
 Intune-Hydration-Kit/
-├── Invoke-IntuneHydration.ps1    # Main orchestrator script
+├── Invoke-IntuneHydration.ps1    # Wrapper script (backward compatibility)
 ├── IntuneHydrationKit.psd1       # Module manifest
 ├── IntuneHydrationKit.psm1       # Module loader
+├── build.ps1                      # Build bootstrap script
+├── IntuneHydrationKit.build.ps1  # InvokeBuild tasks
 ├── settings.example.json          # Example configuration
 ├── Public/                        # Exported functions
+│   ├── Invoke-IntuneHydration.ps1 # Main orchestrator function
 │   ├── Connect-IntuneHydration.ps1
 │   ├── Import-IntuneBaseline.ps1
 │   ├── Import-IntuneCompliancePolicy.ps1
@@ -470,6 +527,7 @@ Intune-Hydration-Kit/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
 │   └── ...
+├── Tests/                         # Pester tests
 ├── Logs/                          # Execution logs
 └── Reports/                       # Generated reports
 ```
@@ -477,6 +535,16 @@ Intune-Hydration-Kit/
 ---
 
 ## Changelog
+
+### v0.2.0
+- **New Feature:** PowerShell Gallery publishing support
+- Module now installable via `Install-Module IntuneHydrationKit`
+- Added `Invoke-IntuneHydration` as exported module function
+- Backward compatible wrapper script for users who clone the repository
+- InvokeBuild-based build system for CI/CD
+- GitHub Actions workflows for automated testing and publishing
+- Added Pester tests for main orchestrator function
+- Fixed PSScriptAnalyzer warnings (variable naming conflicts)
 
 ### v0.1.8
 - **New Feature:** Full parameter-based invocation support
