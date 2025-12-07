@@ -25,7 +25,9 @@ function Test-IntunePrerequisites {
         "Policy.Read.All",
         "Policy.ReadWrite.ConditionalAccess",
         "Application.Read.All",
-        "Directory.ReadWrite.All"
+        "Directory.ReadWrite.All",
+        "LicenseAssignment.Read.All",
+        "Organization.Read.All"
     )
 
     try {
@@ -67,20 +69,26 @@ function Test-IntunePrerequisites {
         if ($null -eq $context) {
             $issues += "Not connected to Microsoft Graph. Please run Connect-IntuneHydration first."
         } else {
-            $currentScopes = $context.Scopes
-            $missingScopes = @()
-
-            foreach ($scope in $requiredScopes) {
-                if ($currentScopes -notcontains $scope) {
-                    $missingScopes += $scope
-                }
-            }
-
-            if ($missingScopes.Count -gt 0) {
-                $issues += "Missing required permission scopes: $($missingScopes -join ', ')"
-                Write-Warning "Missing scopes detected. Please reconnect using Connect-IntuneHydration."
+            $isAppOnly = $context.AuthType -eq 'AppOnly' -or ($context.ClientId -and -not $context.Account)
+            if ($isAppOnly) {
+                # App-only auth uses app roles, so delegated scope validation does not apply
+                Write-Host "App-only authentication detected - skipping delegated scope validation"
             } else {
-                Write-Host "All required permission scopes are present"
+                $currentScopes = $context.Scopes
+                $missingScopes = @()
+
+                foreach ($scope in $requiredScopes) {
+                    if ($currentScopes -notcontains $scope) {
+                        $missingScopes += $scope
+                    }
+                }
+
+                if ($missingScopes.Count -gt 0) {
+                    $issues += "Missing required permission scopes: $($missingScopes -join ', ')"
+                    Write-Warning "Missing scopes detected. Please reconnect using Connect-IntuneHydration."
+                } else {
+                    Write-Host "All required permission scopes are present"
+                }
             }
         }
 
@@ -89,7 +97,10 @@ function Test-IntunePrerequisites {
             foreach ($issue in $issues) {
                 Write-Warning $issue
             }
-            throw "Prerequisite checks failed. Please resolve the issues above before continuing."
+
+            # Surface specific issues in the exception message so callers/tests can pattern match
+            $issueMessage = $issues -join ' | '
+            throw "Prerequisite checks failed: $issueMessage"
         }
 
         Write-Host "All prerequisite checks passed"

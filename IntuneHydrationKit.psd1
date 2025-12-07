@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion = '0.1.4'
+    ModuleVersion = '0.1.8'
 
     # ID used to uniquely identify this module
     GUID = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,6 +85,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+## v0.1.8 - Parameter-Based Invocation
+- Added full parameter support for command-line invocation
+- Settings file is now optional when using parameters
+- Parameters override settings file values when both provided
+- New parameters for all configuration options (tenant, auth, imports, reporting)
+- Added -All switch to enable all import types
+- Backwards compatible with existing settings.json workflow
+- Added Windows Driver Update license pre-check (avoids 403 errors)
+
 ## v0.1.0 - Initial Release
 - OpenIntuneBaseline integration (auto-downloads latest policies)
 - Compliance policy templates (Windows, macOS, iOS, Android, Linux)

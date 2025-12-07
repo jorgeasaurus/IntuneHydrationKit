@@ -116,6 +116,9 @@ function Import-IntuneBaseline {
 
     $results = @()
 
+    # Check Windows Driver Update license upfront (cached for all driver update profiles)
+    $hasDriverUpdateLicense = $null  # Lazy-loaded when needed
+
     # Remove existing baseline policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune-Hydration-Kit" in description
     if ($RemoveExisting) {
@@ -249,6 +252,24 @@ function Import-IntuneBaseline {
                             Write-Warning "  Skipping $policyName - unsupported @odata.type: $odataType"
                             $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Skipped' -Status "Unsupported @odata.type: $odataType"
                             continue
+                        }
+
+                        # Check for Windows Driver Update license requirement
+                        if ($typeEndpoint -eq 'deviceManagement/windowsDriverUpdateProfiles') {
+                            # Lazy-load the license check (only check once)
+                            if ($null -eq $hasDriverUpdateLicense) {
+                                Write-Verbose "Checking Windows Driver Update license..."
+                                $hasDriverUpdateLicense = Test-WindowsDriverUpdateLicense
+                                if (-not $hasDriverUpdateLicense) {
+                                    Write-HydrationLog -Message "Windows Driver Update profiles require additional licensing (Windows E3/E5, M365 Business Premium, etc.)" -Level Warning
+                                }
+                            }
+
+                            if (-not $hasDriverUpdateLicense) {
+                                Write-HydrationLog -Message "  Skipped: $policyName - Missing Windows Driver Update license" -Level Warning
+                                $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Skipped' -Status 'Missing Windows Driver Update license (requires Windows E3/E5, M365 Business Premium, or equivalent)'
+                                continue
+                            }
                         }
 
                         # Get display name
