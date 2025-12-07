@@ -55,6 +55,8 @@ function Invoke-IntuneHydration {
         Process device filters
     .PARAMETER ConditionalAccess
         Process Conditional Access starter pack policies
+    .PARAMETER MobileApps
+        Process mobile app templates
     .PARAMETER All
         Enable all targets
     .PARAMETER BaselineRepoUrl
@@ -176,6 +178,10 @@ function Invoke-IntuneHydration {
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [switch]$MobileApps,
+
+        [Parameter(ParameterSetName = 'Interactive')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [switch]$All,
 
         # OpenIntuneBaseline parameters - available for parameter-based modes only
@@ -241,6 +247,7 @@ function Invoke-IntuneHydration {
                 enrollmentProfiles    = $All.IsPresent -or $EnrollmentProfiles.IsPresent
                 appProtection         = $All.IsPresent -or $AppProtection.IsPresent
                 notificationTemplates = $All.IsPresent -or $NotificationTemplates.IsPresent
+                mobileApps            = $All.IsPresent -or $MobileApps.IsPresent
             }
 
             # Validate that at least one target is enabled
@@ -515,8 +522,17 @@ function Invoke-IntuneHydration {
             $allResults += $caResults
         }
 
-        # Step 11: Generate Summary Report
-        Write-HydrationLog -Message "Step 11: Generating Summary Report" -Level Info
+        # Step 11: Mobile Apps
+        if ($settings.imports.mobileApps) {
+            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
+            Write-HydrationLog -Message "Step 11: $stepAction Mobile Apps" -Level Info
+
+            $mobileAppResults = Import-IntuneMobileApp -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $allResults += $mobileAppResults
+        }
+
+        # Step 12: Generate Summary Report
+        Write-HydrationLog -Message "Step 12: Generating Summary Report" -Level Info
 
         $reportsPath = Join-Path -Path $moduleRoot -ChildPath $settings.reporting.outputPath
         if (-not (Test-Path -Path $reportsPath)) {
@@ -650,7 +666,7 @@ function Invoke-IntuneHydration {
             if ($WhatIfPreference) {
                 Write-HydrationLog -Message "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.WouldDelete) would delete, $($summary.Skipped) skipped" -Level Info
             } else {
-                Write-HydrationLog -Message "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Skipped) skipped" -Level Info
+                Write-HydrationLog -Message "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Deleted) deleted, $($summary.Skipped) skipped" -Level Info
             }
             return @{
                 Success = $true

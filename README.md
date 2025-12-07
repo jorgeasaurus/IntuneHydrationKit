@@ -1,7 +1,7 @@
 # Intune Hydration Kit
 
 <p align="center">
-  <img src="media/IHKLogo.png" alt="Intune Hydration Kit Logo" width="300">
+  <img src="media/IHTLogoClearLight.png" alt="Intune Hydration Kit Logo" width="500">
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) policies and deploys them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
 
 <p align="center">
   <img src="media/SampleOutput.png" alt="Sample Output" width="800">
@@ -41,6 +41,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | Security Baselines | 70+ | OpenIntuneBaseline policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 4 | MAM policies for iOS and Android BYOD |
+| Mobile Apps | 5+ | Microsoft Store apps, macOS apps (Company Portal, Edge, etc.) |
 | Enrollment Profiles | 2 | Autopilot deployment + Enrollment Status Page |
 | Conditional Access | 13 | Starter pack policies (created disabled) |
 
@@ -330,7 +331,8 @@ Enable or disable specific configuration types (used for both create and delete 
     "enrollmentProfiles": true,
     "dynamicGroups": true,
     "deviceFilters": true,
-    "conditionalAccess": true
+    "conditionalAccess": true,
+    "mobileApps": true
 }
 ```
 
@@ -384,6 +386,7 @@ These modes cannot be combined - choose one or the other.
 | `-DynamicGroups` | Switch | Process dynamic groups |
 | `-DeviceFilters` | Switch | Process device filters |
 | `-ConditionalAccess` | Switch | Process CA starter pack |
+| `-MobileApps` | Switch | Process mobile app templates |
 
 ### OpenIntuneBaseline Parameters (Parameter Mode Only)
 
@@ -520,12 +523,16 @@ Intune-Hydration-Kit/
 │   ├── Connect-IntuneHydration.ps1
 │   ├── Import-IntuneBaseline.ps1
 │   ├── Import-IntuneCompliancePolicy.ps1
+│   ├── Import-IntuneMobileApp.ps1
 │   └── ...
 ├── Private/                       # Internal helper functions
+├── Scripts/                       # Helper scripts
+│   └── New-MobileAppTemplate.ps1  # Generate mobile app JSON templates
 ├── Templates/                     # Configuration templates
 │   ├── Compliance/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
+│   ├── MobileApps/
 │   └── ...
 ├── Tests/                         # Pester tests
 ├── Logs/                          # Execution logs
@@ -534,9 +541,62 @@ Intune-Hydration-Kit/
 
 ---
 
+## Creating Mobile App Templates
+
+The kit includes a helper script to generate JSON templates for mobile apps. This makes it easy to add new apps to your hydration workflow.
+
+### Using the Template Generator
+
+```powershell
+# Create a Microsoft Store (winGetApp) template
+.\Scripts\New-MobileAppTemplate.ps1 -AppType winGetApp `
+    -DisplayName "Company Portal" `
+    -PackageIdentifier "9WZDNCRFJ3PZ" `
+    -Publisher "Microsoft Corporation" `
+    -PrivacyUrl "http://go.microsoft.com/fwlink/?LinkID=316999" `
+    -IconPath ".\Templates\MobileApps\Microsoft-IntuneCompanyPortal.png"
+
+# Create a macOS Edge template
+.\Scripts\New-MobileAppTemplate.ps1 -AppType macOSMicrosoftEdgeApp `
+    -DisplayName "Microsoft Edge for macOS" `
+    -Publisher "Microsoft" `
+    -Channel stable
+
+# Create Microsoft 365 Apps for Windows
+.\Scripts\New-MobileAppTemplate.ps1 -AppType officeSuiteApp `
+    -DisplayName "Microsoft 365 Apps for Windows" `
+    -Publisher "Microsoft"
+```
+
+### Supported App Types
+
+| App Type | Description | Required Parameters |
+|----------|-------------|---------------------|
+| `winGetApp` | Microsoft Store apps | `-PackageIdentifier` |
+| `macOSMicrosoftEdgeApp` | Edge for macOS | `-Channel` (stable/beta/dev) |
+| `macOSOfficeSuiteApp` | Microsoft 365 for macOS | None |
+| `officeSuiteApp` | Microsoft 365 for Windows | None |
+
+### Finding Package Identifiers
+
+For Microsoft Store apps, you can find the package identifier in the store URL or by searching:
+- Company Portal: `9WZDNCRFJ3PZ`
+- PowerShell: `9MZ1SNWT0N5D`
+- Visual Studio Code: `XP9KHM4BK9FZ7Q`
+- Adobe Acrobat Reader: `XPDP273C0XHQH2`
+
+---
+
 ## Changelog
 
 ### v0.2.0
+- **New Feature:** Mobile Apps support
+  - Added `Import-IntuneMobileApp` function to import mobile app templates
+  - Added `-MobileApps` parameter to `Invoke-IntuneHydration`
+  - Added `mobileApps` option to settings file imports section
+  - Added `Scripts/New-MobileAppTemplate.ps1` helper to generate mobile app JSON templates
+  - Supports winGetApp (Microsoft Store), macOSMicrosoftEdgeApp, macOSOfficeSuiteApp, officeSuiteApp types
+  - Mobile app templates stored in `Templates/MobileApps/` directory
 - **New Feature:** PowerShell Gallery publishing support
 - Module now installable via `Install-Module IntuneHydrationKit`
 - Added `Invoke-IntuneHydration` as exported module function
