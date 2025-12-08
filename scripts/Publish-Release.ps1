@@ -21,7 +21,7 @@
     ./scripts/Publish-Release.ps1 -Version "0.1.8" -DryRun
     Performs all validation without actual publishing.
 .EXAMPLE
-    ./scripts/Publish-Release.ps1 -Version "0.2.0" -SkipGitHubRelease
+    ./scripts/Publish-Release.ps1 -Version "0.2.1" -SkipGitHubRelease
     Publishes to PSGallery only.
 #>
 [CmdletBinding(SupportsShouldProcess)]

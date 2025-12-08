@@ -649,7 +649,7 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
 
 ## Changelog
 
-### v0.2.0
+### v0.2.1
 
 - **New Feature:** Static Groups support
   - Added `New-IntuneStaticGroup` function for creating assigned security groups

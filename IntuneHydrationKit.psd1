@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion = '0.2.0'
+    ModuleVersion = '0.2.1'
 
     # ID used to uniquely identify this module
     GUID = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,7 +89,7 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.0 - PSGallery Publishing Support
+## v0.2.1 - PSGallery Publishing Support
 - Module now publishable to PowerShell Gallery (Install-Module IntuneHydrationKit)
 - Added Invoke-IntuneHydration as exported module function
 - Backward compatible wrapper script for users who clone the repo
