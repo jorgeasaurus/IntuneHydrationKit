@@ -97,27 +97,6 @@
 - GitHub Actions CI/CD workflows for automated testing and publishing
 - Added Pester tests for main orchestrator function
 - Fixed PSScriptAnalyzer warnings (variable naming conflicts)
-
-## v0.1.8 - Parameter-Based Invocation
-- Added full parameter support for command-line invocation
-- Settings file is now optional when using parameters
-- Parameters override settings file values when both provided
-- New parameters for all configuration options (tenant, auth, imports, reporting)
-- Added -All switch to enable all import types
-- Backwards compatible with existing settings.json workflow
-- Added Windows Driver Update license pre-check (avoids 403 errors)
-
-## v0.1.0 - Initial Release
-- OpenIntuneBaseline integration (auto-downloads latest policies)
-- Compliance policy templates (Windows, macOS, iOS, Android, Linux)
-- App protection policies (Android/iOS MAM)
-- Dynamic groups and device filters
-- Enrollment profiles (Autopilot, ESP)
-- Conditional Access starter pack (always created disabled)
-- Safe deletion (only removes kit-created objects)
-- Multi-cloud support (Global, USGov, USGovDoD, Germany, China)
-- WhatIf/dry-run mode
-- Detailed logging and reporting
 '@
         }
     }
