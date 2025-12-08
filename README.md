@@ -1,7 +1,7 @@
 # Intune Hydration Kit
 
 <p align="center">
-  <img src="media/IHKLogo.png" alt="Intune Hydration Kit Logo" width="300">
+  <img src="media/IHTLogoClearLight.png" alt="Intune Hydration Kit Logo" width="500">
 </p>
 
 <p align="center">
@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.8-blue" alt="Version">
+  <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/v/IntuneHydrationKit?label=PSGallery&color=blue" alt="PowerShell Gallery Version"></a>
+  <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/dt/IntuneHydrationKit?label=Downloads&color=green" alt="PowerShell Gallery Downloads"></a>
   <a href="https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jorgeasaurus/Intune-Hydration-Kit" alt="License"></a>
 </p>
 
@@ -35,13 +36,15 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| Dynamic Groups | 12 | Device targeting groups (OS, manufacturer, Autopilot) |
+| Dynamic Groups | 31 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, licensing) |
+| Static Groups | 2 | Update ring groups (Pilot, UAT) for manual membership |
 | Device Filters | 12 | Platform and manufacturer-based filters |
 | Security Baselines | 70+ | OpenIntuneBaseline policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
-| App Protection | 4 | MAM policies for iOS and Android BYOD |
-| Enrollment Profiles | 2 | Autopilot deployment + Enrollment Status Page |
-| Conditional Access | 13 | Starter pack policies (created disabled) |
+| App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
+| Mobile Apps | 7 | Microsoft Store apps, macOS apps (Company Portal, Edge, etc.) |
+| Enrollment Profiles | 3 | Autopilot deployment + Enrollment Status Page |
+| Conditional Access | 14 | Starter pack policies (created disabled) |
 
 ---
 
@@ -66,6 +69,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 ### Deletion Safety
 
 When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
+
 - Objects must have `"Imported by Intune-Hydration-Kit"` in their description
 - Conditional Access policies must also be in `disabled` state to be deleted
 - Manually created objects with the same names will NOT be deleted
@@ -87,9 +91,11 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 ## Prerequisites
 
 ### Required PowerShell Version
+
 - PowerShell 7.0 or later
 
 ### Required Modules
+
 ```powershell
 Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
 ```
@@ -97,7 +103,9 @@ Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
 > **Note:** This module uses `Invoke-MgGraphRequest` for all Graph API calls, so only the Authentication module is required.
 
 ### Required Permissions
+
 The authenticated user/app needs these Microsoft Graph permissions:
+
 - `DeviceManagementConfiguration.ReadWrite.All`
 - `DeviceManagementServiceConfig.ReadWrite.All`
 - `DeviceManagementManagedDevices.ReadWrite.All`
@@ -115,6 +123,24 @@ The authenticated user/app needs these Microsoft Graph permissions:
 
 ## Installation
 
+### Option A: PowerShell Gallery (Recommended)
+
+Install directly from the PowerShell Gallery:
+
+```powershell
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+```
+
+To update to the latest version:
+
+```powershell
+Update-Module -Name IntuneHydrationKit
+```
+
+### Option B: Clone from GitHub
+
+For development or to use the latest unreleased changes:
+
 ```powershell
 git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
 cd Intune-Hydration-Kit
@@ -127,34 +153,85 @@ Import-Module ./IntuneHydrationKit.psd1
 
 The kit supports two invocation methods: **parameters** (recommended) or **settings file** (for complex configurations).
 
-### Option A: Using Parameters (Recommended)
+### Using the PSGallery Module
 
-Run directly with command-line parameters:
+After installing from PSGallery, use the `Invoke-IntuneHydration` function directly:
 
 ```powershell
 # Preview all targets with interactive auth
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
+Invoke-IntuneHydration -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -All `
+    -WhatIf
 
 # Run specific targets only
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -Interactive -Create `
-    -ComplianceTemplates -DynamicGroups -DeviceFilters
+Invoke-IntuneHydration -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -ComplianceTemplates `
+    -DynamicGroups `
+    -DeviceFilters
 
 # Use service principal authentication
 $secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" -ClientId "app-id" -ClientSecret $secret `
-    -Create -All
+Invoke-IntuneHydration -TenantId "your-tenant-id" `
+    -ClientId "app-id" `
+    -ClientSecret $secret `
+    -Create `
+    -All
+
+# Use a settings file for complex configurations
+Invoke-IntuneHydration -SettingsPath ./settings.json
+
+# Preview with settings file
+Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
 ```
 
-### Option B: Using a Settings File
+### Using the Cloned Repository
+
+If you cloned the repository, use the wrapper script:
+
+```powershell
+# Preview all targets with interactive auth
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -All `
+    -WhatIf
+
+# Run specific targets only
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -ComplianceTemplates `
+    -DynamicGroups `
+    -DeviceFilters
+
+# Use service principal authentication
+$secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
+    -ClientId "app-id" `
+    -ClientSecret $secret `
+    -Create `
+    -All
+```
+
+### Using a Settings File
 
 For complex or repeated configurations, use a settings file:
 
 #### 1. Create Your Settings File
+
 ```powershell
+# If using cloned repo
 Copy-Item settings.example.json settings.json
+
+# If using PSGallery module, create your own settings.json
 ```
 
 Edit `settings.json` with your tenant details:
+
 ```json
 {
     "tenant": {
@@ -174,12 +251,22 @@ Edit `settings.json` with your tenant details:
 ```
 
 #### 2. Preview Changes (Recommended First Step)
+
 ```powershell
+# PSGallery module
+Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
+
+# Cloned repo
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
 ```
 
 #### 3. Run the Hydration
+
 ```powershell
+# PSGallery module
+Invoke-IntuneHydration -SettingsPath ./settings.json
+
+# Cloned repo
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
 ```
 
@@ -190,6 +277,7 @@ Edit `settings.json` with your tenant details:
 ### Settings File Options
 
 #### Tenant Configuration
+
 ```json
 "tenant": {
     "tenantId": "00000000-0000-0000-0000-000000000000",
@@ -207,15 +295,18 @@ The kit supports two authentication methods:
 | Client Secret | Automation, CI/CD | App registration with client secret |
 
 **Interactive (recommended for testing):**
+
 ```json
 "authentication": {
     "mode": "interactive",
     "environment": "Global"
 }
 ```
+
 Uses browser-based login. Best for manual runs and initial testing.
 
 **Client Secret (for automation):**
+
 ```json
 "authentication": {
     "mode": "clientSecret",
@@ -224,6 +315,7 @@ Uses browser-based login. Best for manual runs and initial testing.
     "environment": "Global"
 }
 ```
+
 Uses app registration credentials. Best for unattended/automated runs.
 
 > **Security Note:** Store client secrets securely. Consider using Azure Key Vault or environment variables instead of plaintext in settings files.
@@ -248,6 +340,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 | `force` | Skip confirmation prompt when running delete mode |
 
 **Create mode (default):**
+
 ```json
 "options": {
     "create": true,
@@ -256,6 +349,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 ```
 
 **Delete mode (cleanup):**
+
 ```json
 "options": {
     "create": false,
@@ -267,6 +361,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 #### Selective Targets (create or delete)
 
 Enable or disable specific configuration types (used for both create and delete workflows):
+
 ```json
 "imports": {
     "openIntuneBaseline": true,
@@ -275,8 +370,10 @@ Enable or disable specific configuration types (used for both create and delete 
     "notificationTemplates": true,
     "enrollmentProfiles": true,
     "dynamicGroups": true,
+    "staticGroups": true,
     "deviceFilters": true,
-    "conditionalAccess": true
+    "conditionalAccess": true,
+    "mobileApps": true
 }
 ```
 
@@ -328,8 +425,10 @@ These modes cannot be combined - choose one or the other.
 | `-NotificationTemplates` | Switch | Process notification templates |
 | `-EnrollmentProfiles` | Switch | Process Autopilot/ESP profiles |
 | `-DynamicGroups` | Switch | Process dynamic groups |
+| `-StaticGroups` | Switch | Process static (assigned) groups |
 | `-DeviceFilters` | Switch | Process device filters |
 | `-ConditionalAccess` | Switch | Process CA starter pack |
+| `-MobileApps` | Switch | Process mobile app templates |
 
 ### OpenIntuneBaseline Parameters (Parameter Mode Only)
 
@@ -360,11 +459,13 @@ These modes cannot be combined - choose one or the other.
 ### Hydration Marker
 
 All objects created by this kit include a marker in their description:
+
 ```
 Imported by Intune-Hydration-Kit
 ```
 
 This marker is used to:
+
 - Identify objects created by this tool
 - Prevent deletion of manually-created objects
 - Enable safe cleanup operations
@@ -372,6 +473,7 @@ This marker is used to:
 ### Conditional Access Protection
 
 Conditional Access policies receive additional protection:
+
 - **Always created in `disabled` state** - Never automatically enabled
 - **Deletion requires disabled state** - Cannot delete enabled CA policies
 - **Manual review required** - You must manually enable policies after review
@@ -379,6 +481,7 @@ Conditional Access policies receive additional protection:
 ### WhatIf Support (Preview Mode)
 
 All operations support PowerShell `-WhatIf` preview mode in both parameter and settings modes:
+
 ```powershell
 # Parameter mode
 ./Invoke-IntuneHydration.ps1 -TenantId "guid" -Interactive -Create -All -WhatIf
@@ -392,7 +495,9 @@ All operations support PowerShell `-WhatIf` preview mode in both parameter and s
 ## Output and Reports
 
 ### Console Output
+
 The script provides real-time progress with colored status indicators:
+
 - `[i]` Info - Operation details
 - `[!]` Warning - Non-fatal issues
 - `Created:` - New object created
@@ -400,13 +505,17 @@ The script provides real-time progress with colored status indicators:
 - `Deleted:` - Object removed
 
 ### Log Files
+
 Detailed logs are written to the `Logs/` directory:
-```
+
+```plaintext
 Logs/hydration-20241127-143052.log
 ```
 
 ### Summary Reports
+
 After each run, reports are generated in the `Reports/` directory:
+
 - `Hydration-Summary.md` - Human-readable markdown report
 - `Hydration-Summary.json` - Machine-readable JSON for automation
 
@@ -417,26 +526,31 @@ After each run, reports are generated in the `Reports/` directory:
 ### Common Issues
 
 **"The term 'Invoke-MgGraphRequest' is not recognized"**
+
 ```powershell
 # Install required modules
 Install-Module Microsoft.Graph.Authentication -Force
 ```
 
 **"Insufficient privileges"**
+
 - Ensure you have Global Administrator or Intune Administrator role
 - Check that all required Graph permissions are consented
 
 **"No active Intune license found"**
+
 - Verify Intune licenses are assigned in the tenant
 - Check for INTUNE_A, INTUNE_EDU, or EMS license
 
 **Objects not being deleted**
+
 - Verify the object has "Imported by Intune-Hydration-Kit" in its description
 - For CA policies, ensure the policy is in `disabled` state
 
 ### Debug Mode
 
 Enable verbose logging in settings:
+
 ```json
 "options": {
     "verbose": true
@@ -444,6 +558,7 @@ Enable verbose logging in settings:
 ```
 
 Or use PowerShell's verbose preference:
+
 ```powershell
 $VerbosePreference = "Continue"
 ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
@@ -453,32 +568,120 @@ $VerbosePreference = "Continue"
 
 ## Project Structure
 
-```
+```plaintext
 Intune-Hydration-Kit/
-├── Invoke-IntuneHydration.ps1    # Main orchestrator script
+├── Invoke-IntuneHydration.ps1    # Wrapper script (backward compatibility)
 ├── IntuneHydrationKit.psd1       # Module manifest
 ├── IntuneHydrationKit.psm1       # Module loader
+├── build.ps1                      # Build bootstrap script
+├── IntuneHydrationKit.build.ps1  # InvokeBuild tasks
 ├── settings.example.json          # Example configuration
 ├── Public/                        # Exported functions
+│   ├── Invoke-IntuneHydration.ps1 # Main orchestrator function
 │   ├── Connect-IntuneHydration.ps1
 │   ├── Import-IntuneBaseline.ps1
 │   ├── Import-IntuneCompliancePolicy.ps1
+│   ├── Import-IntuneMobileApp.ps1
 │   └── ...
 ├── Private/                       # Internal helper functions
+├── Scripts/                       # Helper scripts
+│   └── New-MobileAppTemplate.ps1  # Generate mobile app JSON templates
 ├── Templates/                     # Configuration templates
 │   ├── Compliance/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
+│   ├── StaticGroups/
+│   ├── MobileApps/
 │   └── ...
+├── Tests/                         # Pester tests
 ├── Logs/                          # Execution logs
 └── Reports/                       # Generated reports
 ```
 
 ---
 
+## Creating Mobile App Templates
+
+The kit includes a helper script to generate JSON templates for mobile apps. This makes it easy to add new apps to your hydration workflow.
+
+### Using the Template Generator
+
+```powershell
+# Create a Microsoft Store (winGetApp) template
+.\Scripts\New-MobileAppTemplate.ps1 -AppType winGetApp `
+    -DisplayName "Company Portal" `
+    -PackageIdentifier "9WZDNCRFJ3PZ" `
+    -Publisher "Microsoft Corporation" `
+    -PrivacyUrl "http://go.microsoft.com/fwlink/?LinkID=316999" `
+    -IconPath ".\Templates\MobileApps\Microsoft-IntuneCompanyPortal.png"
+
+# Create a macOS Edge template
+.\Scripts\New-MobileAppTemplate.ps1 -AppType macOSMicrosoftEdgeApp `
+    -DisplayName "Microsoft Edge for macOS" `
+    -Publisher "Microsoft" `
+    -Channel stable
+
+# Create Microsoft 365 Apps for Windows
+.\Scripts\New-MobileAppTemplate.ps1 -AppType officeSuiteApp `
+    -DisplayName "Microsoft 365 Apps for Windows" `
+    -Publisher "Microsoft"
+```
+
+### Supported App Types
+
+| App Type | Description | Required Parameters |
+|----------|-------------|---------------------|
+| `winGetApp` | Microsoft Store apps | `-PackageIdentifier` |
+| `macOSMicrosoftEdgeApp` | Edge for macOS | `-Channel` (stable/beta/dev) |
+| `macOSOfficeSuiteApp` | Microsoft 365 for macOS | None |
+| `officeSuiteApp` | Microsoft 365 for Windows | None |
+
+### Finding Package Identifiers
+
+For Microsoft Store apps, you can find the package identifier in the store URL or by searching:
+
+- Company Portal: `9WZDNCRFJ3PZ`
+- PowerShell: `9MZ1SNWT0N5D`
+- Visual Studio Code: `XP9KHM4BK9FZ7Q`
+- Adobe Acrobat Reader: `XPDP273C0XHQH2`
+
+---
+
 ## Changelog
 
+### v0.2.0
+
+- **New Feature:** Static Groups support
+  - Added `New-IntuneStaticGroup` function for creating assigned security groups
+  - Added `-StaticGroups` parameter to `Invoke-IntuneHydration`
+  - Added `staticGroups` option to settings file imports section
+  - Static group templates stored in `Templates/StaticGroups/` directory
+  - Includes Update Ring groups (Pilot, UAT) for Windows Update for Business
+- **New Feature:** Expanded Dynamic Groups (12 → 30+)
+  - Added ownership groups (Corporate, BYOD)
+  - Added user-based groups (Intune Licensed Users, Update Ring Broad)
+  - Added platform-specific ownership groups (macOS, iPhone, iPad, Android)
+  - Added Android Enterprise groups (Work Profile, Fully Managed)
+  - Added Windows ConfigMgr Managed devices group
+- **New Feature:** Mobile Apps support
+  - Added `Import-IntuneMobileApp` function to import mobile app templates
+  - Added `-MobileApps` parameter to `Invoke-IntuneHydration`
+  - Added `mobileApps` option to settings file imports section
+  - Added `Scripts/New-MobileAppTemplate.ps1` helper to generate mobile app JSON templates
+  - Supports winGetApp (Microsoft Store), macOSMicrosoftEdgeApp, macOSOfficeSuiteApp, officeSuiteApp types
+  - Mobile app templates stored in `Templates/MobileApps/` directory
+- **New Feature:** PowerShell Gallery publishing support
+- Module now installable via `Install-Module IntuneHydrationKit`
+- Added `Invoke-IntuneHydration` as exported module function
+- Backward compatible wrapper script for users who clone the repository
+- InvokeBuild-based build system for CI/CD
+- GitHub Actions workflows for automated testing and publishing
+- Added Pester tests for main orchestrator function
+- Fixed PSScriptAnalyzer warnings (variable naming conflicts)
+- Fixed notification template deletion (now matches by template name)
+
 ### v0.1.8
+
 - **New Feature:** Full parameter-based invocation support
 - Two mutually exclusive modes: settings file (`-SettingsPath`) or parameters (`-TenantId` + auth)
 - Added `-All` switch to enable all targets at once
@@ -490,6 +693,7 @@ Intune-Hydration-Kit/
 - Added `Organization.Read.All` scope for tenant organization details
 
 ### v0.1.4
+
 - Added `DeviceManagementScripts.ReadWrite.All` scope for custom compliance scripts (required after Microsoft Graph API permission changes)
 - Added `Application.Read.All` scope for Conditional Access policies targeting specific applications
 - Added `Policy.Read.All` scope for querying existing Conditional Access policies
@@ -497,15 +701,19 @@ Intune-Hydration-Kit/
 - Removed MDM authority check from prerequisites
 
 ### v0.1.3
+
 - Fixed image paths in README.md
 
 ### v0.1.2
+
 - Refactored code structure for improved readability and maintainability
 
 ### v0.1.1
+
 - Updated module manifest with correct author and company details
 
 ### v0.1.0 - Initial Release
+
 - OpenIntuneBaseline integration (auto-downloads latest policies)
 - Compliance policy templates (Windows, macOS, iOS, Android, Linux)
 - App protection policies (Android/iOS MAM)

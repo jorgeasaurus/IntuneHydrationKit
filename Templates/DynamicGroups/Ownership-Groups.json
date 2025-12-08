@@ -1,0 +1,14 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Corporate Owned Devices",
+            "description": "All corporate owned devices managed by Intune",
+            "membershipRule": "(device.deviceOwnership -eq \"Company\")"
+        },
+        {
+            "displayName": "Intune - BYOD Devices",
+            "description": "All personally owned devices managed by Intune",
+            "membershipRule": "(device.deviceOwnership -eq \"Personal\")"
+        }
+    ]
+}

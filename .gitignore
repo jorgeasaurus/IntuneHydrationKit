@@ -1,14 +1,32 @@
+# Build output
+/build/
+
+# Logs and reports
 Logs/*.log
-.DS_Store
-settings.json
-C*.md
-.C*
 Reports/*.json
 Reports/*.md
 Reports/PowerShell-Code-Review.md
-Test*/*
 Hydration-Summary.md
-*.code-workspace
-Test-ModuleConfigurations.ps1
+
+# Local settings (contains tenant secrets)
+settings.json
 settingsDelete.json
+
+# Dev Testing Results
+TestResults/
+
+# Dev/test scripts
+Test-ModuleConfigurations.ps1
 Test-ModuleConfigurationsParams.ps1
+
+# IDE and OS files
+.DS_Store
+*.code-workspace
+
+# Claude AI files
+C*.md
+.C*
+
+# Miscellaneous
+Publishing.md
+Test-Adhoc.ps1

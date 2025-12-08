@@ -41,28 +41,28 @@ function Import-IntuneEnrollmentProfile {
         # Delete matching Autopilot profiles
         try {
             $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -ErrorAction Stop
-            foreach ($profile in $existingAutopilot.value) {
+            foreach ($enrollmentProfile in $existingAutopilot.value) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
-                if (-not (Test-HydrationKitObject -Description $profile.description -ObjectName $profile.displayName)) {
-                    Write-Verbose "Skipping '$($profile.displayName)' - not created by Intune-Hydration-Kit"
+                if (-not (Test-HydrationKitObject -Description $enrollmentProfile.description -ObjectName $enrollmentProfile.displayName)) {
+                    Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune-Hydration-Kit"
                     continue
                 }
 
-                if ($PSCmdlet.ShouldProcess($profile.displayName, "Delete Autopilot profile")) {
+                if ($PSCmdlet.ShouldProcess($enrollmentProfile.displayName, "Delete Autopilot profile")) {
                     try {
-                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($profile.id)" -ErrorAction Stop
-                        Write-HydrationLog -Message "  Deleted: $($profile.displayName)" -Level Info
-                        $results += New-HydrationResult -Name $profile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Deleted' -Status 'Success'
+                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($enrollmentProfile.id)" -ErrorAction Stop
+                        Write-HydrationLog -Message "  Deleted: $($enrollmentProfile.displayName)" -Level Info
+                        $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
                         $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                        Write-HydrationLog -Message "  Failed: $($profile.displayName) - $errMessage" -Level Warning
-                        $results += New-HydrationResult -Name $profile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Failed' -Status "Delete failed: $errMessage"
+                        Write-HydrationLog -Message "  Failed: $($enrollmentProfile.displayName) - $errMessage" -Level Warning
+                        $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Failed' -Status "Delete failed: $errMessage"
                     }
                 }
                 else {
-                    Write-HydrationLog -Message "  WouldDelete: $($profile.displayName)" -Level Info
-                    $results += New-HydrationResult -Name $profile.displayName -Type 'AutopilotDeploymentProfile' -Action 'WouldDelete' -Status 'DryRun'
+                    Write-HydrationLog -Message "  WouldDelete: $($enrollmentProfile.displayName)" -Level Info
+                    $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'WouldDelete' -Status 'DryRun'
                 }
             }
         }
@@ -77,28 +77,28 @@ function Import-IntuneEnrollmentProfile {
                 $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
             }
 
-            foreach ($profile in $espProfiles) {
+            foreach ($espProfile in $espProfiles) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
-                if (-not (Test-HydrationKitObject -Description $profile.description -ObjectName $profile.displayName)) {
-                    Write-Verbose "Skipping '$($profile.displayName)' - not created by Intune-Hydration-Kit"
+                if (-not (Test-HydrationKitObject -Description $espProfile.description -ObjectName $espProfile.displayName)) {
+                    Write-Verbose "Skipping '$($espProfile.displayName)' - not created by Intune-Hydration-Kit"
                     continue
                 }
 
-                if ($PSCmdlet.ShouldProcess($profile.displayName, "Delete ESP profile")) {
+                if ($PSCmdlet.ShouldProcess($espProfile.displayName, "Delete ESP profile")) {
                     try {
-                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$($profile.id)" -ErrorAction Stop
-                        Write-HydrationLog -Message "  Deleted: $($profile.displayName)" -Level Info
-                        $results += New-HydrationResult -Name $profile.displayName -Type 'EnrollmentStatusPage' -Action 'Deleted' -Status 'Success'
+                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$($espProfile.id)" -ErrorAction Stop
+                        Write-HydrationLog -Message "  Deleted: $($espProfile.displayName)" -Level Info
+                        $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'Deleted' -Status 'Success'
                     }
                     catch {
                         $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                        Write-HydrationLog -Message "  Failed: $($profile.displayName) - $errMessage" -Level Warning
-                        $results += New-HydrationResult -Name $profile.displayName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status "Delete failed: $errMessage"
+                        Write-HydrationLog -Message "  Failed: $($espProfile.displayName) - $errMessage" -Level Warning
+                        $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status "Delete failed: $errMessage"
                     }
                 }
                 else {
-                    Write-HydrationLog -Message "  WouldDelete: $($profile.displayName)" -Level Info
-                    $results += New-HydrationResult -Name $profile.displayName -Type 'EnrollmentStatusPage' -Action 'WouldDelete' -Status 'DryRun'
+                    Write-HydrationLog -Message "  WouldDelete: $($espProfile.displayName)" -Level Info
+                    $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'WouldDelete' -Status 'DryRun'
                 }
             }
         }

@@ -1,0 +1,16 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Licensed Users",
+            "description": "All users licensed for Microsoft Intune",
+            "membershipRule": "(user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\"))",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Intune - Update Ring Broad Users",
+            "description": "All Intune licensed users targeted for the broad phase of Windows Update for Business",
+            "membershipRule": "(user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\"))",
+            "membershipType": "user"
+        }
+    ]
+}

@@ -65,11 +65,14 @@ if (Test-Path -Path $publicPath) {
 
 # Define public functions to export (must match FunctionsToExport in .psd1)
 $publicFunctions = @(
+    # Main entry point
+    'Invoke-IntuneHydration',
     # Core hydration functions
     'Connect-IntuneHydration',
     'Test-IntunePrerequisites',
     # Import functions
     'New-IntuneDynamicGroup',
+    'New-IntuneStaticGroup',
     'Get-OpenIntuneBaseline',
     'Import-IntuneBaseline',
     'Import-IntuneCompliancePolicy',
@@ -78,6 +81,7 @@ $publicFunctions = @(
     'Import-IntuneEnrollmentProfile',
     'Import-IntuneDeviceFilter',
     'Import-IntuneConditionalAccessPolicy',
+    'Import-IntuneMobileApp',
     # Helper functions
     'Initialize-HydrationLogging',
     'Write-HydrationLog',

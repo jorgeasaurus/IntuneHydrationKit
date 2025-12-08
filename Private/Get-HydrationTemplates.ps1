@@ -25,5 +25,7 @@ function Get-HydrationTemplates {
 
     $templates = Get-ChildItem -Path $Path -Filter "*.json" -File -Recurse:$Recurse
 
+    Write-Verbose "Found $($templates.Count) $ResourceType template(s) in $Path"
+
     return $templates
 }

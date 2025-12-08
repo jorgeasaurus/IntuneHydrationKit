@@ -1,14 +1,24 @@
 {
     "groups": [
         {
+            "displayName": "Intune - Windows Devices",
+            "description": "All Windows devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.managementType -eq \"MDM\")"
+        },
+        {
             "displayName": "Intune - Windows 10 Devices",
             "description": "All Windows 10 devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.1\")"
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.1\") and (device.managementType -eq \"MDM\")"
         },
         {
             "displayName": "Intune - Windows 11 Devices",
             "description": "All Windows 11 devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.2\")"
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.2\") and (device.managementType -eq \"MDM\")"
+        },
+        {
+            "displayName": "Intune - Windows ConfigMgr Managed Devices",
+            "description": "All Windows devices managed by ConfigMgr (co-managed)",
+            "membershipRule": "(device.deviceManagementAppId -eq \"54b943f8-d761-4f8d-951e-9cea1846db5a\")"
         },
         {
             "displayName": "Intune - macOS Devices",
@@ -16,14 +26,79 @@
             "membershipRule": "(device.deviceOSType -eq \"MacMDM\")"
         },
         {
+            "displayName": "Intune - macOS Corporate Devices",
+            "description": "All corporate owned macOS devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Company\")"
+        },
+        {
+            "displayName": "Intune - macOS BYOD Devices",
+            "description": "All personally owned macOS devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Personal\")"
+        },
+        {
             "displayName": "Intune - iOS iPadOS Devices",
             "description": "All iOS and iPadOS devices managed by Intune",
             "membershipRule": "(device.deviceOSType -eq \"iOS\") or (device.deviceOSType -eq \"iPad\")"
         },
         {
+            "displayName": "Intune - iPhone Devices",
+            "description": "All iPhone devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\")"
+        },
+        {
+            "displayName": "Intune - iPhone Corporate Devices",
+            "description": "All corporate owned iPhone devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Company\")"
+        },
+        {
+            "displayName": "Intune - iPhone BYOD Devices",
+            "description": "All personally owned iPhone devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Personal\")"
+        },
+        {
+            "displayName": "Intune - iPad Devices",
+            "description": "All iPad devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPad\")"
+        },
+        {
+            "displayName": "Intune - iPad Corporate Devices",
+            "description": "All corporate owned iPad devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Company\")"
+        },
+        {
+            "displayName": "Intune - iPad BYOD Devices",
+            "description": "All personally owned iPad devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Personal\")"
+        },
+        {
             "displayName": "Intune - Android Devices",
             "description": "All Android devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Android\") or (device.deviceOSType -eq \"AndroidEnterprise\") or (device.deviceOSType -eq \"AndroidForWork\")"
+            "membershipRule": "(device.deviceOSType -match \"Android\")"
+        },
+        {
+            "displayName": "Intune - Android Corporate Devices",
+            "description": "All corporate owned Android devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Company\")"
+        },
+        {
+            "displayName": "Intune - Android BYOD Devices",
+            "description": "All personally owned Android devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Personal\")"
+        },
+        {
+            "displayName": "Intune - Android Enterprise Devices",
+            "description": "All Android Enterprise devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -match \"AndroidEnterprise\")"
+        },
+        {
+            "displayName": "Intune - Android Work Profile Devices",
+            "description": "All Android Work Profile devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"AndroidForWork\") and (device.managementType -eq \"MDM\")"
+        },
+        {
+            "displayName": "Intune - Android Fully Managed Devices",
+            "description": "All Android Fully Managed devices managed by Intune",
+            "membershipRule": "(device.deviceOSType -eq \"AndroidEnterprise\") and (device.enrollmentProfileName -eq null)"
         }
     ]
 }

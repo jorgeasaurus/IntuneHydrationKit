@@ -63,17 +63,30 @@ function Import-IntuneNotificationTemplate {
         $existingByName[$key] = $existingTemplates[$key].Id
     }
 
+    # Build list of template names from our JSON files for name-based matching
+    $templateNames = @{}
+    foreach ($templateFile in $templateFiles) {
+        try {
+            $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+            if ($templateContent.displayName) {
+                $templateNames[$templateContent.displayName] = $true
+            }
+        }
+        catch {
+            Write-Verbose "Could not read template file: $($templateFile.FullName)"
+        }
+    }
+
     # Remove existing notification templates if requested
-    # SAFETY: Only delete templates that have "Imported by Intune-Hydration-Kit" in description
-    # Note: Notification templates may not always have descriptions, so we check what's available
+    # SAFETY: Only delete templates whose names match our template files
+    # Note: Notification templates don't support description field, so we match by name
     if ($RemoveExisting) {
         foreach ($templateName in $existingTemplates.Keys) {
             $templateInfo = $existingTemplates[$templateName]
 
-            # Safety check: Only delete if created by this kit (has hydration marker in description)
-            # Note: notification templates have 'description' field according to Graph API
-            if (-not (Test-HydrationKitObject -Description $templateInfo.Description -ObjectName $templateName)) {
-                Write-Verbose "Skipping '$templateName' - not created by Intune-Hydration-Kit"
+            # Safety check: Only delete if the name matches one of our template files
+            if (-not $templateNames.ContainsKey($templateName)) {
+                Write-Verbose "Skipping '$templateName' - not in hydration kit templates"
                 continue
             }
 
