@@ -1,3 +1,11 @@
+
+<div align="center">
+  <p>
+    <a href="https://twitter.com/jorge2990"><img src="https://img.shields.io/badge/Follow-@Jorgeasaurus-1DA1F2?style=flat&logo=x&logoColor=white" alt="Twitter Follow"/></a>
+    <a href="https://www.linkedin.com/in/jorgeasaurus/"><img src="https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat&logo=linkedin" alt="LinkedIn"/></a>
+  </p>
+</div>
+
 # Intune Hydration Kit
 
 <p align="center">
