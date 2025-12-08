@@ -26,4 +26,7 @@ Test-ModuleConfigurationsParams.ps1
 # Claude AI files
 C*.md
 .C*
+
+# Miscellaneous
 Publishing.md
+Test-Adhoc.ps1

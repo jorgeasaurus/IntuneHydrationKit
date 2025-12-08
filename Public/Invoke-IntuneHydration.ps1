@@ -51,6 +51,8 @@ function Invoke-IntuneHydration {
         Process enrollment profiles (Autopilot, ESP)
     .PARAMETER DynamicGroups
         Process dynamic groups
+    .PARAMETER StaticGroups
+        Process static (assigned) groups
     .PARAMETER DeviceFilters
         Process device filters
     .PARAMETER ConditionalAccess
@@ -170,6 +172,10 @@ function Invoke-IntuneHydration {
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [switch]$StaticGroups,
+
+        [Parameter(ParameterSetName = 'Interactive')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [switch]$DeviceFilters,
 
         [Parameter(ParameterSetName = 'Interactive')]
@@ -240,6 +246,7 @@ function Invoke-IntuneHydration {
             # Determine which targets are enabled
             $importsEnabled = @{
                 dynamicGroups         = $All.IsPresent -or $DynamicGroups.IsPresent
+                staticGroups          = $All.IsPresent -or $StaticGroups.IsPresent
                 deviceFilters         = $All.IsPresent -or $DeviceFilters.IsPresent
                 conditionalAccess     = $All.IsPresent -or $ConditionalAccess.IsPresent
                 complianceTemplates   = $All.IsPresent -or $ComplianceTemplates.IsPresent
@@ -450,6 +457,77 @@ function Invoke-IntuneHydration {
             }
         }
 
+        # Step 3b: Static Groups
+        if ($settings.imports.staticGroups) {
+            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
+            Write-HydrationLog -Message "Step 3b: $stepAction Static Groups" -Level Info
+
+            # Delete existing static groups if RemoveExisting is set
+            # SAFETY: Only delete groups that have "Imported by Intune-Hydration-Kit" in description
+            if ($RemoveExisting) {
+                try {
+                    # Get all security groups (non-dynamic) with hydration kit marker in description
+                    # Note: Using ConsistencyLevel header and $count for advanced query with NOT operator
+                    $listUri = "beta/groups?`$filter=securityEnabled eq true and NOT groupTypes/any(c:c eq 'DynamicMembership')&`$select=id,displayName,description&`$count=true"
+                    $headers = @{ 'ConsistencyLevel' = 'eventual' }
+                    do {
+                        $existingGroups = Invoke-MgGraphRequest -Method GET -Uri $listUri -Headers $headers -ErrorAction Stop
+                        foreach ($group in $existingGroups.value) {
+                            # Safety check: Only delete if created by this kit (has hydration marker in description)
+                            if (-not (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName)) {
+                                Write-Verbose "Skipping '$($group.displayName)' - not created by Intune-Hydration-Kit"
+                                continue
+                            }
+
+                            if ($PSCmdlet.ShouldProcess($group.displayName, "Delete static group")) {
+                                try {
+                                    Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
+                                    Write-HydrationLog -Message "  Deleted: $($group.displayName)" -Level Info
+                                    $allResults += New-HydrationResult -Type 'StaticGroup' -Name $group.displayName -Action 'Deleted' -Status 'Success'
+                                } catch {
+                                    Write-HydrationLog -Message "Failed to delete group '$($group.displayName)': $_" -Level Warning
+                                    $allResults += New-HydrationResult -Type 'StaticGroup' -Name $group.displayName -Action 'Failed' -Status $_.Exception.Message
+                                }
+                            } else {
+                                $allResults += New-HydrationResult -Type 'StaticGroup' -Name $group.displayName -Action 'WouldDelete' -Status 'DryRun'
+                            }
+                        }
+                        $listUri = $existingGroups.'@odata.nextLink'
+                    } while ($listUri)
+                } catch {
+                    Write-HydrationLog -Message "Failed to list static groups: $_" -Level Warning
+                }
+            } else {
+                # Normal create mode
+                $staticGroupsTemplatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/StaticGroups'
+
+                if (Test-Path -Path $staticGroupsTemplatePath) {
+                    $groupTemplates = Get-ChildItem -Path $staticGroupsTemplatePath -Filter "*.json" -File
+
+                    # Collect all groups from templates
+                    $allGroupDefs = @()
+                    foreach ($templateFile in $groupTemplates) {
+                        $templateContent = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json
+
+                        # Handle templates with multiple groups
+                        $groups = if ($templateContent.groups) { $templateContent.groups } else { @($templateContent) }
+                        $allGroupDefs += $groups
+                    }
+
+                    foreach ($groupDef in $allGroupDefs) {
+                        if ($PSCmdlet.ShouldProcess($groupDef.displayName, "Create static group")) {
+                            $groupResult = New-IntuneStaticGroup -DisplayName $groupDef.displayName -Description $groupDef.description
+
+                            $allResults += New-HydrationResult -Type 'StaticGroup' -Name $groupDef.displayName -Action $groupResult.Action -Id $groupResult.Id -Details $groupResult.Reason
+                            Write-HydrationLog -Message "  $($groupResult.Action): $($groupDef.displayName)" -Level Info
+                        }
+                    }
+                } else {
+                    Write-HydrationLog -Message "Static Groups template directory not found" -Level Warning
+                }
+            }
+        }
+
         # Step 4: Device Filters
         if ($settings.imports.deviceFilters) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
@@ -605,7 +683,7 @@ function Invoke-IntuneHydration {
 "@
 
             foreach ($result in $allResults) {
-                $reportContent += "| $($result.Timestamp) | $($result.Type) | $($result.Name) | $($result.Action) | $($result.Id) | $($result.Details) |`n"
+                $reportContent += "| $($result.Timestamp) | $($result.Type) | $($result.Name) | $($result.Action) | $($result.Id) | $($result.Status) |`n"
             }
         }
 

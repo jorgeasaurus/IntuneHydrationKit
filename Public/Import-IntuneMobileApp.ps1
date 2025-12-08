@@ -116,8 +116,13 @@ function Import-IntuneMobileApp {
             Remove-ReadOnlyGraphProperties -InputObject $importBody
 
             # Add hydration kit tag to notes field (mobile apps use notes instead of description for this)
-            $existingNotes = if ($importBody.notes) { $importBody.notes } else { "" }
-            $importBody.notes = if ($existingNotes) { "$existingNotes - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            $existingNotes = if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { "" }
+            $newNotes = if ($existingNotes) { "$existingNotes - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            if ($importBody.PSObject.Properties['notes']) {
+                $importBody.notes = $newNotes
+            } else {
+                $importBody | Add-Member -NotePropertyName 'notes' -NotePropertyValue $newNotes
+            }
 
             $endpoint = "beta/deviceAppManagement/mobileApps"
 

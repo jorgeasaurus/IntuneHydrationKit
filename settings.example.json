@@ -24,8 +24,10 @@
         "notificationTemplates": true,
         "enrollmentProfiles": true,
         "dynamicGroups": true,
+        "staticGroups": true,
         "deviceFilters": true,
-        "conditionalAccess": true
+        "conditionalAccess": true,
+        "mobileApps": true
     },
     "openIntuneBaseline": {
         "repoUrl": "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",

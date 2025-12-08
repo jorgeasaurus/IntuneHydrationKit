@@ -39,6 +39,7 @@
         'Test-IntunePrerequisites',
         # Import functions
         'New-IntuneDynamicGroup',
+        'New-IntuneStaticGroup',
         'Get-OpenIntuneBaseline',
         'Import-IntuneBaseline',
         'Import-IntuneCompliancePolicy',
@@ -47,6 +48,7 @@
         'Import-IntuneEnrollmentProfile',
         'Import-IntuneDeviceFilter',
         'Import-IntuneConditionalAccessPolicy',
+        'Import-IntuneMobileApp',
         # Helper functions
         'Initialize-HydrationLogging',
         'Write-HydrationLog',

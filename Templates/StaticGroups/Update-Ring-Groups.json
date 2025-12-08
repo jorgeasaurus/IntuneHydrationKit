@@ -1,0 +1,12 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Update Ring Pilot Users",
+            "description": "Users targeted for the pilot phase of Windows Update for Business and Driver Updates"
+        },
+        {
+            "displayName": "Intune - Update Ring UAT Users",
+            "description": "Users targeted for the UAT phase of Windows Update for Business and Driver Updates"
+        }
+    ]
+}
