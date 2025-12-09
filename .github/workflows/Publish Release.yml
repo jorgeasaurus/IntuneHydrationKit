@@ -60,6 +60,12 @@ jobs:
       - name: Validate Tag Matches Module Version
         shell: pwsh
         run: |
+          # If this run isn't associated with a tag (e.g., manual PSGallery-only publish), skip tag validation
+          if (-not ($env:GITHUB_REF -like 'refs/tags/*')) {
+            Write-Host "No tag ref detected; skipping tag/version validation."
+            return
+          }
+
           $manifestPath = './IntuneHydrationKit.psd1'
           $manifestData = Import-PowerShellDataFile -Path $manifestPath
           $moduleVersion = $manifestData.ModuleVersion
