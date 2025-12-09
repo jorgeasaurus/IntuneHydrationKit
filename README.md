@@ -659,6 +659,10 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
 
 ## Changelog
 
+### v0.2.2
+
+- **Fix:** Adobe Acrobat Reader DC Json updated to import properly
+
 ### v0.2.1
 
 - **New Feature:** Static Groups support
@@ -681,14 +685,14 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
   - Supports winGetApp (Microsoft Store), macOSMicrosoftEdgeApp, macOSOfficeSuiteApp, officeSuiteApp types
   - Mobile app templates stored in `Templates/MobileApps/` directory
 - **New Feature:** PowerShell Gallery publishing support
-- Module now installable via `Install-Module IntuneHydrationKit`
-- Added `Invoke-IntuneHydration` as exported module function
-- Backward compatible wrapper script for users who clone the repository
-- InvokeBuild-based build system for CI/CD
-- GitHub Actions workflows for automated testing and publishing
-- Added Pester tests for main orchestrator function
-- Fixed PSScriptAnalyzer warnings (variable naming conflicts)
-- Fixed notification template deletion (now matches by template name)
+  - Module now installable via `Install-Module IntuneHydrationKit`
+  - Added `Invoke-IntuneHydration` as exported module function
+  - Backward compatible wrapper script for users who clone the repository
+  - InvokeBuild-based build system for CI/CD
+  - GitHub Actions workflows for automated testing and publishing
+  - Added Pester tests for main orchestrator function
+  - Fixed PSScriptAnalyzer warnings (variable naming conflicts)
+  - Fixed notification template deletion (now matches by template name)
 
 ### v0.1.8
 

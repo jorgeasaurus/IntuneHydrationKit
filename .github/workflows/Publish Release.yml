@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_release:
+        description: 'Skip GitHub release (only publish to PSGallery)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: release-${{ github.ref }}
@@ -68,6 +73,7 @@ jobs:
           Write-Host "Version validated: $moduleVersion"
 
       - name: Create GitHub Release
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_release }}
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           name: v${{ steps.module_info.outputs.version }}
