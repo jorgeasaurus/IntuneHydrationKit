@@ -24,7 +24,7 @@ Test-ModuleConfigurationsParams.ps1
 *.code-workspace
 
 # Claude AI files
-C*.md
+Claude.md
 .C*
 
 # Miscellaneous
