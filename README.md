@@ -470,7 +470,7 @@ These modes cannot be combined - choose one or the other.
 
 All objects created by this kit include a marker in their description:
 
-```
+```plaintext
 Imported by Intune-Hydration-Kit
 ```
 
@@ -658,6 +658,13 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
 ---
 
 ## Changelog
+
+## v0.2.3
+
+- **New Features:**
+  - Slack added to mobile app templates
+  - Updated module dependencies
+  - Added Windows, macOS, and Linux build test support
 
 ### v0.2.2
 
