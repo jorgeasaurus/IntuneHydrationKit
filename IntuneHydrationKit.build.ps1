@@ -13,8 +13,7 @@ $ModuleName = 'IntuneHydrationKit'
 $SourcePath = $BuildRoot
 $BuildPath = Join-Path -Path $BuildRoot -ChildPath 'build'
 $ModuleBuildPath = Join-Path -Path $BuildPath -ChildPath $ModuleName
-$TestResultsPath = Join-Path -Path $BuildRoot -ChildPath 'TestResults'
-$LogsDir = Join-Path -Path $BuildRoot -ChildPath 'Logs'
+$TestResultsPath = Join-Path -Path $BuildPath -ChildPath 'TestResults'
 
 # Files and folders to include in the build
 $ModuleFiles = @(
@@ -29,25 +28,15 @@ $ModuleFolders = @(
 )
 
 # Synopsis: Remove build artifacts
-Task Clean {
+task Clean {
     if (Test-Path -Path $BuildPath) {
         Write-Build Yellow "Removing build directory: $BuildPath"
         Remove-Item -Path $BuildPath -Recurse -Force
     }
-    if (Test-Path -Path $TestResultsPath) {
-        Write-Build Yellow "Removing test results from directory: $TestResultsPath"
-        # Remove contents but not the directory
-        Get-ChildItem -Path $TestResultsPath -Recurse | Remove-Item -Recurse -Force
-    }
-    if (Test-Path -Path $LogsDir) {
-        Write-Build Yellow "Removing logs from directory: $LogsDir"
-        # Remove contents but not the directory
-        Get-ChildItem -Path $LogsDir -Recurse | Remove-Item -Recurse -Force
-    }
 }
 
 # Synopsis: Run PSScriptAnalyzer
-Task Analyze {
+task Analyze {
     Write-Build White "Running PSScriptAnalyzer..."
 
     $analyzerParams = @{
@@ -76,17 +65,17 @@ Task Analyze {
     )
 
     $results = Get-ChildItem -Path $SourcePath -Include '*.ps1', '*.psm1', '*.psd1' -Recurse |
-    Where-Object {
-        # Exclude paths
-        $excludePath = $false
-        foreach ($ep in $excludePaths) {
-            if ($_.FullName.StartsWith($ep)) { $excludePath = $true; break }
-        }
-        # Exclude specific files
-        if ($_.Name -in $excludeFiles) { $excludePath = $true }
-        -not $excludePath
-    } |
-    ForEach-Object { Invoke-ScriptAnalyzer -Path $_.FullName @analyzerParams }
+        Where-Object {
+            # Exclude paths
+            $excludePath = $false
+            foreach ($ep in $excludePaths) {
+                if ($_.FullName.StartsWith($ep)) { $excludePath = $true; break }
+            }
+            # Exclude specific files
+            if ($_.Name -in $excludeFiles) { $excludePath = $true }
+            -not $excludePath
+        } |
+        ForEach-Object { Invoke-ScriptAnalyzer -Path $_.FullName @analyzerParams }
 
     if ($results) {
         $results | Format-Table -AutoSize
@@ -104,7 +93,7 @@ Task Analyze {
 }
 
 # Synopsis: Run Pester tests
-Task Test {
+task Test {
     Write-Build White "Running Pester tests..."
 
     # Ensure test results directory exists
@@ -136,7 +125,7 @@ Task Test {
 }
 
 # Synopsis: Build the module for distribution
-Task Build Clean, {
+task Build Clean, {
     Write-Build White "Building module to: $ModuleBuildPath"
 
     # Create build directory
@@ -173,7 +162,7 @@ Task Build Clean, {
 }
 
 # Synopsis: Publish module to PSGallery
-Task Publish Build, {
+task Publish Build, {
     Write-Build White "Publishing to PSGallery..."
 
     $apiKey = $env:PSGALLERY_API_KEY
@@ -192,7 +181,7 @@ Task Publish Build, {
 }
 
 # Synopsis: Get module version from manifest
-Task GetVersion {
+task GetVersion {
     $manifestPath = Join-Path -Path $SourcePath -ChildPath 'IntuneHydrationKit.psd1'
     $manifestData = Import-PowerShellDataFile -Path $manifestPath
     $version = $manifestData.ModuleVersion
@@ -208,7 +197,7 @@ Task GetVersion {
 }
 
 # Synopsis: Get release notes from manifest
-Task GetReleaseNotes {
+task GetReleaseNotes {
     $manifestPath = Join-Path -Path $SourcePath -ChildPath 'IntuneHydrationKit.psd1'
     $manifestData = Import-PowerShellDataFile -Path $manifestPath
     $releaseNotes = $manifestData.PrivateData.PSData.ReleaseNotes
@@ -226,10 +215,10 @@ Task GetReleaseNotes {
 }
 
 # Synopsis: Default task - run tests and build
-Task . Analyze, Test, Build
+task . Analyze, Test, Build
 
 # Synopsis: CI task - full validation without publishing
-Task CI Analyze, Test, Build
+task CI Analyze, Test, Build
 
 # Synopsis: Release task - build and publish
-Task Release Analyze, Test, Publish
+task Release Analyze, Test, Publish
