@@ -470,7 +470,7 @@ These modes cannot be combined - choose one or the other.
 
 All objects created by this kit include a marker in their description:
 
-```
+```plaintext
 Imported by Intune-Hydration-Kit
 ```
 
@@ -535,24 +535,24 @@ After each run, reports are generated in the `Reports/` directory:
 
 ### Common Issues
 
-**"The term 'Invoke-MgGraphRequest' is not recognized"**
+#### "The term 'Invoke-MgGraphRequest' is not recognized"
 
 ```powershell
 # Install required modules
 Install-Module Microsoft.Graph.Authentication -Force
 ```
 
-**"Insufficient privileges"**
+#### "Insufficient privileges"
 
 - Ensure you have Global Administrator or Intune Administrator role
 - Check that all required Graph permissions are consented
 
-**"No active Intune license found"**
+#### "No active Intune license found"
 
 - Verify Intune licenses are assigned in the tenant
 - Check for INTUNE_A, INTUNE_EDU, or EMS license
 
-**Objects not being deleted**
+#### Objects not being deleted
 
 - Verify the object has "Imported by Intune-Hydration-Kit" in its description
 - For CA policies, ensure the policy is in `disabled` state
@@ -658,6 +658,14 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
 ---
 
 ## Changelog
+
+## v0.2.3
+
+- **New Features:**
+  - Slack added to mobile app templates
+  - Microsoft Teams added to mobile app templates
+  - Updated module dependencies
+  - Added Windows, macOS, and Linux build test support
 
 ### v0.2.2
 

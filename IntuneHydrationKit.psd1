@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.2'
+    ModuleVersion     = '0.2.3'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,7 +89,13 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.2 - Adobe Acrobat Reader DC Import Json fix
+## v0.2.3 
+
+- **New Features:**
+  - Microsoft Teams added to mobile app templates
+  - Slack added to mobile app templates
+  - Updated module dependencies
+  - Added Windows, macOS, and Linux build test support
 '@
         }
     }

@@ -1,0 +1,137 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ['**']
+    tags:
+      - 'v*.*.*'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+  pull_request:
+    branches: ['**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Build Environment
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: ./build.ps1 -Task Analyze
+
+      - name: Run Pester Tests
+        shell: pwsh
+        run: ./build.ps1 -Task Test
+
+      - name: Build Module
+        shell: pwsh
+        run: ./build.ps1 -Task Build
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: build/TestResults/TestResults.xml
+          if-no-files-found: warn
+
+      - name: Upload Build Artifacts
+        if: success() && matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-build
+          path: build/IntuneHydrationKit/
+
+  release:
+    name: Publish and Release
+    needs: build
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: module-build
+          path: build/IntuneHydrationKit/
+
+      - name: Get Module Info
+        id: module_info
+        shell: pwsh
+        run: |
+          $manifest = Import-PowerShellDataFile -Path ./IntuneHydrationKit.psd1
+          "version=$($manifest.ModuleVersion)" >> $env:GITHUB_OUTPUT
+          $notes = $manifest.PrivateData.PSData.ReleaseNotes -replace "`n", '%0A' -replace "`r", ''
+          "release_notes=$notes" >> $env:GITHUB_OUTPUT
+
+      - name: Validate Tag Matches Module Version
+        shell: pwsh
+        run: |
+          $manifest = Import-PowerShellDataFile -Path ./IntuneHydrationKit.psd1
+          $moduleVersion = $manifest.ModuleVersion
+          $tagVersion = '${{ github.ref_name }}' -replace '^v', ''
+          if ($moduleVersion -ne $tagVersion) {
+            throw "Tag version ($tagVersion) does not match module version ($moduleVersion). Please update the module manifest."
+          }
+          Write-Host "Version validated: $moduleVersion"
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          if (-not $env:PSGALLERY_API_KEY) {
+            throw "PSGALLERY_API_KEY secret is not set"
+          }
+          Publish-Module -Path ./build/IntuneHydrationKit -NuGetApiKey $env:PSGALLERY_API_KEY -Repository PSGallery -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        with:
+          name: v${{ steps.module_info.outputs.version }}
+          body: |
+            ## IntuneHydrationKit v${{ steps.module_info.outputs.version }}
+
+            ### Installation
+
+            ```powershell
+            Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+            ```
+
+            ### Release Notes
+
+            ${{ steps.module_info.outputs.release_notes }}
+          draft: false
+          prerelease: false
+          files: build/IntuneHydrationKit/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
