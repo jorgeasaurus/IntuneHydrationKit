@@ -52,7 +52,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | Security Baselines | 70+ | OpenIntuneBaseline policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
-| Mobile Apps | 7 | Microsoft Store apps, macOS apps (Company Portal, Edge, etc.) |
+| Mobile Apps | 9 | Microsoft Store apps, macOS apps (Company Portal, Edge, etc.) |
 | Enrollment Profiles | 3 | Autopilot deployment + Enrollment Status Page |
 | Conditional Access | 14 | Starter pack policies (created disabled) |
 
@@ -607,53 +607,6 @@ Intune-Hydration-Kit/
 ├── Logs/                          # Execution logs
 └── Reports/                       # Generated reports
 ```
-
----
-
-## Creating Mobile App Templates
-
-The kit includes a helper script to generate JSON templates for mobile apps. This makes it easy to add new apps to your hydration workflow.
-
-### Using the Template Generator
-
-```powershell
-# Create a Microsoft Store (winGetApp) template
-.\Scripts\New-MobileAppTemplate.ps1 -AppType winGetApp `
-    -DisplayName "Company Portal" `
-    -PackageIdentifier "9WZDNCRFJ3PZ" `
-    -Publisher "Microsoft Corporation" `
-    -PrivacyUrl "http://go.microsoft.com/fwlink/?LinkID=316999" `
-    -IconPath ".\Templates\MobileApps\Microsoft-IntuneCompanyPortal.png"
-
-# Create a macOS Edge template
-.\Scripts\New-MobileAppTemplate.ps1 -AppType macOSMicrosoftEdgeApp `
-    -DisplayName "Microsoft Edge for macOS" `
-    -Publisher "Microsoft" `
-    -Channel stable
-
-# Create Microsoft 365 Apps for Windows
-.\Scripts\New-MobileAppTemplate.ps1 -AppType officeSuiteApp `
-    -DisplayName "Microsoft 365 Apps for Windows" `
-    -Publisher "Microsoft"
-```
-
-### Supported App Types
-
-| App Type | Description | Required Parameters |
-|----------|-------------|---------------------|
-| `winGetApp` | Microsoft Store apps | `-PackageIdentifier` |
-| `macOSMicrosoftEdgeApp` | Edge for macOS | `-Channel` (stable/beta/dev) |
-| `macOSOfficeSuiteApp` | Microsoft 365 for macOS | None |
-| `officeSuiteApp` | Microsoft 365 for Windows | None |
-
-### Finding Package Identifiers
-
-For Microsoft Store apps, you can find the package identifier in the store URL or by searching:
-
-- Company Portal: `9WZDNCRFJ3PZ`
-- PowerShell: `9MZ1SNWT0N5D`
-- Visual Studio Code: `XP9KHM4BK9FZ7Q`
-- Adobe Acrobat Reader: `XPDP273C0XHQH2`
 
 ---
 
