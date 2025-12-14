@@ -49,10 +49,6 @@ jobs:
         shell: pwsh
         run: ./build.ps1 -Task Test
 
-      - name: Build Module
-        shell: pwsh
-        run: ./build.ps1 -Task Build
-
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +56,10 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: build/TestResults/TestResults.xml
           if-no-files-found: warn
+
+      - name: Build Module
+        shell: pwsh
+        run: ./build.ps1 -Task Build
 
       - name: Upload Build Artifacts
         if: success() && matrix.os == 'windows-latest'
