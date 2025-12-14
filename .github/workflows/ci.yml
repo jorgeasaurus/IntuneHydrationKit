@@ -67,6 +67,7 @@ jobs:
         with:
           name: module-build
           path: build/IntuneHydrationKit/
+          if-no-files-found: error
 
   release:
     name: Publish and Release
@@ -83,6 +84,19 @@ jobs:
         with:
           name: module-build
           path: build/IntuneHydrationKit/
+
+      - name: List Build Artifacts
+        shell: pwsh
+        run: |
+          Write-Host "=== Build Artifacts ===" -ForegroundColor Cyan
+          if (Test-Path build/IntuneHydrationKit) {
+            Get-ChildItem -Path build/IntuneHydrationKit -Recurse | ForEach-Object {
+              Write-Host $_.FullName
+            }
+          } else {
+            Write-Error "Build artifacts directory not found!"
+            exit 1
+          }
 
       - name: Get Module Info
         id: module_info
@@ -114,6 +128,15 @@ jobs:
           }
           Publish-Module -Path ./build/IntuneHydrationKit -NuGetApiKey $env:PSGALLERY_API_KEY -Repository PSGallery -Force
 
+      - name: Create Release Archive
+        shell: pwsh
+        run: |
+          $version = '${{ steps.module_info.outputs.version }}'
+          $zipName = "IntuneHydrationKit-v$version.zip"
+          Compress-Archive -Path ./build/IntuneHydrationKit/* -DestinationPath "./build/$zipName" -Force
+          Write-Host "Created release archive: $zipName"
+          Get-ChildItem ./build/*.zip | ForEach-Object { Write-Host "  $($_.Name) - $([math]::Round($_.Length/1KB, 2)) KB" }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
         with:
@@ -132,6 +155,6 @@ jobs:
             ${{ steps.module_info.outputs.release_notes }}
           draft: false
           prerelease: false
-          files: build/IntuneHydrationKit/**
+          files: build/IntuneHydrationKit-v${{ steps.module_info.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
