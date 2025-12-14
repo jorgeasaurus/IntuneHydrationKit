@@ -92,6 +92,7 @@
 ## v0.2.3 
 
 - **New Features:**
+  - Microsoft Teams added to mobile app templates
   - Slack added to mobile app templates
   - Updated module dependencies
   - Added Windows, macOS, and Linux build test support

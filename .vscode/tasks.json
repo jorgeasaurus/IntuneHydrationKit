@@ -125,13 +125,13 @@
             "problemMatcher": []
         },
         {
-            "label": "Module: Get Version",
+            "label": "Module: Get ReleaseNotes",
             "type": "shell",
             "command": "pwsh",
             "args": [
                 "-NoProfile",
                 "-Command",
-                "Import-Module InvokeBuild -Force; Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task GetVersion"
+                "Import-Module InvokeBuild -Force; Invoke-Build -File ./IntuneHydrationKit.build.ps1 -Task GetReleaseNotes"
             ],
             "group": "none",
             "presentation": {
