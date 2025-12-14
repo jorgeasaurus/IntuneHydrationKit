@@ -663,7 +663,7 @@ For Microsoft Store apps, you can find the package identifier in the store URL o
 
 - **New Features:**
   - Slack added to mobile app templates
-  - Slack added to mobile app templates
+  - Microsoft Teams added to mobile app templates
   - Updated module dependencies
   - Added Windows, macOS, and Linux build test support
 
