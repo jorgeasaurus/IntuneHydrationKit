@@ -632,7 +632,6 @@ Intune-Hydration-Kit/
   - Dynamic enrollment profile discovery (auto-detects templates by @odata.type)
   - Cross-platform logging to OS temp directories (Windows/macOS/Linux)
   - Reports now written to OS temp directory by default
-  - Enhanced New-MobileAppTemplate with Microsoft Store integration
 
 ### v0.2.4
 

@@ -84,8 +84,8 @@
             # Project URI for this module
             ProjectUri   = 'https://github.com/jorgeasaurus/Intune-Hydration-Kit'
 
-            # Icon URI for the module (optional - uncomment if you add an icon)
-            # IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/IHKLogo.png'
+            # Icon URI for the module (used in PSGallery)
+            IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/IHTLogoClearLight.png'
 
             # Release notes for this module
             ReleaseNotes = @'
@@ -95,7 +95,6 @@
   - Dynamic enrollment profile discovery (auto-detects templates by @odata.type)
   - Cross-platform logging to OS temp directories (Windows/macOS/Linux)
   - Reports now written to OS temp directory by default
-  - Enhanced New-MobileAppTemplate with Microsoft Store integration
 '@
         }
     }
