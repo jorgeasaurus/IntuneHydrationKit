@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.4'
+    ModuleVersion     = '0.2.5'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,17 +89,13 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.4
+## v0.2.5
 
-- **New Mobile Apps:**
-  - WhatsApp
-  - Spotify
-  - Microsoft Copilot
-  - Power BI Desktop
-  - Windows App
-  - Windows Terminal
-- **New Enrollment Profile:**
-  - Windows Self-Deploy Autopilot Profile
+- **Features:**
+  - Dynamic enrollment profile discovery (auto-detects templates by @odata.type)
+  - Cross-platform logging to OS temp directories (Windows/macOS/Linux)
+  - Reports now written to OS temp directory by default
+  - Enhanced New-MobileAppTemplate with Microsoft Store integration
 '@
         }
     }
