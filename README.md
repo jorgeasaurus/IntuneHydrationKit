@@ -47,13 +47,13 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | Category | Count | Description |
 |----------|-------|-------------|
 | Dynamic Groups | 31 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, licensing) |
-| Static Groups | 2 | Update ring groups (Pilot, UAT) for manual membership |
-| Device Filters | 12 | Platform and manufacturer-based filters |
+| Static Groups | 4 | Update ring groups (Pilot, UAT, Broad) and assignment groups |
+| Device Filters | 12 | Platform and manufacturer-based filters (Windows, macOS, iOS, Android) |
 | Security Baselines | 70+ | OpenIntuneBaseline policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
-| Mobile Apps | 9 | Microsoft Store apps, macOS apps (Company Portal, Edge, etc.) |
-| Enrollment Profiles | 3 | Autopilot deployment + Enrollment Status Page |
+| Mobile Apps | 15 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
+| Enrollment Profiles | 3 | Autopilot deployment profiles + Enrollment Status Page |
 | Conditional Access | 14 | Starter pack policies (created disabled) |
 
 ---
@@ -471,7 +471,7 @@ These modes cannot be combined - choose one or the other.
 All objects created by this kit include a marker in their description:
 
 ```plaintext
-Imported by Intune-Hydration-Kit
+Imported by Intune Hydration Kit
 ```
 
 This marker is used to:
@@ -612,7 +612,19 @@ Intune-Hydration-Kit/
 
 ## Changelog
 
-## v0.2.3
+### v0.2.4
+
+- **New Mobile Apps:**
+  - WhatsApp
+  - Spotify
+  - Microsoft Copilot
+  - Power BI Desktop
+  - Windows App
+  - Windows Terminal
+- **New Enrollment Profile:**
+  - Windows Self-Deploy Autopilot Profile
+
+### v0.2.3
 
 - **New Features:**
   - Slack added to mobile app templates

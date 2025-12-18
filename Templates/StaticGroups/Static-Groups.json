@@ -7,6 +7,14 @@
         {
             "displayName": "Intune - Update Ring UAT Users",
             "description": "Users targeted for the UAT phase of Windows Update for Business and Driver Updates"
+        },
+        {
+            "displayName": "Intune - Assignment Ring Pilot Devices",
+            "description": "Devices targeted for the pilot assignment ring."
+        },
+        {
+            "displayName": "Intune - Assignment Ring UAT Devices",
+            "description": "Devices targeted for the UAT assignment ring."
         }
     ]
 }
