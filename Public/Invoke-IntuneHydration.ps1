@@ -288,7 +288,7 @@ function Invoke-IntuneHydration {
                     downloadPath = if ($BaselineDownloadPath) { $BaselineDownloadPath } else { './OpenIntuneBaseline' }
                 }
                 reporting          = @{
-                    outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { 'Reports' }
+                    outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { $null }
                     formats    = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
                 }
             }
@@ -338,8 +338,8 @@ function Invoke-IntuneHydration {
         }
 
         # Initialize logging (after applying verbose setting)
-        $logsPath = Join-Path -Path $moduleRoot -ChildPath 'Logs'
-        Initialize-HydrationLogging -LogPath $logsPath -EnableVerbose:($VerbosePreference -eq 'Continue')
+        # Uses OS temp directory by default (e.g., $env:TEMP/IntuneHydrationKit/Logs on Windows, /tmp/IntuneHydrationKit/Logs on macOS/Linux)
+        Initialize-HydrationLogging -EnableVerbose:($VerbosePreference -eq 'Continue')
 
         Write-HydrationLog -Message "=== Intune Hydration Kit Started ===" -Level Info
         Write-HydrationLog -Message "Loaded settings for tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -Level Info
@@ -612,7 +612,13 @@ function Invoke-IntuneHydration {
         # Step 12: Generate Summary Report
         Write-HydrationLog -Message "Step 12: Generating Summary Report" -Level Info
 
-        $reportsPath = Join-Path -Path $moduleRoot -ChildPath $settings.reporting.outputPath
+        # Use OS temp directory for reports if no explicit path provided
+        if ($settings.reporting.outputPath) {
+            $reportsPath = $settings.reporting.outputPath
+        } else {
+            $tempBase = [System.IO.Path]::GetTempPath()
+            $reportsPath = Join-Path -Path $tempBase -ChildPath 'IntuneHydrationKit/Reports'
+        }
         if (-not (Test-Path -Path $reportsPath)) {
             New-Item -Path $reportsPath -ItemType Directory -Force | Out-Null
         }

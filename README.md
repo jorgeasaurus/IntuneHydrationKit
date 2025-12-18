@@ -516,18 +516,32 @@ The script provides real-time progress with colored status indicators:
 
 ### Log Files
 
-Detailed logs are written to the `Logs/` directory:
+Detailed logs are written to an OS-appropriate temp directory:
+
+| OS | Log Path |
+|----|----------|
+| Windows | `$env:TEMP\IntuneHydrationKit\Logs\` |
+| macOS | `/var/folders/.../IntuneHydrationKit/Logs/` |
+| Linux | `/tmp/IntuneHydrationKit/Logs/` |
 
 ```plaintext
-Logs/hydration-20241127-143052.log
+hydration-20241127-143052.log
 ```
 
 ### Summary Reports
 
-After each run, reports are generated in the `Reports/` directory:
+After each run, reports are generated in the OS temp directory (same location as logs):
+
+| OS | Reports Path |
+|----|--------------|
+| Windows | `$env:TEMP\IntuneHydrationKit\Reports\` |
+| macOS | `/var/folders/.../IntuneHydrationKit/Reports/` |
+| Linux | `/tmp/IntuneHydrationKit/Reports/` |
 
 - `Hydration-Summary.md` - Human-readable markdown report
 - `Hydration-Summary.json` - Machine-readable JSON for automation
+
+You can specify a custom output path using the `-ReportOutputPath` parameter or `reporting.outputPath` in settings.
 
 ---
 
@@ -611,6 +625,13 @@ Intune-Hydration-Kit/
 ---
 
 ## Changelog
+
+### v0.2.5
+
+- **Features:**
+  - Dynamic enrollment profile discovery (auto-detects templates by @odata.type)
+  - Cross-platform logging to OS temp directories (Windows/macOS/Linux)
+  - Reports now written to OS temp directory by default
 
 ### v0.2.4
 
