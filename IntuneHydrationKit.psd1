@@ -85,7 +85,7 @@
             ProjectUri   = 'https://github.com/jorgeasaurus/Intune-Hydration-Kit'
 
             # Icon URI for the module (used in PSGallery)
-            IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/IHTLogoClearLight.png'
+            IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/media/IHTLogoClearLight.png'
 
             # Release notes for this module
             ReleaseNotes = @'
