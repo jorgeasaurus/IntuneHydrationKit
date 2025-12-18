@@ -113,7 +113,16 @@ function Import-IntuneEnrollmentProfile {
     $templateFiles = Get-ChildItem -Path $TemplatePath -Filter "*.json" -File
 
     foreach ($templateFile in $templateFiles) {
-        $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json
+        try {
+            $template = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop |
+                ConvertFrom-Json -ErrorAction Stop
+        }
+        catch {
+            Write-Error "Failed to load or parse enrollment template file '$($templateFile.FullName)': $_"
+            Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $($_.Exception.Message)" -Level Error
+            $results += New-HydrationResult -Name $templateFile.Name -Type 'EnrollmentTemplate' -Action 'Failed' -Status $_.Exception.Message
+            continue
+        }
         $profileName = $template.displayName
         $odataType = $template.'@odata.type'
 
