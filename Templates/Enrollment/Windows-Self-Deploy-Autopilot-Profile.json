@@ -1,0 +1,20 @@
+{
+    "@odata.type": "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile",
+    "displayName": "Self Deploy Default Autopilot Deployment Profile",
+    "description": "",
+    "deviceNameTemplate": "%SERIAL%",
+    "locale": "os-default",
+    "preprovisioningAllowed": false,
+    "deviceType": "windowsPc",
+    "hardwareHashExtractionEnabled": false,
+    "roleScopeTagIds": [],
+    "hybridAzureADJoinSkipConnectivityCheck": false,
+    "outOfBoxExperienceSetting": {
+        "deviceUsageType": "shared",
+        "escapeLinkHidden": true,
+        "privacySettingsHidden": true,
+        "eulaHidden": true,
+        "userType": "standard",
+        "keyboardSelectionPageSkipped": true
+    }
+}

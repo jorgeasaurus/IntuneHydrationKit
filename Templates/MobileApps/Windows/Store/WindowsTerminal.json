@@ -1,0 +1,23 @@
+{
+  "@odata.type": "#microsoft.graph.winGetApp",
+  "displayName": "Windows Terminal",
+  "description": "The Windows Terminal is a modern, fast, efficient, powerful, and productive terminal application for users of command-line tools and shells like Command Prompt, PowerShell, and WSL. Its main features include multiple tabs, panes, Unicode and UTF-8 characte...",
+  "publisher": "Microsoft Corporation",
+  "developer": "Microsoft Corporation",
+  "informationUrl": "https://github.com/microsoft/terminal/issues",
+  "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkID=521839",
+  "isFeatured": false,
+  "categories": [],
+  "roleScopeTagIds": [],
+  "notes": "",
+  "owner": "",
+  "largeIcon": {
+    "type": "image/png",
+    "value": "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"
+  },
+  "packageIdentifier": "9N0DX20HK701",
+  "repositoryType": "microsoftStore",
+  "installExperience": {
+    "runAsAccount": "user"
+  }
+}
