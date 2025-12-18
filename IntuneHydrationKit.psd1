@@ -82,7 +82,7 @@
             LicenseUri   = 'https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE'
 
             # Project URI for this module
-            ProjectUri   = 'https://github.com/jorgeasaurus/Intune-Hydration-Kit'
+            ProjectUri   = 'https://intunehydrationkit.com'
 
             # Icon URI for the module (used in PSGallery)
             IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/media/IHTLogoClearLight.png'
