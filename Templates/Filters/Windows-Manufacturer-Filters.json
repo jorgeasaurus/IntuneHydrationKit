@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "Windows - Dell Devices",
+            "description": "Filter for Dell Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -eq \"Dell Inc.\")"
+        },
+        {
+            "displayName": "Windows - HP Devices",
+            "description": "Filter for HP Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -eq \"HP\") or (device.manufacturer -eq \"Hewlett-Packard\")"
+        },
+        {
+            "displayName": "Windows - Lenovo Devices",
+            "description": "Filter for Lenovo Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -eq \"LENOVO\")"
+        }
+    ]
+}

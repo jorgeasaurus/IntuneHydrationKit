@@ -46,13 +46,13 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| Dynamic Groups | 31 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, licensing) |
+| Dynamic Groups | 43 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, licensing, VMs) |
 | Static Groups | 4 | Update ring groups (Pilot, UAT, Broad) and assignment groups |
-| Device Filters | 12 | Platform and manufacturer-based filters (Windows, macOS, iOS, Android) |
-| Security Baselines | 70+ | OpenIntuneBaseline policies (Windows, macOS) |
+| Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
+| Security Baselines | 70+ | [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
-| Mobile Apps | 15 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
+| Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
 | Enrollment Profiles | 3 | Autopilot deployment profiles + Enrollment Status Page |
 | Conditional Access | 14 | Starter pack policies (created disabled) |
 
@@ -614,6 +614,7 @@ Intune-Hydration-Kit/
 │   ├── Compliance/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
+│   ├── Filters/
 │   ├── StaticGroups/
 │   ├── MobileApps/
 │   └── ...
@@ -626,112 +627,7 @@ Intune-Hydration-Kit/
 
 ## Changelog
 
-### v0.2.5
-
-- **Features:**
-  - Dynamic enrollment profile discovery (auto-detects templates by @odata.type)
-  - Cross-platform logging to OS temp directories (Windows/macOS/Linux)
-  - Reports now written to OS temp directory by default
-
-### v0.2.4
-
-- **New Mobile Apps:**
-  - WhatsApp
-  - Spotify
-  - Microsoft Copilot
-  - Power BI Desktop
-  - Windows App
-  - Windows Terminal
-- **New Enrollment Profile:**
-  - Windows Self-Deploy Autopilot Profile
-
-### v0.2.3
-
-- **New Features:**
-  - Slack added to mobile app templates
-  - Microsoft Teams added to mobile app templates
-  - Updated module dependencies
-  - Added Windows, macOS, and Linux build test support
-
-### v0.2.2
-
-- **Fix:** Adobe Acrobat Reader DC Json updated to import properly
-
-### v0.2.1
-
-- **New Feature:** Static Groups support
-  - Added `New-IntuneStaticGroup` function for creating assigned security groups
-  - Added `-StaticGroups` parameter to `Invoke-IntuneHydration`
-  - Added `staticGroups` option to settings file imports section
-  - Static group templates stored in `Templates/StaticGroups/` directory
-  - Includes Update Ring groups (Pilot, UAT) for Windows Update for Business
-- **New Feature:** Expanded Dynamic Groups (12 → 30+)
-  - Added ownership groups (Corporate, BYOD)
-  - Added user-based groups (Intune Licensed Users, Update Ring Broad)
-  - Added platform-specific ownership groups (macOS, iPhone, iPad, Android)
-  - Added Android Enterprise groups (Work Profile, Fully Managed)
-  - Added Windows ConfigMgr Managed devices group
-- **New Feature:** Mobile Apps support
-  - Added `Import-IntuneMobileApp` function to import mobile app templates
-  - Added `-MobileApps` parameter to `Invoke-IntuneHydration`
-  - Added `mobileApps` option to settings file imports section
-  - Added `Scripts/New-MobileAppTemplate.ps1` helper to generate mobile app JSON templates
-  - Supports winGetApp (Microsoft Store), macOSMicrosoftEdgeApp, macOSOfficeSuiteApp, officeSuiteApp types
-  - Mobile app templates stored in `Templates/MobileApps/` directory
-- **New Feature:** PowerShell Gallery publishing support
-  - Module now installable via `Install-Module IntuneHydrationKit`
-  - Added `Invoke-IntuneHydration` as exported module function
-  - Backward compatible wrapper script for users who clone the repository
-  - InvokeBuild-based build system for CI/CD
-  - GitHub Actions workflows for automated testing and publishing
-  - Added Pester tests for main orchestrator function
-  - Fixed PSScriptAnalyzer warnings (variable naming conflicts)
-  - Fixed notification template deletion (now matches by template name)
-
-### v0.1.8
-
-- **New Feature:** Full parameter-based invocation support
-- Two mutually exclusive modes: settings file (`-SettingsPath`) or parameters (`-TenantId` + auth)
-- Added `-All` switch to enable all targets at once
-- Added PowerShell `-WhatIf` preview mode support across invocation modes
-- Added parameters for all configuration options (tenant, auth, targets, reporting)
-- Settings file mode continues to work unchanged
-- Added Windows Driver Update license pre-check to avoid 403 errors when importing driver update profiles without required licensing (Windows E3/E5, M365 Business Premium)
-- Added `LicenseAssignment.Read.All` scope for license validation checks
-- Added `Organization.Read.All` scope for tenant organization details
-
-### v0.1.4
-
-- Added `DeviceManagementScripts.ReadWrite.All` scope for custom compliance scripts (required after Microsoft Graph API permission changes)
-- Added `Application.Read.All` scope for Conditional Access policies targeting specific applications
-- Added `Policy.Read.All` scope for querying existing Conditional Access policies
-- Updated prerequisite checks to validate Graph permission scopes
-- Removed MDM authority check from prerequisites
-
-### v0.1.3
-
-- Fixed image paths in README.md
-
-### v0.1.2
-
-- Refactored code structure for improved readability and maintainability
-
-### v0.1.1
-
-- Updated module manifest with correct author and company details
-
-### v0.1.0 - Initial Release
-
-- OpenIntuneBaseline integration (auto-downloads latest policies)
-- Compliance policy templates (Windows, macOS, iOS, Android, Linux)
-- App protection policies (Android/iOS MAM)
-- Dynamic groups and device filters
-- Enrollment profiles (Autopilot, ESP)
-- Conditional Access starter pack (always created disabled)
-- Safe deletion (only removes kit-created objects)
-- Multi-cloud support (Global, USGov, USGovDoD, Germany, China)
-- WhatIf/dry-run mode
-- Detailed logging and reporting
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 ---
 

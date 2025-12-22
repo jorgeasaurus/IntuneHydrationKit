@@ -1,0 +1,76 @@
+{
+    "filters": [
+        {
+            "displayName": "Windows - Azure Virtual Desktop (AVD)",
+            "description": "Filter for Azure Virtual Desktop VMs",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -contains \"Virtual Machine\")"
+        },
+        {
+            "displayName": "Windows - Azure Virtual Desktop (AVD) Named",
+            "description": "Filter for AVD VMs with AVD- naming convention",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -contains \"Virtual Machine\") and (device.deviceName -startsWith \"AVD-\")"
+        },
+        {
+            "displayName": "Windows - Azure IaaS VMs",
+            "description": "Filter for Azure IaaS Virtual Machines",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -eq \"Microsoft Corporation\") and (device.model -contains \"Virtual Machine\")"
+        },
+        {
+            "displayName": "Windows - Windows 365 Cloud PC",
+            "description": "Filter for Windows 365 Cloud PC devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -contains \"Cloud PC\")"
+        },
+        {
+            "displayName": "Windows - Microsoft Dev Box",
+            "description": "Filter for Microsoft Dev Box devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -contains \"Microsoft\") and (device.model -contains \"Cloud\")"
+        },
+        {
+            "displayName": "Windows - Hyper-V VMs",
+            "description": "Filter for Hyper-V VMs (may overlap with Azure)",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -eq \"Microsoft Corporation\") and (device.model -contains \"Virtual\")"
+        },
+        {
+            "displayName": "Windows - VMware VMs",
+            "description": "Filter for VMware VMs (ESXi, Horizon, Workstation, Fusion)",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -contains \"VMware\")"
+        },
+        {
+            "displayName": "Windows - VirtualBox VMs",
+            "description": "Filter for Oracle VirtualBox VMs",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -contains \"VirtualBox\")"
+        },
+        {
+            "displayName": "Windows - Parallels VMs",
+            "description": "Filter for Parallels Desktop VMs",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -contains \"Parallels\")"
+        },
+        {
+            "displayName": "Windows - QEMU KVM VMs",
+            "description": "Filter for QEMU/KVM VMs",
+            "platform": "windows10AndLater",
+            "rule": "(device.manufacturer -contains \"QEMU\") or (device.model -contains \"KVM\")"
+        },
+        {
+            "displayName": "Windows - All Virtual Machines",
+            "description": "Filter for all VMs - use for reporting only",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -contains \"Virtual\") or (device.model -contains \"Cloud PC\") or (device.manufacturer -contains \"VMware\") or (device.manufacturer -contains \"Parallels\") or (device.manufacturer -contains \"QEMU\")"
+        },
+        {
+            "displayName": "Windows - Physical Devices Only",
+            "description": "Filter excluding all known VMs",
+            "platform": "windows10AndLater",
+            "rule": "(device.model -notContains \"Virtual\") and (device.model -notContains \"Cloud PC\") and (device.manufacturer -notContains \"VMware\") and (device.manufacturer -notContains \"Parallels\") and (device.manufacturer -notContains \"QEMU\")"
+        }
+    ]
+}

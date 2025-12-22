@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "iOS - iPhone Devices",
+            "description": "Filter for iPhone devices",
+            "platform": "iOS",
+            "rule": "(device.model -startsWith \"iPhone\")"
+        },
+        {
+            "displayName": "iOS - iPad Devices",
+            "description": "Filter for iPad devices",
+            "platform": "iOS",
+            "rule": "(device.model -startsWith \"iPad\")"
+        },
+        {
+            "displayName": "iOS - Corporate Owned",
+            "description": "Filter for corporate-owned iOS/iPadOS devices",
+            "platform": "iOS",
+            "rule": "(device.deviceOwnership -eq \"Corporate\")"
+        }
+    ]
+}

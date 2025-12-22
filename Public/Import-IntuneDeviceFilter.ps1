@@ -1,22 +1,47 @@
 function Import-IntuneDeviceFilter {
     <#
     .SYNOPSIS
-        Creates device filters for Intune
+        Creates device filters for Intune from templates
     .DESCRIPTION
-        Creates device filters by manufacturer for each device OS platform (Windows, macOS, iOS/iPadOS, Android).
-        Creates 3 manufacturer filters per OS: Dell/HP/Lenovo for Windows, Apple for macOS/iOS.
+        Reads JSON templates from Templates/Filters and creates device filters via Graph API.
+        Filters can be used to target or exclude devices from policy assignments.
+    .PARAMETER TemplatePath
+        Path to the filter template directory (defaults to Templates/Filters)
+    .PARAMETER RemoveExisting
+        If specified, removes existing filters created by this kit instead of creating new ones
     .EXAMPLE
         Import-IntuneDeviceFilter
+    .EXAMPLE
+        Import-IntuneDeviceFilter -TemplatePath ./MyFilters
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
+        [string]$TemplatePath,
+
+        [Parameter()]
         [switch]$RemoveExisting
     )
 
+    if (-not $TemplatePath) {
+        $TemplatePath = Join-Path -Path $script:TemplatesPath -ChildPath "Filters"
+    }
+
+    if (-not (Test-Path -Path $TemplatePath)) {
+        Write-Warning "Filter template directory not found: $TemplatePath"
+        return @()
+    }
+
+    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "filter template"
+
+    if (-not $templateFiles -or $templateFiles.Count -eq 0) {
+        Write-Warning "No filter templates found in: $TemplatePath"
+        return @()
+    }
+
     $results = @()
 
-    # Get all existing filters first with pagination (OData filter on displayName not supported for this endpoint)
+    # Prefetch existing filters with pagination (OData filter on displayName not supported for this endpoint)
     # Store full filter objects so we can check descriptions later
     $existingFilters = @{}
     try {
@@ -44,86 +69,6 @@ function Import-IntuneDeviceFilter {
     foreach ($key in $existingFilters.Keys) {
         $existingFilterNames[$key] = $existingFilters[$key].Id
     }
-
-    # Define filters first so we know what to delete
-    $filterDefinitions = @(
-        # Windows filters by manufacturer
-        @{
-            DisplayName = "Windows - Dell Devices"
-            Description = "Filter for Dell Windows devices"
-            Platform = "windows10AndLater"
-            Rule = '(device.manufacturer -eq "Dell Inc.")'
-        },
-        @{
-            DisplayName = "Windows - HP Devices"
-            Description = "Filter for HP Windows devices"
-            Platform = "windows10AndLater"
-            Rule = '(device.manufacturer -eq "HP") or (device.manufacturer -eq "Hewlett-Packard")'
-        },
-        @{
-            DisplayName = "Windows - Lenovo Devices"
-            Description = "Filter for Lenovo Windows devices"
-            Platform = "windows10AndLater"
-            Rule = '(device.manufacturer -eq "LENOVO")'
-        },
-        # macOS filters
-        @{
-            DisplayName = "macOS - Apple Devices"
-            Description = "Filter for Apple macOS devices"
-            Platform = "macOS"
-            Rule = '(device.manufacturer -eq "Apple")'
-        },
-        @{
-            DisplayName = "macOS - MacBook Devices"
-            Description = "Filter for MacBook devices"
-            Platform = "macOS"
-            Rule = '(device.model -startsWith "MacBook")'
-        },
-        @{
-            DisplayName = "macOS - iMac Devices"
-            Description = "Filter for iMac devices"
-            Platform = "macOS"
-            Rule = '(device.model -startsWith "iMac")'
-        },
-        # iOS/iPadOS filters
-        @{
-            DisplayName = "iOS - iPhone Devices"
-            Description = "Filter for iPhone devices"
-            Platform = "iOS"
-            Rule = '(device.model -startsWith "iPhone")'
-        },
-        @{
-            DisplayName = "iOS - iPad Devices"
-            Description = "Filter for iPad devices"
-            Platform = "iOS"
-            Rule = '(device.model -startsWith "iPad")'
-        },
-        @{
-            DisplayName = "iOS - Corporate Owned"
-            Description = "Filter for corporate-owned iOS/iPadOS devices"
-            Platform = "iOS"
-            Rule = '(device.deviceOwnership -eq "Corporate")'
-        },
-        # Android filters
-        @{
-            DisplayName = "Android - Samsung Devices"
-            Description = "Filter for Samsung Android devices"
-            Platform = "androidForWork"
-            Rule = '(device.manufacturer -eq "samsung")'
-        },
-        @{
-            DisplayName = "Android - Google Pixel Devices"
-            Description = "Filter for Google Pixel devices"
-            Platform = "androidForWork"
-            Rule = '(device.manufacturer -eq "Google")'
-        },
-        @{
-            DisplayName = "Android - Corporate Owned"
-            Description = "Filter for corporate-owned Android devices"
-            Platform = "androidForWork"
-            Rule = '(device.deviceOwnership -eq "Corporate")'
-        }
-    )
 
     # Remove existing filters if requested
     # SAFETY: Only delete filters that have "Imported by Intune-Hydration-Kit" in description
@@ -158,38 +103,79 @@ function Import-IntuneDeviceFilter {
         return $results
     }
 
-    foreach ($filter in $filterDefinitions) {
+    # Process each template file
+    foreach ($templateFile in $templateFiles) {
         try {
-            # Check if filter already exists using pre-fetched list
-            if ($existingFilterNames.ContainsKey($filter.DisplayName)) {
-                Write-HydrationLog -Message "  Skipped: $($filter.DisplayName)" -Level Info
-                $results += New-HydrationResult -Name $filter.DisplayName -Id $existingFilterNames[$filter.DisplayName] -Platform $filter.Platform -Action 'Skipped' -Status 'Already exists'
+            $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+
+            # Each template file contains a "filters" array
+            if (-not $template.filters) {
+                Write-Warning "Template missing 'filters' array: $($templateFile.FullName)"
+                $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'DeviceFilter' -Action 'Failed' -Status "Missing 'filters' array"
                 continue
             }
 
-            if ($PSCmdlet.ShouldProcess($filter.DisplayName, "Create device filter")) {
-                $filterBody = @{
-                    displayName = $filter.DisplayName
-                    description = "$($filter.Description) - Imported by Intune-Hydration-Kit"
-                    platform = $filter.Platform
-                    rule = $filter.Rule
-                    roleScopeTags = @("0")
+            foreach ($filter in $template.filters) {
+                # Validate required properties
+                if (-not $filter.displayName) {
+                    Write-Warning "Filter missing displayName in: $($templateFile.FullName)"
+                    continue
+                }
+                if (-not $filter.platform) {
+                    Write-Warning "Filter '$($filter.displayName)' missing platform in: $($templateFile.FullName)"
+                    continue
+                }
+                if (-not $filter.rule) {
+                    Write-Warning "Filter '$($filter.displayName)' missing rule in: $($templateFile.FullName)"
+                    continue
                 }
 
-                $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
+                try {
+                    # Check if filter already exists using pre-fetched list
+                    if ($existingFilterNames.ContainsKey($filter.displayName)) {
+                        Write-HydrationLog -Message "  Skipped: $($filter.displayName)" -Level Info
+                        $results += New-HydrationResult -Name $filter.displayName -Id $existingFilterNames[$filter.displayName] -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
+                        continue
+                    }
 
-                Write-HydrationLog -Message "  Created: $($filter.DisplayName)" -Level Info
+                    if ($PSCmdlet.ShouldProcess($filter.displayName, "Create device filter")) {
+                        # Build description with hydration kit marker
+                        $description = if ($filter.description) {
+                            "$($filter.description) - Imported by Intune-Hydration-Kit"
+                        } else {
+                            "Imported by Intune-Hydration-Kit"
+                        }
 
-                $results += New-HydrationResult -Name $filter.DisplayName -Id $newFilter.id -Platform $filter.Platform -Action 'Created' -Status 'Success'
-            }
-            else {
-                Write-HydrationLog -Message "  WouldCreate: $($filter.DisplayName)" -Level Info
-                $results += New-HydrationResult -Name $filter.DisplayName -Platform $filter.Platform -Action 'WouldCreate' -Status 'DryRun'
+                        $filterBody = @{
+                            displayName = $filter.displayName
+                            description = $description
+                            platform = $filter.platform
+                            rule = $filter.rule
+                            roleScopeTags = @("0")
+                        }
+
+                        $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
+
+                        Write-HydrationLog -Message "  Created: $($filter.displayName)" -Level Info
+
+                        $results += New-HydrationResult -Name $filter.displayName -Id $newFilter.id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Created' -Status 'Success'
+                    }
+                    else {
+                        Write-HydrationLog -Message "  WouldCreate: $($filter.displayName)" -Level Info
+                        $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
+                    }
+                }
+                catch {
+                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                    Write-HydrationLog -Message "  Failed: $($filter.displayName) - $errMessage" -Level Warning
+                    $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errMessage
+                }
             }
         }
         catch {
-            Write-HydrationLog -Message "  Failed: $($filter.DisplayName) - $_" -Level Warning
-            $results += New-HydrationResult -Name $filter.DisplayName -Platform $filter.Platform -Action 'Failed' -Status $_.Exception.Message
+            $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+            Write-HydrationLog -Message "  Failed to parse: $($templateFile.Name) - $errMessage" -Level Warning
+            $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'DeviceFilter' -Action 'Failed' -Status "Parse error: $errMessage"
         }
     }
 
