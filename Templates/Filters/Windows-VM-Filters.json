@@ -46,7 +46,7 @@
             "displayName": "Windows - VirtualBox VMs",
             "description": "Filter for Oracle VirtualBox VMs",
             "platform": "windows10AndLater",
-            "rule": "(device.model -contains \"VirtualBox\") or (device.manufacturer -contains \"Oracle\")"
+            "rule": "(device.model -contains \"VirtualBox\")"
         },
         {
             "displayName": "Windows - Parallels VMs",
@@ -64,13 +64,13 @@
             "displayName": "Windows - All Virtual Machines",
             "description": "Filter for all VMs - use for reporting only",
             "platform": "windows10AndLater",
-            "rule": "(device.model -contains \"Virtual\") or (device.manufacturer -contains \"VMware\") or (device.manufacturer -contains \"Microsoft\") or (device.manufacturer -contains \"Oracle\") or (device.manufacturer -contains \"Parallels\")"
+            "rule": "(device.model -contains \"Virtual\") or (device.model -contains \"Cloud PC\") or (device.manufacturer -contains \"VMware\") or (device.manufacturer -contains \"Parallels\") or (device.manufacturer -contains \"QEMU\")"
         },
         {
             "displayName": "Windows - Physical Devices Only",
             "description": "Filter excluding all known VMs",
             "platform": "windows10AndLater",
-            "rule": "(device.model -notContains \"Virtual\") and (device.manufacturer -notContains \"VMware\") and (device.manufacturer -notContains \"Microsoft\") and (device.manufacturer -notContains \"Oracle\") and (device.manufacturer -notContains \"Parallels\")"
+            "rule": "(device.model -notContains \"Virtual\") and (device.model -notContains \"Cloud PC\") and (device.manufacturer -notContains \"VMware\") and (device.manufacturer -notContains \"Parallels\") and (device.manufacturer -notContains \"QEMU\")"
         }
     ]
 }

@@ -38,7 +38,7 @@
         {
             "displayName": "Intune - VirtualBox Virtual Machines",
             "description": "All Oracle VirtualBox VMs",
-            "membershipRule": "(device.deviceModel -contains \"VirtualBox\") or (device.deviceManufacturer -contains \"Oracle\")"
+            "membershipRule": "(device.deviceModel -contains \"VirtualBox\")"
         },
         {
             "displayName": "Intune - Parallels Desktop Virtual Machines",
@@ -53,12 +53,12 @@
         {
             "displayName": "Intune - All Virtual Machines",
             "description": "Catch-all for all virtual machines - use for reporting only",
-            "membershipRule": "(device.deviceModel -contains \"Virtual\") or (device.deviceManufacturer -contains \"VMware\") or (device.deviceManufacturer -contains \"Microsoft\") or (device.deviceManufacturer -contains \"Oracle\") or (device.deviceManufacturer -contains \"Parallels\")"
+            "membershipRule": "(device.deviceModel -contains \"Virtual\") or (device.deviceModel -contains \"Cloud PC\") or (device.deviceManufacturer -contains \"VMware\") or (device.deviceManufacturer -contains \"Parallels\") or (device.deviceManufacturer -contains \"QEMU\")"
         },
         {
             "displayName": "Intune - Physical Devices Only",
             "description": "Excludes all known virtual machines",
-            "membershipRule": "(device.deviceModel -notContains \"Virtual\") and (device.deviceManufacturer -notContains \"VMware\") and (device.deviceManufacturer -notContains \"Microsoft\") and (device.deviceManufacturer -notContains \"Oracle\") and (device.deviceManufacturer -notContains \"Parallels\")"
+            "membershipRule": "(device.deviceModel -notContains \"Virtual\") and (device.deviceModel -notContains \"Cloud PC\") and (device.deviceManufacturer -notContains \"VMware\") and (device.deviceManufacturer -notContains \"Parallels\") and (device.deviceManufacturer -notContains \"QEMU\")"
         }
     ]
 }
