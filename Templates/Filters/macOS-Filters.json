@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "macOS - Apple Devices",
+            "description": "Filter for Apple macOS devices",
+            "platform": "macOS",
+            "rule": "(device.manufacturer -eq \"Apple\")"
+        },
+        {
+            "displayName": "macOS - MacBook Devices",
+            "description": "Filter for MacBook devices",
+            "platform": "macOS",
+            "rule": "(device.model -startsWith \"MacBook\")"
+        },
+        {
+            "displayName": "macOS - iMac Devices",
+            "description": "Filter for iMac devices",
+            "platform": "macOS",
+            "rule": "(device.model -startsWith \"iMac\")"
+        }
+    ]
+}

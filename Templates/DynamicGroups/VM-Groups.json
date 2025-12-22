@@ -1,0 +1,64 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Azure Virtual Desktop (AVD) Devices",
+            "description": "All Azure Virtual Desktop VMs (model contains Virtual Machine)",
+            "membershipRule": "(device.deviceModel -contains \"Virtual Machine\")"
+        },
+        {
+            "displayName": "Intune - Azure Virtual Desktop (AVD) Named Devices",
+            "description": "Azure Virtual Desktop VMs with AVD- naming convention",
+            "membershipRule": "(device.deviceModel -contains \"Virtual Machine\") and (device.displayName -startsWith \"AVD-\")"
+        },
+        {
+            "displayName": "Intune - Azure IaaS Virtual Machines",
+            "description": "All Azure IaaS VMs (Microsoft Corporation manufacturer with Virtual Machine model)",
+            "membershipRule": "(device.deviceManufacturer -eq \"Microsoft Corporation\") and (device.deviceModel -contains \"Virtual Machine\")"
+        },
+        {
+            "displayName": "Intune - Windows 365 Cloud PC Devices",
+            "description": "All Windows 365 Cloud PC devices",
+            "membershipRule": "(device.deviceModel -contains \"Cloud PC\")"
+        },
+        {
+            "displayName": "Intune - Microsoft Dev Box Devices",
+            "description": "All Microsoft Dev Box devices",
+            "membershipRule": "(device.deviceManufacturer -contains \"Microsoft\") and (device.deviceModel -contains \"Cloud\")"
+        },
+        {
+            "displayName": "Intune - Hyper-V Virtual Machines",
+            "description": "Hyper-V VMs (on-prem or nested) - may overlap with Azure VMs",
+            "membershipRule": "(device.deviceManufacturer -eq \"Microsoft Corporation\") and (device.deviceModel -contains \"Virtual\")"
+        },
+        {
+            "displayName": "Intune - VMware Virtual Machines",
+            "description": "All VMware VMs (ESXi, Horizon, Workstation, Fusion)",
+            "membershipRule": "(device.deviceManufacturer -contains \"VMware\")"
+        },
+        {
+            "displayName": "Intune - VirtualBox Virtual Machines",
+            "description": "All Oracle VirtualBox VMs",
+            "membershipRule": "(device.deviceModel -contains \"VirtualBox\") or (device.deviceManufacturer -contains \"Oracle\")"
+        },
+        {
+            "displayName": "Intune - Parallels Desktop Virtual Machines",
+            "description": "All Parallels Desktop VMs",
+            "membershipRule": "(device.deviceManufacturer -contains \"Parallels\")"
+        },
+        {
+            "displayName": "Intune - QEMU KVM Virtual Machines",
+            "description": "All QEMU/KVM VMs",
+            "membershipRule": "(device.deviceManufacturer -contains \"QEMU\") or (device.deviceModel -contains \"KVM\")"
+        },
+        {
+            "displayName": "Intune - All Virtual Machines",
+            "description": "Catch-all for all virtual machines - use for reporting only",
+            "membershipRule": "(device.deviceModel -contains \"Virtual\") or (device.deviceManufacturer -contains \"VMware\") or (device.deviceManufacturer -contains \"Microsoft\") or (device.deviceManufacturer -contains \"Oracle\") or (device.deviceManufacturer -contains \"Parallels\")"
+        },
+        {
+            "displayName": "Intune - Physical Devices Only",
+            "description": "Excludes all known virtual machines",
+            "membershipRule": "(device.deviceModel -notContains \"Virtual\") and (device.deviceManufacturer -notContains \"VMware\") and (device.deviceManufacturer -notContains \"Microsoft\") and (device.deviceManufacturer -notContains \"Oracle\") and (device.deviceManufacturer -notContains \"Parallels\")"
+        }
+    ]
+}

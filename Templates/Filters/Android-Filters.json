@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "Android - Samsung Devices",
+            "description": "Filter for Samsung Android devices",
+            "platform": "androidForWork",
+            "rule": "(device.manufacturer -eq \"samsung\")"
+        },
+        {
+            "displayName": "Android - Google Pixel Devices",
+            "description": "Filter for Google Pixel devices",
+            "platform": "androidForWork",
+            "rule": "(device.manufacturer -eq \"Google\")"
+        },
+        {
+            "displayName": "Android - Corporate Owned",
+            "description": "Filter for corporate-owned Android devices",
+            "platform": "androidForWork",
+            "rule": "(device.deviceOwnership -eq \"Corporate\")"
+        }
+    ]
+}
