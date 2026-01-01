@@ -688,9 +688,15 @@ function Invoke-IntuneHydration {
 |-----------|------|------|--------|-----|---------|
 "@
 
-            foreach ($result in $allResults) {
-                $reportContent += "| $($result.Timestamp) | $($result.Type) | $($result.Name) | $($result.Action) | $($result.Id) | $($result.Status) |`n"
+            # Build table rows separately to avoid header/row formatting issues
+            $operationLines = foreach ($result in $allResults) {
+                "| {0} | {1} | {2} | {3} | {4} | {5} |" -f $result.Timestamp, $result.Type, $result.Name, $result.Action, $result.Id, $result.Status
             }
+
+            # Explicit newline between header and first row to keep the table rendering clean
+            $reportContent += "`n"
+            $reportContent += ($operationLines -join "`n")
+            $reportContent += "`n"
         }
 
         $reportContent += @"

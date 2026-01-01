@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.6'
+    ModuleVersion     = '0.2.7'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,22 +89,11 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.6
+## v0.2.7
 
-- **Features:**
-  - Notion mobile app template
-  - VLC mobile app template
-  - VM-based dynamic groups (12 new groups for AVD, Windows 365, Hyper-V, VMware, VirtualBox, Parallels, QEMU/KVM)
-  - VM-based device filters (12 new filters matching the dynamic groups)
-  - Template-based device filter import (`Templates/Filters/` directory)
-  - Device filter templates organized by platform (Windows, macOS, iOS, Android)
-  - CHANGELOG.md
+- **Fixed:**
+  - Hydration summary report table now renders correctly by ensuring a newline after the header in the **All Operations** section.
 
-- **Changes:**
-  - Refactored Import-IntuneDeviceFilter to use JSON templates instead of hardcoded definitions
-  - Dynamic Groups count increased from 31 to 43
-  - Device Filters count increased from 12 to 24
-  - Changelog moved to CHANGELOG.md following Keep a Changelog format
 '@
         }
     }
