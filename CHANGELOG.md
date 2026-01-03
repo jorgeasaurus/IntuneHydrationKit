@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-01-02
+
+### Added
+
+- Automatic replacement of `%OrganizationId%` placeholder with tenant ID during OpenIntuneBaseline import
+- Verbose logging when placeholder replacement occurs in policy templates
+
+### Changed
+
+- `Import-IntuneBaseline` now processes JSON templates and replaces `%OrganizationId%` with actual tenant ID before importing to Graph API
+- Affects OneDrive configuration policies that require tenant-specific settings (Known Folder Move, etc.)
+
 ## [0.2.7] - 2026-01-01
 
 ### Fixed

@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.7'
+    ModuleVersion     = '0.2.8'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,10 +89,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.7
+## v0.2.8
 
-- **Fixed:**
-  - Hydration summary report table now renders correctly by ensuring a newline after the header in the **All Operations** section.
+- **Added:**
+  - Automatic replacement of `%OrganizationId%` placeholder with tenant ID during OpenIntuneBaseline import
+  - Verbose logging when placeholder replacement occurs in policy templates
+
+- **Changed:**
+  - `Import-IntuneBaseline` now processes JSON templates and replaces `%OrganizationId%` with actual tenant ID before importing to Graph API
+  - Affects OneDrive configuration policies that require tenant-specific settings (Known Folder Move, etc.)
 
 '@
         }

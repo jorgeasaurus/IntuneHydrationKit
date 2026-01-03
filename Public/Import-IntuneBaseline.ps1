@@ -243,7 +243,13 @@ function Import-IntuneBaseline {
                     $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
                     try {
-                        $policyContent = Get-Content -Path $jsonFile.FullName -Raw | ConvertFrom-Json
+                        # Read JSON content and replace %OrganizationId% placeholder with actual tenant ID
+                        $jsonContent = Get-Content -Path $jsonFile.FullName -Raw
+                        if ($jsonContent -match '%OrganizationId%') {
+                            Write-Verbose "Replacing %OrganizationId% with tenant ID in $policyName"
+                            $jsonContent = $jsonContent -replace '%OrganizationId%', $TenantId
+                        }
+                        $policyContent = $jsonContent | ConvertFrom-Json
                         $odataType = $policyContent.'@odata.type'
 
                         # Determine endpoint from @odata.type
@@ -470,8 +476,13 @@ function Import-IntuneBaseline {
                 $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
                 try {
-                    # Read and parse JSON
-                    $policyContent = Get-Content -Path $jsonFile.FullName -Raw | ConvertFrom-Json
+                    # Read JSON content and replace %OrganizationId% placeholder with actual tenant ID
+                    $jsonContent = Get-Content -Path $jsonFile.FullName -Raw
+                    if ($jsonContent -match '%OrganizationId%') {
+                        Write-Verbose "Replacing %OrganizationId% with tenant ID in $policyName"
+                        $jsonContent = $jsonContent -replace '%OrganizationId%', $TenantId
+                    }
+                    $policyContent = $jsonContent | ConvertFrom-Json
 
                     # Get display name from policy
                     $displayName = $policyContent.displayName
