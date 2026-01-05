@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-04
+
+### Fixed
+
+- **Issue #12**: Logs and reports now created when using `-WhatIf` parameter
+  - Log files are always written regardless of WhatIf mode
+  - Summary reports (both Markdown and JSON) are always generated
+  - Report mode correctly displays "Dry-Run" when WhatIf is enabled
+- **Issue #13**: TenantId parameter consistency across functions
+  - Both `Connect-IntuneHydration` and `Invoke-IntuneHydration` now require GUID format
+  - Documentation and examples updated to reflect GUID-only requirement
+- Tenant ID obfuscation in console output for security (e.g., `0e3028c5****-****-****-eea5ff7417b5`)
+
+### Changed
+
+- Logging and reporting operations now explicitly bypass `-WhatIf` using `-WhatIf:$false`
+- `TenantId` parameter validation standardized to GUID format across all public functions
+- Added WhatIf mode tests to verify logging and reporting behavior
+
 ## [0.2.9] - 2026-01-04
 
 ### Added

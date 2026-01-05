@@ -61,10 +61,11 @@ function Write-HydrationLog {
     }
 
     # File output
+    # Always write to log file regardless of -WhatIf (logging is observational, not a tenant change)
     if ($script:CurrentLogFile) {
-        $logEntry | Out-File -FilePath $script:CurrentLogFile -Append -Encoding utf8
+        $logEntry | Out-File -FilePath $script:CurrentLogFile -Append -Encoding utf8 -WhatIf:$false
         if ($Data) {
-            ($Data | ConvertTo-Json -Depth 5) | Out-File -FilePath $script:CurrentLogFile -Append -Encoding utf8
+            ($Data | ConvertTo-Json -Depth 5) | Out-File -FilePath $script:CurrentLogFile -Append -Encoding utf8 -WhatIf:$false
         }
     }
 }

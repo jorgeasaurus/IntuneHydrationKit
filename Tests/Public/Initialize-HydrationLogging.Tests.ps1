@@ -183,4 +183,42 @@ Describe 'Initialize-HydrationLogging' {
             Test-Path -Path $expectedLogPath | Should -Be $true
         }
     }
+
+    Context 'WhatIf Mode' {
+        It 'Should create log directory even when WhatIf is enabled' {
+            $customLogPath = Join-Path $script:TestTempDir "WhatIfTest-$(Get-Random)"
+
+            # Verify directory doesn't exist yet
+            Test-Path -Path $customLogPath | Should -Be $false
+
+            # Enable WhatIf preference
+            $originalWhatIfPreference = $WhatIfPreference
+            try {
+                $WhatIfPreference = $true
+                Initialize-HydrationLogging -LogPath $customLogPath
+
+                # Directory should still be created despite WhatIf (logging is observational)
+                Test-Path -Path $customLogPath | Should -Be $true
+            } finally {
+                $WhatIfPreference = $originalWhatIfPreference
+            }
+        }
+
+        It 'Should create log file even when WhatIf is enabled' {
+            $customLogPath = Join-Path $script:TestTempDir "WhatIfLogFile-$(Get-Random)"
+
+            # Enable WhatIf preference
+            $originalWhatIfPreference = $WhatIfPreference
+            try {
+                $WhatIfPreference = $true
+                Initialize-HydrationLogging -LogPath $customLogPath
+
+                # Log files should still be created despite WhatIf
+                $logFiles = Get-ChildItem -Path $customLogPath -Filter "hydration-*.log"
+                $logFiles.Count | Should -BeGreaterThan 0
+            } finally {
+                $WhatIfPreference = $originalWhatIfPreference
+            }
+        }
+    }
 }

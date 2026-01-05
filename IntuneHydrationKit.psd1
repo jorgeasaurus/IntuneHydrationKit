@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.9'
+    ModuleVersion     = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,26 +89,21 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.9
+## v0.3.0
 
-- **Added:**
-  - 7 new Conditional Access policy templates (total now 21 policies)
-    - Block access to Office365 apps for users with insider risk
-    - Block all agent identities from accessing resources
-    - Block all agent users from accessing resources
-    - Block high risk agent identities from accessing resources
-    - Require multifactor authentication for risky sign-ins
-    - Require password change for high-risk users
-    - Secure account recovery with identity verification (Preview)
-  - Premium P2 license validation for Conditional Access policies requiring Entra ID P2
-  - Preview feature detection for Conditional Access policies requiring preview features
-  - Get-PremiumP2ServicePlans helper function for centralized P2 SKU list management
+- **Fixed:**
+  - Issue #12: Logs and reports now created when using `-WhatIf` parameter
+    - Log files are always written regardless of WhatIf mode
+    - Summary reports (both Markdown and JSON) are always generated
+    - Report mode correctly displays "Dry-Run" when WhatIf is enabled
+  - Issue #13: TenantId parameter consistency across functions
+    - Both `Connect-IntuneHydration` and `Invoke-IntuneHydration` now require GUID format
+    - Documentation and examples updated to reflect GUID-only requirement
+  - Tenant ID obfuscation in console output for security (e.g., `0e3028c5****-****-****-eea5ff7417b5`)
 
 - **Changed:**
-  - README.md updated with correct Conditional Access count (21 policies) and link to Microsoft Learn documentation
-  - Enhanced Test-IntunePrerequisites with comprehensive E5/A5/EMS suite detection
-  - Fixed empty rows in hydration summary reports
-  - Fixed missing Type column values in Conditional Access import results
+  - Logging and reporting operations now explicitly bypass `-WhatIf` using `-WhatIf:$false`
+  - TenantId parameter validation standardized to GUID format across all public functions
 
 '@
         }

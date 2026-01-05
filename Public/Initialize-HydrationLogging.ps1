@@ -29,7 +29,8 @@ function Initialize-HydrationLogging {
     }
 
     if (-not (Test-Path -Path $LogPath)) {
-        New-Item -Path $LogPath -ItemType Directory -Force | Out-Null
+        # Always create log directory regardless of -WhatIf (logging is observational, not a tenant change)
+        New-Item -Path $LogPath -ItemType Directory -Force -WhatIf:$false | Out-Null
     }
 
     $script:LogPath = $LogPath

@@ -17,7 +17,7 @@ function Invoke-IntuneHydration {
         Path to the settings JSON file. Use this for settings file-based invocation.
         Cannot be combined with -Interactive, -ClientId, or -ClientSecret.
     .PARAMETER TenantId
-        Azure AD tenant ID (GUID). Required for parameter-based invocation.
+        Azure AD tenant ID (GUID format). Required for parameter-based invocation.
     .PARAMETER TenantName
         Tenant name for display purposes (e.g., contoso.onmicrosoft.com)
     .PARAMETER Interactive
@@ -295,7 +295,7 @@ function Invoke-IntuneHydration {
         }
 
         # Display current settings
-        Write-Host "Target Tenant: $($settings.tenant.tenantId)" -InformationAction Continue
+        Write-Host "Target Tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -InformationAction Continue
         if ($settings.tenant.tenantName) {
             Write-Host "Tenant Name: $($settings.tenant.tenantName)" -InformationAction Continue
         }
@@ -620,7 +620,8 @@ function Invoke-IntuneHydration {
             $reportsPath = Join-Path -Path $tempBase -ChildPath 'IntuneHydrationKit/Reports'
         }
         if (-not (Test-Path -Path $reportsPath)) {
-            New-Item -Path $reportsPath -ItemType Directory -Force | Out-Null
+            # Always create reports directory regardless of -WhatIf (reports are observational, not tenant changes)
+            New-Item -Path $reportsPath -ItemType Directory -Force -WhatIf:$false | Out-Null
         }
 
         $summary = Get-ResultSummary -Results $allResults
@@ -721,7 +722,8 @@ function Invoke-IntuneHydration {
 
 "@
 
-        $reportContent | Out-File -FilePath $reportPath -Encoding UTF8
+        # Always write reports regardless of -WhatIf (reports are observational, not tenant changes)
+        $reportContent | Out-File -FilePath $reportPath -Encoding UTF8 -WhatIf:$false
         Write-HydrationLog -Message "Summary report written to: $reportPath" -Level Info
 
         # Also write JSON if requested
@@ -734,7 +736,7 @@ function Invoke-IntuneHydration {
                 Mode        = if ($WhatIfPreference) { 'DryRun' } else { 'Live' }
                 Summary     = $summary
                 Results     = $allResults
-            } | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonReportPath -Encoding UTF8
+            } | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonReportPath -Encoding UTF8 -WhatIf:$false
             Write-HydrationLog -Message "JSON report written to: $jsonReportPath" -Level Info
         }
 

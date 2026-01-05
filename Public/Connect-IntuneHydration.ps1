@@ -6,7 +6,7 @@ function Connect-IntuneHydration {
         Establishes authentication to Microsoft Graph using interactive or client secret auth.
         Supports multiple cloud environments: Global (Commercial), USGov, USGovDoD, Germany, China.
     .PARAMETER TenantId
-        The Azure AD tenant ID
+        The Azure AD tenant ID (GUID format)
     .PARAMETER ClientId
         Application (client) ID for app registration auth
     .PARAMETER ClientSecret
@@ -16,16 +16,16 @@ function Connect-IntuneHydration {
     .PARAMETER Environment
         Graph environment: Global, USGov, USGovDoD, Germany, China
     .EXAMPLE
-        Connect-IntuneHydration -TenantId "contoso.onmicrosoft.com" -Interactive
+        Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -Interactive
     .EXAMPLE
-        Connect-IntuneHydration -TenantId "contoso.onmicrosoft.com" -ClientId "app-id" -ClientSecret $secret
+        Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -ClientId "app-id" -ClientSecret $secret
     .EXAMPLE
-        Connect-IntuneHydration -TenantId "contoso.onmicrosoft.us" -Interactive -Environment USGov
+        Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -Interactive -Environment USGov
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
         [string]$TenantId,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'ClientSecret')]
