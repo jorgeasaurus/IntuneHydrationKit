@@ -43,6 +43,32 @@ function Import-IntuneConditionalAccessPolicy {
         return @()
     }
 
+    # Check for Premium P2 license once at the start
+    $premiumP2ServicePlans = Get-PremiumP2ServicePlans
+
+    $hasPremiumP2 = $false
+    try {
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
+        foreach ($sku in $subscribedSkus.value) {
+            if ($sku.capabilityStatus -ne 'Enabled') { continue }
+            foreach ($plan in $sku.servicePlans) {
+                if ($plan.servicePlanName -in $premiumP2ServicePlans -and $plan.provisioningStatus -eq 'Success') {
+                    $hasPremiumP2 = $true
+                    break
+                }
+            }
+            if ($hasPremiumP2) { break }
+        }
+    }
+    catch {
+        Write-Verbose "Failed to check Premium P2 license: $_"
+        $hasPremiumP2 = $true  # Allow attempt if check fails
+    }
+
+    if (-not $hasPremiumP2) {
+        Write-Warning "No Azure AD Premium P2 license detected. Risk-based Conditional Access policies will be skipped."
+    }
+
     $results = @()
 
     # Remove existing CA policies if requested
@@ -110,13 +136,28 @@ function Import-IntuneConditionalAccessPolicy {
             $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8
             $policy = $templateContent | ConvertFrom-Json
 
+            # Check if policy requires P2 and tenant doesn't have it
+            if (-not $hasPremiumP2 -and (Test-ConditionalAccessPolicyRequiresP2 -Policy $policy)) {
+                Write-HydrationLog -Message "  Skipped: $displayName - requires Azure AD Premium P2 license (uses risk-based conditions)" -Level Warning
+                $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'Skipped' -Status 'Requires Premium P2 license'
+                continue
+            }
+
+            # Check if policy requires private preview features
+            $previewFeature = Test-ConditionalAccessPolicyRequiresPreview -Policy $policy
+            if ($previewFeature) {
+                Write-HydrationLog -Message "  Skipped: $displayName - requires private preview feature: $previewFeature (tenant must be explicitly authorized)" -Level Warning
+                $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'Skipped' -Status "Requires private preview: $previewFeature"
+                continue
+            }
+
             # Check if policy already exists (escape single quotes for OData filter)
             $safeDisplayName = $displayName -replace "'", "''"
             $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/identity/conditionalAccess/policies?`$filter=displayName eq '$safeDisplayName'" -ErrorAction Stop
 
             if ($existingPolicies.value.Count -gt 0) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Id $existingPolicies.value[0].id -Action 'Skipped' -Status 'Already exists' -State $existingPolicies.value[0].state
+                $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Id $existingPolicies.value[0].id -Action 'Skipped' -Status 'Already exists' -State $existingPolicies.value[0].state
                 continue
             }
 
@@ -144,17 +185,17 @@ function Import-IntuneConditionalAccessPolicy {
 
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
-                $results += New-HydrationResult -Name $displayName -Id $newPolicy.id -Action 'Created' -Status 'Success' -State 'disabled'
+                $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Id $newPolicy.id -Action 'Created' -Status 'Success' -State 'disabled'
             }
             else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Action 'WouldCreate' -Status 'DryRun' -State 'disabled'
+                $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'WouldCreate' -Status 'DryRun' -State 'disabled'
             }
         }
         catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $displayName - $errMessage" -Level Warning
-            $results += New-HydrationResult -Name $displayName -Action 'Failed' -Status $errMessage
+            $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'Failed' -Status $errMessage
         }
     }
 

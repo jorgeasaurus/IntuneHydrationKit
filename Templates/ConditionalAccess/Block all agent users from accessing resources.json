@@ -1,0 +1,54 @@
+{
+  "grantControls": {
+    "termsOfUse": [],
+    "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#conditionalAccess/templates('376d9923-7f15-40c2-830b-3312120f1eed')/details/grantControls/authenticationStrength/$entity",
+    "authenticationStrength": null,
+    "builtInControls": [
+      "block"
+    ],
+    "customAuthenticationFactors": [],
+    "operator": "OR"
+  },
+  "conditions": {
+    "locations": null,
+    "signInRiskLevels": [],
+    "times": null,
+    "servicePrincipalRiskLevels": [],
+    "clientApplications": null,
+    "clientAppTypes": [
+      "all"
+    ],
+    "applications": {
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "networkAccess": null,
+      "globalSecureAccess": null,
+      "includeApplications": [
+        "All"
+      ],
+      "applicationFilter": null,
+      "includeAuthenticationContextClassReferences": []
+    },
+    "authenticationFlows": null,
+    "userRiskLevels": [],
+    "platforms": null,
+    "insiderRiskLevels": null,
+    "deviceStates": null,
+    "clients": null,
+    "agentIdRiskLevels": null,
+    "users": {
+      "excludeUsers": [],
+      "includeUsers": [
+        "AllAgentIdUsers"
+      ],
+      "includeRoles": [],
+      "excludeGuestsOrExternalUsers": null,
+      "includeGroups": [],
+      "includeGuestsOrExternalUsers": null,
+      "excludeGroups": [],
+      "excludeRoles": []
+    },
+    "devices": null
+  },
+  "sessionControls": null
+}

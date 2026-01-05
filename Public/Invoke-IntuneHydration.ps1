@@ -689,8 +689,21 @@ function Invoke-IntuneHydration {
 "@
 
             # Build table rows separately to avoid header/row formatting issues
+            # Filter out results that don't have a Name or Action (invalid/empty results)
             $operationLines = foreach ($result in $allResults) {
-                "| {0} | {1} | {2} | {3} | {4} | {5} |" -f $result.Timestamp, $result.Type, $result.Name, $result.Action, $result.Id, $result.Status
+                # Skip results with no meaningful data
+                if (-not $result.Name -and -not $result.Action) {
+                    continue
+                }
+
+                $timestamp = if ($result.Timestamp) { $result.Timestamp } else { '' }
+                $type = if ($result.PSObject.Properties['Type']) { $result.Type } else { '' }
+                $name = if ($result.Name) { $result.Name } else { '' }
+                $action = if ($result.Action) { $result.Action } else { '' }
+                $id = if ($result.PSObject.Properties['Id']) { $result.Id } else { '' }
+                $status = if ($result.Status) { $result.Status } else { '' }
+
+                "| {0} | {1} | {2} | {3} | {4} | {5} |" -f $timestamp, $type, $name, $action, $id, $status
             }
 
             # Explicit newline between header and first row to keep the table rendering clean
@@ -704,7 +717,6 @@ function Invoke-IntuneHydration {
 ## Important Notes
 
 - **Conditional Access policies** were created in **DISABLED** state. Review and enable as needed.
-- **OpenIntuneBaseline policies** were imported using IntuneManagement module.
 - Review all configurations before enabling in production.
 
 "@

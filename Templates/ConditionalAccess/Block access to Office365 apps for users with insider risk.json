@@ -1,0 +1,59 @@
+{
+  "grantControls": {
+    "termsOfUse": [],
+    "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#conditionalAccess/templates('16aaa400-bfdf-4756-a420-ad2245d4cde8')/details/grantControls/authenticationStrength/$entity",
+    "authenticationStrength": null,
+    "builtInControls": [
+      "block"
+    ],
+    "customAuthenticationFactors": [],
+    "operator": "OR"
+  },
+  "conditions": {
+    "locations": null,
+    "signInRiskLevels": [],
+    "times": null,
+    "servicePrincipalRiskLevels": [],
+    "clientApplications": null,
+    "clientAppTypes": [
+      "all"
+    ],
+    "applications": {
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "networkAccess": null,
+      "globalSecureAccess": null,
+      "includeApplications": [
+        "Office365"
+      ],
+      "applicationFilter": null,
+      "includeAuthenticationContextClassReferences": []
+    },
+    "authenticationFlows": null,
+    "userRiskLevels": [],
+    "platforms": null,
+    "insiderRiskLevels": "elevated",
+    "deviceStates": null,
+    "clients": null,
+    "agentIdRiskLevels": null,
+    "users": {
+      "excludeUsers": [
+        
+      ],
+      "includeUsers": [
+        "All"
+      ],
+      "includeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bDirectConnectUser,otherExternalUser,serviceProvider",
+        "externalTenants": null
+      },
+      "includeGroups": [],
+      "includeGuestsOrExternalUsers": null,
+      "excludeGroups": [],
+      "excludeRoles": []
+    },
+    "devices": null
+  },
+  "sessionControls": null
+}

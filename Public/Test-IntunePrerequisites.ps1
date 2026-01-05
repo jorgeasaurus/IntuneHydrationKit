@@ -3,7 +3,11 @@ function Test-IntunePrerequisites {
     .SYNOPSIS
         Validates Intune tenant prerequisites
     .DESCRIPTION
-        Checks for Intune license availability and required Microsoft Graph permission scopes
+        Checks for Intune license availability, Azure AD Premium P2 license (for risk-based
+        Conditional Access), and required Microsoft Graph permission scopes.
+
+        Warnings are issued if Premium P2 is not found, as certain Conditional Access policies
+        that use sign-in risk or user risk conditions require this license level.
     .EXAMPLE
         Test-IntunePrerequisites
     #>
@@ -48,21 +52,42 @@ function Test-IntunePrerequisites {
             'EMSPREMIUM'          # Enterprise Mobility + Security
         )
 
+        # Premium P2 service plans (required for risk-based Conditional Access)
+        $premiumP2ServicePlans = Get-PremiumP2ServicePlans
+
         $hasIntune = $false
+        $hasPremiumP2 = $false
+
         foreach ($sku in $subscribedSkus.value) {
+            # Skip disabled SKUs
+            if ($sku.capabilityStatus -ne 'Enabled') {
+                continue
+            }
+
             foreach ($plan in $sku.servicePlans) {
                 if ($plan.servicePlanName -in $intuneServicePlans -and $plan.provisioningStatus -eq 'Success') {
                     $hasIntune = $true
                     Write-Host "Found Intune license: $($plan.servicePlanName)"
-                    break
+                }
+                if ($plan.servicePlanName -in $premiumP2ServicePlans -and $plan.provisioningStatus -eq 'Success') {
+                    $hasPremiumP2 = $true
+                    Write-Host "Found Premium P2 compatible license: $($plan.servicePlanName) in SKU $($sku.skuPartNumber)"
                 }
             }
-            if ($hasIntune) { break }
         }
 
         if (-not $hasIntune) {
             $issues += "No active Intune license found. Please ensure Intune is licensed for this tenant."
         }
+
+        if (-not $hasPremiumP2) {
+            Write-Warning "No Azure AD Premium P2 license found. Risk-based Conditional Access policies (sign-in risk, user risk) will be skipped."
+            Write-Warning "Affected policies: 'Require multifactor authentication for risky sign-ins', 'Require password change for high-risk users', 'Block high risk agent identities', 'Block access to Office365 apps for users with insider risk'"
+        }
+
+        # Note about private preview features
+        Write-Host "Note: Some Conditional Access templates use private preview features that require explicit tenant authorization."
+        Write-Host "      Policies requiring preview features will be automatically skipped during import."
 
         # Check for required permission scopes
         $context = Get-MgContext

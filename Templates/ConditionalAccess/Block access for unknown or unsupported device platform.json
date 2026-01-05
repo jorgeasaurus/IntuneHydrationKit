@@ -3,30 +3,48 @@
   "conditions": {
     "userRiskLevels": [],
     "signInRiskLevels": [],
-    "clientAppTypes": ["all"],
+    "clientAppTypes": [
+      "all"
+    ],
     "servicePrincipalRiskLevels": [],
     "applications": {
-      "includeApplications": ["All"],
+      "includeApplications": [
+        "All"
+      ],
       "excludeApplications": [],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": []
     },
     "users": {
-      "includeUsers": ["All"],
+      "includeUsers": [
+        "All"
+      ],
       "excludeUsers": [],
       "includeGroups": [],
       "excludeGroups": [],
       "includeRoles": [],
-      "excludeRoles": ["62e90394-69f5-4237-9190-012177145e10"]
+      "excludeRoles": [
+        "62e90394-69f5-4237-9190-012177145e10"
+      ]
     },
     "platforms": {
-      "includePlatforms": ["all"],
-      "excludePlatforms": ["android", "iOS", "windows", "macOS", "linux"]
+      "includePlatforms": [
+        "all"
+      ],
+      "excludePlatforms": [
+        "android",
+        "iOS",
+        "windows",
+        "macOS",
+        "linux"
+      ]
     }
   },
   "grantControls": {
     "operator": "OR",
-    "builtInControls": ["block"],
+    "builtInControls": [
+      "block"
+    ],
     "customAuthenticationFactors": [],
     "termsOfUse": []
   },

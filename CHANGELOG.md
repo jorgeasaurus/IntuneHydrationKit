@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2026-01-04
+
+### Added
+
+- 7 new Conditional Access policy templates (total now 21 policies)
+  - Block access to Office365 apps for users with insider risk
+  - Block all agent identities from accessing resources
+  - Block all agent users from accessing resources
+  - Block high risk agent identities from accessing resources
+  - Require multifactor authentication for risky sign-ins
+  - Require password change for high-risk users
+  - Secure account recovery with identity verification (Preview)
+- Premium P2 license validation for Conditional Access policies requiring Entra ID P2
+- Preview feature detection for Conditional Access policies requiring preview features
+- `Get-PremiumP2ServicePlans` helper function for centralized P2 SKU list management
+
+### Changed
+
+- README.md updated with correct Conditional Access count (21 policies) and link to Microsoft Learn documentation
+- Enhanced `Test-IntunePrerequisites` with comprehensive E5/A5/EMS suite detection
+- Fixed empty rows in hydration summary reports
+- Fixed missing Type column values in Conditional Access import results
+
 ## [0.2.8] - 2026-01-02
 
 ### Added

@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.2.8'
+    ModuleVersion     = '0.2.9'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,15 +89,26 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.2.8
+## v0.2.9
 
 - **Added:**
-  - Automatic replacement of `%OrganizationId%` placeholder with tenant ID during OpenIntuneBaseline import
-  - Verbose logging when placeholder replacement occurs in policy templates
+  - 7 new Conditional Access policy templates (total now 21 policies)
+    - Block access to Office365 apps for users with insider risk
+    - Block all agent identities from accessing resources
+    - Block all agent users from accessing resources
+    - Block high risk agent identities from accessing resources
+    - Require multifactor authentication for risky sign-ins
+    - Require password change for high-risk users
+    - Secure account recovery with identity verification (Preview)
+  - Premium P2 license validation for Conditional Access policies requiring Entra ID P2
+  - Preview feature detection for Conditional Access policies requiring preview features
+  - Get-PremiumP2ServicePlans helper function for centralized P2 SKU list management
 
 - **Changed:**
-  - `Import-IntuneBaseline` now processes JSON templates and replaces `%OrganizationId%` with actual tenant ID before importing to Graph API
-  - Affects OneDrive configuration policies that require tenant-specific settings (Known Folder Move, etc.)
+  - README.md updated with correct Conditional Access count (21 policies) and link to Microsoft Learn documentation
+  - Enhanced Test-IntunePrerequisites with comprehensive E5/A5/EMS suite detection
+  - Fixed empty rows in hydration summary reports
+  - Fixed missing Type column values in Conditional Access import results
 
 '@
         }

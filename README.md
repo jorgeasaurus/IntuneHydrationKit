@@ -54,7 +54,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
 | Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
 | Enrollment Profiles | 3 | Autopilot deployment profiles + Enrollment Status Page |
-| Conditional Access | 14 | Starter pack policies (created disabled) |
+| Conditional Access | 21 | [Starter pack policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) (created disabled) |
 
 ---
 

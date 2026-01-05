@@ -1,0 +1,62 @@
+{
+  "grantControls": {
+    "termsOfUse": [],
+    "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#conditionalAccess/templates('6acdf4c3-6815-485c-a57d-2c349d517ba0')/details/grantControls/authenticationStrength/$entity",
+    "authenticationStrength": null,
+    "builtInControls": [
+      "verifiedID"
+    ],
+    "customAuthenticationFactors": [],
+    "operator": "AND"
+  },
+  "conditions": {
+    "locations": null,
+    "signInRiskLevels": [],
+    "times": null,
+    "servicePrincipalRiskLevels": [],
+    "clientApplications": null,
+    "clientAppTypes": [
+      "all"
+    ],
+    "applications": {
+      "excludeApplications": [],
+      "includeUserActions": [
+        "urn:user:accountrecovery"
+      ],
+      "networkAccess": null,
+      "globalSecureAccess": null,
+      "includeApplications": [],
+      "applicationFilter": null,
+      "includeAuthenticationContextClassReferences": []
+    },
+    "authenticationFlows": null,
+    "userRiskLevels": [],
+    "platforms": null,
+    "insiderRiskLevels": null,
+    "deviceStates": null,
+    "clients": null,
+    "agentIdRiskLevels": null,
+    "users": {
+      "excludeUsers": [
+        
+      ],
+      "includeUsers": [
+        "All"
+      ],
+      "includeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser,serviceProvider",
+        "externalTenants": {
+          "membershipKind": "all",
+          "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants"
+        }
+      },
+      "includeGroups": [],
+      "includeGuestsOrExternalUsers": null,
+      "excludeGroups": [],
+      "excludeRoles": []
+    },
+    "devices": null
+  },
+  "sessionControls": null
+}

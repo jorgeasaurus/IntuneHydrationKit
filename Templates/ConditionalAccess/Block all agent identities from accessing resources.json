@@ -1,0 +1,63 @@
+{
+  "grantControls": {
+    "termsOfUse": [],
+    "authenticationStrength@odata.context": "https://graph.microsoft.com/beta/$metadata#conditionalAccess/templates('c5bf9137-a43c-48e1-9d13-8258b31b855d')/details/grantControls/authenticationStrength/$entity",
+    "authenticationStrength": null,
+    "builtInControls": [
+      "block"
+    ],
+    "customAuthenticationFactors": [],
+    "operator": "OR"
+  },
+  "conditions": {
+    "locations": null,
+    "signInRiskLevels": [],
+    "times": null,
+    "servicePrincipalRiskLevels": [],
+    "clientApplications": {
+      "servicePrincipalFilter": null,
+      "agentIdServicePrincipalFilter": null,
+      "excludeServicePrincipals": [],
+      "includeAgentIdServicePrincipals": [
+        "All"
+      ],
+      "excludeAgentIdServicePrincipals": [],
+      "includeServicePrincipals": []
+    },
+    "clientAppTypes": [
+      "all"
+    ],
+    "applications": {
+      "excludeApplications": [],
+      "includeUserActions": [],
+      "networkAccess": null,
+      "globalSecureAccess": null,
+      "includeApplications": [
+        "All"
+      ],
+      "applicationFilter": null,
+      "includeAuthenticationContextClassReferences": []
+    },
+    "authenticationFlows": null,
+    "userRiskLevels": [],
+    "platforms": null,
+    "insiderRiskLevels": null,
+    "deviceStates": null,
+    "clients": null,
+    "agentIdRiskLevels": null,
+    "users": {
+      "excludeUsers": [],
+      "includeUsers": [
+        "None"
+      ],
+      "includeRoles": [],
+      "excludeGuestsOrExternalUsers": null,
+      "includeGroups": [],
+      "includeGuestsOrExternalUsers": null,
+      "excludeGroups": [],
+      "excludeRoles": []
+    },
+    "devices": null
+  },
+  "sessionControls": null
+}
