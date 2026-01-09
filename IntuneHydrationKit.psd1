@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.3.0'
+    ModuleVersion     = '0.3.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,21 +89,12 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.3.0
+## v0.3.1
 
 - **Fixed:**
-  - Issue #12: Logs and reports now created when using `-WhatIf` parameter
-    - Log files are always written regardless of WhatIf mode
-    - Summary reports (both Markdown and JSON) are always generated
-    - Report mode correctly displays "Dry-Run" when WhatIf is enabled
-  - Issue #13: TenantId parameter consistency across functions
-    - Both `Connect-IntuneHydration` and `Invoke-IntuneHydration` now require GUID format
-    - Documentation and examples updated to reflect GUID-only requirement
-  - Tenant ID obfuscation in console output for security (e.g., `0e3028c5****-****-****-eea5ff7417b5`)
-
-- **Changed:**
-  - Logging and reporting operations now explicitly bypass `-WhatIf` using `-WhatIf:$false`
-  - TenantId parameter validation standardized to GUID format across all public functions
+  - Issue #14: M365 Business Premium license not detected for Windows Driver Updates
+    - Added `WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE` service plan to license detection
+    - This service plan is included in M365 Business Premium and enables driver update functionality
 
 '@
         }

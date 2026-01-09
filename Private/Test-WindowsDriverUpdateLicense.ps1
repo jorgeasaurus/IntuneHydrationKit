@@ -23,6 +23,8 @@ function Test-WindowsDriverUpdateLicense {
     # Service plan names that enable Windows Driver Update profiles
     # Reference: https://learn.microsoft.com/en-us/mem/intune/protect/windows-driver-updates-overview
     $driverUpdateServicePlans = @(
+        # Windows Update for Business Deployment Service (enables driver updates across license types)
+        'WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE',  # Windows Update for Business Deployment Service
         # Windows Enterprise E3/E5
         'WIN10_PRO_ENT_SUB',        # Windows 10/11 Enterprise E3
         'WIN10_ENT_A3_GOV',         # Windows 10/11 Enterprise E3 (Gov)

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-01-09
+
+### Fixed
+
+- **Issue #14**: M365 Business Premium license not detected for Windows Driver Updates
+  - Added `WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE` service plan to license detection
+  - This service plan is included in M365 Business Premium and enables driver update functionality
+
 ## [0.3.0] - 2026-01-04
 
 ### Fixed

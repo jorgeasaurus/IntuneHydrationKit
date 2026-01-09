@@ -104,6 +104,28 @@ Describe 'Test-WindowsDriverUpdateLicense' {
             $result = Test-WindowsDriverUpdateLicense
             $result | Should -Be $true
         }
+
+        It 'Should return $true when WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE service plan is found' {
+            Mock -CommandName Invoke-MgGraphRequest -MockWith {
+                @{
+                    value = @(
+                        @{
+                            skuPartNumber = 'SPB'
+                            capabilityStatus = 'Enabled'
+                            servicePlans = @(
+                                @{
+                                    servicePlanName = 'WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE'
+                                    provisioningStatus = 'Success'
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+
+            $result = Test-WindowsDriverUpdateLicense
+            $result | Should -Be $true
+        }
     }
 
     Context 'When tenant has Education licenses' {
