@@ -48,7 +48,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| Dynamic Groups | 51 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
+| Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 4 | Update ring groups (Pilot, UAT, Broad) and assignment groups |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
 | Security Baselines | 70+ | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS) |
