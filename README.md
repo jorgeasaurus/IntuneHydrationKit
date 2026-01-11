@@ -34,7 +34,9 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+
+> **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. This ensures stability and prevents unplanned breaking changes from affecting your deployments.
 
 ### Demo
 
@@ -46,10 +48,10 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| Dynamic Groups | 43 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, licensing, VMs) |
+| Dynamic Groups | 51 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 4 | Update ring groups (Pilot, UAT, Broad) and assignment groups |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
-| Security Baselines | 70+ | [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) policies (Windows, macOS) |
+| Security Baselines | 70+ | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
 | Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
@@ -633,7 +635,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 ## Acknowledgments
 
-- [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) by SkipToTheEndpoint - Community-driven Intune security baselines
+- [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) by SkipToTheEndpoint - Original community-driven Intune security baselines (this kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) for stability)
 - Microsoft Graph PowerShell SDK team
 
 ---

@@ -193,7 +193,7 @@ function Invoke-IntuneHydration {
         # OpenIntuneBaseline parameters - available for parameter-based modes only
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
-        [string]$BaselineRepoUrl = "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+        [string]$BaselineRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]

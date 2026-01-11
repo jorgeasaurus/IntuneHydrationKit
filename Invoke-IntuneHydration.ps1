@@ -158,7 +158,7 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
-    [string]$BaselineRepoUrl = "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+    [string]$BaselineRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]

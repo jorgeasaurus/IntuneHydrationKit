@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-01-11
+
+### Added
+
+- **Issue #15**: License-based dynamic user groups with simplified membership rules:
+  - `Entra - License - E3` (Exchange Online Plan 2)
+  - `Entra - License - E5` (Entra ID P2)
+  - `Entra - License - F3` (Exchange Kiosk)
+  - `Entra - License - Business Premium` (Defender for Business)
+  - `Entra - License - Copilot` (M365 Copilot Business Chat)
+  - `Entra - License - Power BI Pro`
+  - `Entra - License - Visio`
+  - `Entra - License - Project`
+- Dynamic groups count increased from 43 to 51
+
+### Changed
+
+- OpenIntuneBaseline now pulls from [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) to prevent unplanned breaking changes from upstream
+- **Issue #15**: Simplified dynamic group membership rules - removed complex exclusion logic (`-and -not`) for faster group processing
+- Updated README with fork notice and acknowledgment of original OpenIntuneBaseline project
+
 ## [0.3.1] - 2026-01-09
 
 ### Fixed

@@ -5,7 +5,7 @@ function Get-OpenIntuneBaseline {
     .DESCRIPTION
         Downloads and extracts the OpenIntuneBaseline repository containing all baseline policies
     .PARAMETER RepoUrl
-        GitHub repository URL (default: https://github.com/SkipToTheEndpoint/OpenIntuneBaseline)
+        GitHub repository URL (default: https://github.com/jorgeasaurus/OpenIntuneBaseline)
     .PARAMETER Branch
         Branch to download (default: main)
     .PARAMETER DestinationPath
@@ -16,7 +16,7 @@ function Get-OpenIntuneBaseline {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [string]$RepoUrl = "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+        [string]$RepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
 
         [Parameter()]
         [string]$Branch = "main",

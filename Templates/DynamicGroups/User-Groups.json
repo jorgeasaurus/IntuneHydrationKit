@@ -3,13 +3,61 @@
         {
             "displayName": "Intune - Licensed Users",
             "description": "All users licensed for Microsoft Intune",
-            "membershipRule": "(user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\"))",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
             "membershipType": "user"
         },
         {
             "displayName": "Intune - Update Ring Broad Users",
             "description": "All Intune licensed users targeted for the broad phase of Windows Update for Business",
-            "membershipRule": "(user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\"))",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"c1ec4a95-1f05-45b3-a911-aa3fa01094f5\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - Business Premium",
+            "description": "Users with Microsoft 365 Business Premium (Defender for Business)",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"4cde982a-aba4-4f86-8c9f-d6a9a8683f6e\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - E3",
+            "description": "Users with Microsoft 365 E3 or Office 365 E3 (Exchange Online Plan 2)",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"efb87545-963c-4e0d-99df-69c6916d9eb0\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - E5",
+            "description": "Users with Microsoft 365 E5 (Entra ID P2)",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"eec0eb4f-6444-4f95-aba0-50c24d67f998\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - F3",
+            "description": "Users with Microsoft 365 F3 (Exchange Kiosk + Intune)",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"4a82b400-a79f-41a4-b4e2-e94f5787b113\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - Copilot",
+            "description": "Users with Microsoft 365 Copilot",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"3f30311c-6b1e-48a4-ab79-725b469da960\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - Power BI Pro",
+            "description": "Users with Power BI Pro",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"70d33638-9c74-4d01-bfd3-562de28bd4ba\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - Visio",
+            "description": "Users with Visio Plan 2",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"663a804f-1c30-4ff0-9915-9db84f0d1cea\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
+            "membershipType": "user"
+        },
+        {
+            "displayName": "Entra - License - Project",
+            "description": "Users with Project Plan 3 or higher",
+            "membershipRule": "user.assignedPlans -any (assignedPlan.servicePlanId -eq \"fafd7243-e5c1-4a3a-9e40-495efcb1d3c3\" -and assignedPlan.capabilityStatus -eq \"Enabled\")",
             "membershipType": "user"
         }
     ]

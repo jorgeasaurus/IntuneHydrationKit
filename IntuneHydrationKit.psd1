@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.3.1'
+    ModuleVersion     = '0.3.3'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,12 +89,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.3.1
+## v0.3.3
 
-- **Fixed:**
-  - Issue #14: M365 Business Premium license not detected for Windows Driver Updates
-    - Added `WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE` service plan to license detection
-    - This service plan is included in M365 Business Premium and enables driver update functionality
+- **Added:**
+  - Issue #15: License-based dynamic user groups (E3, E5, F3, Business Premium, Copilot, Power BI Pro, Visio, Project)
+  - Dynamic groups count increased from 43 to 51
+
+- **Changed:**
+  - OpenIntuneBaseline now pulls from maintained fork to prevent unplanned breaking changes
+  - Issue #15: Simplified dynamic group membership rules (removed complex exclusion logic for better processing)
 
 '@
         }

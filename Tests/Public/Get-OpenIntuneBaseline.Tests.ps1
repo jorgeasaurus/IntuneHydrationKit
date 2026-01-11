@@ -56,7 +56,7 @@ Describe 'Get-OpenIntuneBaseline' {
             $command = Get-Command Get-OpenIntuneBaseline
             # Check that the function has the expected default in its definition
             $functionDef = (Get-Command Get-OpenIntuneBaseline).ScriptBlock.ToString()
-            $functionDef | Should -Match 'https://github.com/SkipToTheEndpoint/OpenIntuneBaseline'
+            $functionDef | Should -Match 'https://github.com/jorgeasaurus/OpenIntuneBaseline'
         }
 
         It 'Should default Branch to main' {
@@ -86,7 +86,7 @@ Describe 'Get-OpenIntuneBaseline' {
             }
 
             Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Uri -eq 'https://github.com/SkipToTheEndpoint/OpenIntuneBaseline/archive/refs/heads/main.zip'
+                $Uri -eq 'https://github.com/jorgeasaurus/OpenIntuneBaseline/archive/refs/heads/main.zip'
             }
         }
 
@@ -101,7 +101,7 @@ Describe 'Get-OpenIntuneBaseline' {
             }
 
             Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Uri -eq 'https://github.com/SkipToTheEndpoint/OpenIntuneBaseline/archive/refs/heads/develop.zip'
+                $Uri -eq 'https://github.com/jorgeasaurus/OpenIntuneBaseline/archive/refs/heads/develop.zip'
             }
         }
 
