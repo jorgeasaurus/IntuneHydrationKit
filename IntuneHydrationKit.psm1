@@ -33,6 +33,9 @@ $script:CurrentLogFile = $null
 $script:GraphEnvironment = $null
 $script:GraphEndpoint = $null
 
+# Graph API batch operation settings
+$script:MaxBatchSize = 10  # Graph API batch limit (max 20, using 10 for safety)
+
 # Import private functions
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'
 if (Test-Path -Path $privatePath) {

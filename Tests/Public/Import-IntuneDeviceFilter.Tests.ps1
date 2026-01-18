@@ -106,12 +106,17 @@ Describe 'Import-IntuneDeviceFilter' {
 
         It 'Should create filter if it does not exist' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-filter-id'; displayName = 'Windows 11 Devices' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Batch creation response
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-filter-id'; displayName = 'Windows 11 Devices' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -120,7 +125,7 @@ Describe 'Import-IntuneDeviceFilter' {
             $result | Should -Not -BeNullOrEmpty
             $result[0].Action | Should -Be 'Created'
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'POST' -and $Uri -like '*assignmentFilters*'
+                $Method -eq 'POST' -and $Uri -like '*$batch*'
             }
         }
 
@@ -130,9 +135,14 @@ Describe 'Import-IntuneDeviceFilter' {
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    $Body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
-                    return @{ id = 'new-filter-id'; displayName = 'Windows 11 Devices' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Verify description in batch request
+                    $Body.requests[0].body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-filter-id'; displayName = 'Windows 11 Devices' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -169,23 +179,29 @@ Describe 'Import-IntuneDeviceFilter' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-filter-id'; displayName = 'Created Filter' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Return success for all filters in batch
+                    $responses = $Body.requests | ForEach-Object {
+                        @{ id = $_.id; status = 201; body = @{ id = "filter-$($_.id)"; displayName = $_.body.displayName } }
+                    }
+                    return @{ responses = $responses }
                 }
             } -ModuleName IntuneHydrationKit
         }
 
-        It 'Should create all filters from template' {
+        It 'Should create all filters from template in batch' {
             $result = Import-IntuneDeviceFilter -Platform Windows
 
             $result.Count | Should -Be 2
+            ($result | Where-Object { $_.Action -eq 'Created' }).Count | Should -Be 2
+            # Should be batched into a single request
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'POST'
-            } -Times 2
+                $Method -eq 'POST' -and $Uri -like '*$batch*'
+            } -Times 1
         }
     }
 
@@ -280,7 +296,7 @@ Describe 'Import-IntuneDeviceFilter' {
             Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(
@@ -288,8 +304,13 @@ Describe 'Import-IntuneDeviceFilter' {
                         )
                     }
                 }
-                if ($Method -eq 'DELETE') {
-                    return $null
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Batch delete response
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 204 }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -408,26 +429,20 @@ Describe 'Import-IntuneDeviceFilter' {
             } -ModuleName IntuneHydrationKit
         }
 
-        It 'Should retry on server errors (500+)' {
-            $callCount = 0
+        It 'Should handle batch API errors gracefully' {
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') { return @{ value = @() } }
-                if ($Method -eq 'POST') {
-                    $script:callCount++
-                    if ($script:callCount -lt 2) {
-                        $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::InternalServerError)
-                        $exception = [Microsoft.PowerShell.Commands.HttpResponseException]::new("Server Error", $response)
-                        throw $exception
-                    }
-                    return @{ id = 'new-filter-id'; displayName = 'Test Filter' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    throw "Batch API Error"
                 }
             } -ModuleName IntuneHydrationKit
 
             $result = Import-IntuneDeviceFilter -Platform Windows
 
-            # Due to retry logic, should eventually succeed
+            # Should return Failed result when batch fails
             $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
         }
     }
 
@@ -454,9 +469,15 @@ Describe 'Import-IntuneDeviceFilter' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') { return @{ value = @() } }
-                return @{ id = 'filter-123'; displayName = 'Test Filter' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'filter-123'; displayName = 'Test Filter' } }
+                        )
+                    }
+                }
             } -ModuleName IntuneHydrationKit
         }
 

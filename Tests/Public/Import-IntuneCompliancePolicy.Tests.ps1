@@ -107,8 +107,12 @@ Describe 'Import-IntuneCompliancePolicy' {
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-policy-id'; displayName = 'Windows 10 Compliance Policy' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-policy-id'; displayName = 'Windows 10 Compliance Policy' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -117,7 +121,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             $result | Should -Not -BeNullOrEmpty
             $result[0].Action | Should -Be 'Created'
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'POST' -and $Uri -like '*deviceCompliancePolicies*'
+                $Method -eq 'POST' -and $Uri -like '*$batch*'
             }
         }
 
@@ -164,20 +168,26 @@ Describe 'Import-IntuneCompliancePolicy' {
 
         It 'Should use compliancePolicies endpoint for Linux' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-policy-id'; name = 'Linux Compliance Policy' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Verify the batch contains a request to compliancePolicies endpoint
+                    $Body | Should -BeLike '*compliancePolicies*'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-policy-id'; name = 'Linux Compliance Policy' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
             Import-IntuneCompliancePolicy -Platform Linux
 
-            # Linux uses /compliancePolicies (not /deviceCompliancePolicies)
+            # Linux uses /compliancePolicies (not /deviceCompliancePolicies) - verified in batch body
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'POST' -and $Uri -eq 'beta/deviceManagement/compliancePolicies'
+                $Method -eq 'POST' -and $Uri -like '*$batch*'
             }
         }
     }
@@ -280,8 +290,12 @@ Describe 'Import-IntuneCompliancePolicy' {
                         )
                     }
                 }
-                if ($Method -eq 'DELETE') {
-                    return $null
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 204 }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -364,9 +378,15 @@ Describe 'Import-IntuneCompliancePolicy' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') { return @{ value = @() } }
-                return @{ id = 'policy-123'; displayName = 'Test Policy' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'policy-123'; displayName = 'Test Policy' } }
+                        )
+                    }
+                }
             } -ModuleName IntuneHydrationKit
         }
 

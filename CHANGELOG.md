@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-18
+
+### Added
+
+- **Batch Graph API operations** for dramatically improved performance:
+  - Group imports now batched (existence checks + creation in batches of 10)
+  - Policy imports batched for baselines, compliance, app protection, conditional access, and mobile apps
+  - Device filter imports batched
+  - ~89% reduction in API calls for group operations
+  - ~90% reduction in API calls for policy imports
+- **Bundled OpenIntuneBaseline templates** - Templates now included in module, no external downloads required
+- `Invoke-GraphBatchOperation` private helper for standardized batch processing with retry logic
+
+### Changed
+
+- `Import-IntuneBaseline` now uses bundled `Templates/OpenIntuneBaseline` by default
+- Full hydration runtime reduced from ~180 seconds to ~70 seconds (61% faster)
+- Module-level `$script:MaxBatchSize` variable for consistent batch sizing across functions
+
+
 ## [0.3.4] - 2026-01-17
 
 ### Added

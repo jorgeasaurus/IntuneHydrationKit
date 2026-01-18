@@ -34,9 +34,9 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes bundled [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command that completes in about **70 seconds**.
 
-> **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. This ensures stability and prevents unplanned breaking changes from affecting your deployments.
+> **Note:** This kit bundles a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. This ensures stability, faster execution (no downloads required), and prevents unplanned breaking changes from affecting your deployments.
 
 ### Demo
 
@@ -90,13 +90,24 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 
 ## Features
 
+- **Fast Execution** - Completes full hydration in ~70 seconds using batch Graph API operations
 - **Idempotent** - Safe to run multiple times; skips existing configurations
 - **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
 - **Safe Deletion** - Only removes objects created by this kit
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
-- **OpenIntuneBaseline Integration** - Automatically downloads latest community baselines
+- **Bundled Baselines** - Includes OpenIntuneBaseline templates (no external downloads required)
 - **Detailed Logging** - Full audit trail of all operations
 - **Summary Reports** - Markdown and JSON reports of all changes
+
+### Performance
+
+The kit uses Microsoft Graph batch API operations to minimize API calls and maximize throughput:
+
+| Operation | API Calls (Sequential) | API Calls (Batched) | Improvement |
+|-----------|------------------------|---------------------|-------------|
+| Group creation (55 groups) | ~110 calls | ~12 calls | 89% reduction |
+| Policy imports | Individual calls per policy | Up to 20 per batch | ~90% reduction |
+| Full hydration runtime | ~180 seconds | ~70 seconds | 61% faster |
 
 ---
 
@@ -515,11 +526,13 @@ Affects: OpenIntuneBaseline, ComplianceTemplates, AppProtection, DeviceFilters, 
 
 ### OpenIntuneBaseline Parameters (Parameter Mode Only)
 
+> **Note:** OpenIntuneBaseline templates are bundled with the module. These parameters are optional and only needed if you want to use a custom baseline source.
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `-BaselineRepoUrl` | String | GitHub repository URL |
+| `-BaselineRepoUrl` | String | GitHub repository URL (optional - uses bundled templates by default) |
 | `-BaselineBranch` | String | Git branch to use |
-| `-BaselineDownloadPath` | String | Local download path |
+| `-BaselineDownloadPath` | String | Local path to custom baseline templates |
 
 ### Reporting Parameters (Parameter Mode Only)
 
@@ -684,6 +697,7 @@ Intune-Hydration-Kit/
 ├── Scripts/                       # Helper scripts
 │   └── New-MobileAppTemplate.ps1  # Generate mobile app JSON templates
 ├── Templates/                     # Configuration templates
+│   ├── OpenIntuneBaseline/       # Bundled OpenIntuneBaseline policies
 │   ├── Compliance/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
