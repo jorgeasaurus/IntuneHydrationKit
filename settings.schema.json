@@ -1,0 +1,192 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Intune Hydration Kit Settings",
+    "description": "Configuration schema for Intune Hydration Kit settings file",
+    "type": "object",
+    "required": ["tenant", "authentication", "options", "imports"],
+    "properties": {
+        "tenant": {
+            "type": "object",
+            "description": "Target tenant configuration",
+            "required": ["tenantId"],
+            "properties": {
+                "tenantId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                    "description": "Azure AD tenant ID (GUID format)"
+                },
+                "tenantName": {
+                    "type": ["string", "null"],
+                    "description": "Tenant name for display purposes (e.g., contoso.onmicrosoft.com)"
+                }
+            }
+        },
+        "authentication": {
+            "type": "object",
+            "description": "Authentication configuration",
+            "required": ["mode"],
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["interactive", "clientSecret"],
+                    "description": "Authentication mode: interactive (browser) or clientSecret (service principal)"
+                },
+                "clientId": {
+                    "type": ["string", "null"],
+                    "description": "Application (client) ID for service principal authentication"
+                },
+                "clientSecret": {
+                    "type": ["string", "null"],
+                    "description": "Client secret for service principal authentication"
+                },
+                "environment": {
+                    "type": "string",
+                    "enum": ["Global", "USGov", "USGovDoD", "Germany", "China"],
+                    "default": "Global",
+                    "description": "Azure cloud environment"
+                }
+            }
+        },
+        "options": {
+            "type": "object",
+            "description": "Execution options",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run in dry-run mode (no changes made)"
+                },
+                "create": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable creation of configurations"
+                },
+                "delete": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable deletion of kit-created configurations"
+                },
+                "force": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip confirmation prompts"
+                },
+                "verbose": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable verbose logging output"
+                }
+            }
+        },
+        "imports": {
+            "type": "object",
+            "description": "Resource types to import",
+            "properties": {
+                "openIntuneBaseline": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import OpenIntuneBaseline policies"
+                },
+                "complianceTemplates": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import compliance policy templates"
+                },
+                "appProtection": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import app protection (MAM) policies"
+                },
+                "notificationTemplates": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import notification templates"
+                },
+                "enrollmentProfiles": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import enrollment profiles (Autopilot, ESP)"
+                },
+                "dynamicGroups": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import dynamic Azure AD groups"
+                },
+                "staticGroups": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import static (assigned) groups and the Autopilot device preparation group"
+                },
+                "deviceFilters": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import device filters"
+                },
+                "conditionalAccess": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import Conditional Access starter pack policies"
+                },
+                "mobileApps": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Import mobile app templates"
+                }
+            }
+        },
+        "platforms": {
+            "type": "array",
+            "description": "Filter imports by platform. Affects: ComplianceTemplates, DeviceFilters, AppProtection, MobileApps, EnrollmentProfiles, OpenIntuneBaseline. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.",
+            "items": {
+                "type": "string",
+                "enum": ["Windows", "macOS", "iOS", "Android", "Linux", "All"]
+            },
+            "default": ["All"],
+            "examples": [
+                ["All"],
+                ["Windows"],
+                ["Windows", "macOS"],
+                ["iOS", "Android"]
+            ]
+        },
+        "openIntuneBaseline": {
+            "type": "object",
+            "description": "OpenIntuneBaseline configuration",
+            "properties": {
+                "repoUrl": {
+                    "type": "string",
+                    "default": "https://github.com/jorgeasaurus/OpenIntuneBaseline",
+                    "description": "GitHub repository URL for OpenIntuneBaseline"
+                },
+                "branch": {
+                    "type": "string",
+                    "default": "main",
+                    "description": "Git branch to use"
+                },
+                "downloadPath": {
+                    "type": ["string", "null"],
+                    "description": "Local path for OpenIntuneBaseline download"
+                }
+            }
+        },
+        "reporting": {
+            "type": "object",
+            "description": "Reporting configuration",
+            "properties": {
+                "outputPath": {
+                    "type": ["string", "null"],
+                    "description": "Output directory for reports"
+                },
+                "formats": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["markdown", "json"]
+                    },
+                    "default": ["markdown"],
+                    "description": "Report formats to generate"
+                }
+            }
+        }
+    }
+}

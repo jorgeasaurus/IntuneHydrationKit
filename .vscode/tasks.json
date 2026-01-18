@@ -139,6 +139,38 @@
                 "panel": "shared"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Module: Get Version",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "(Import-PowerShellDataFile ./IntuneHydrationKit.psd1).ModuleVersion"
+            ],
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Format: All PowerShell Files",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/scripts/Format-AllFiles.ps1"
+            ],
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
         }
     ]
 }

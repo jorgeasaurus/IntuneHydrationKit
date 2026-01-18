@@ -50,12 +50,10 @@ function Write-HydrationLog {
         if ($Message -match '^Step \d+:') {
             Write-Host ""
             Write-Host "▶ $Message" -ForegroundColor $colors[$Level]
-        }
-        elseif ($Message -match '^===') {
+        } elseif ($Message -match '^===') {
             Write-Host ""
             Write-Host $Message -ForegroundColor $colors[$Level]
-        }
-        else {
+        } else {
             Write-Host "  $consoleMessage" -ForegroundColor $colors[$Level]
         }
     }

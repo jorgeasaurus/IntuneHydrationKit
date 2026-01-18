@@ -2,19 +2,19 @@
     "@odata.type": "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile",
     "displayName": "Default Autopilot Deployment Profile",
     "description": "User Driven Azure AD Join with Standard User",
-    "deviceType": "windowsPc",
     "deviceNameTemplate": "%SERIAL%",
-    "language": "en-US",
-    "enableWhiteGlove": true,
-    "extractHardwareHash": true,
+    "locale": "os-default",
+    "preprovisioningAllowed": true,
+    "deviceType": "windowsPc",
+    "hardwareHashExtractionEnabled": true,
+    "roleScopeTagIds": [],
     "hybridAzureADJoinSkipConnectivityCheck": false,
-    "outOfBoxExperienceSettings": {
-        "hidePrivacySettings": true,
-        "hideEULA": true,
-        "userType": "standard",
+    "outOfBoxExperienceSetting": {
         "deviceUsageType": "singleUser",
-        "skipKeyboardSelectionPage": true,
-        "hideEscapeLink": true
-    },
-    "roleScopeTagIds": []
+        "escapeLinkHidden": true,
+        "privacySettingsHidden": true,
+        "eulaHidden": true,
+        "userType": "standard",
+        "keyboardSelectionPageSkipped": true
+    }
 }

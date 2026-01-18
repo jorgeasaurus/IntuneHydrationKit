@@ -9,15 +9,25 @@ function Import-IntuneDeviceFilter {
         Path to the filter template directory (defaults to Templates/Filters)
     .PARAMETER RemoveExisting
         If specified, removes existing filters created by this kit instead of creating new ones
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: Windows, macOS, iOS, Android, All.
+        Defaults to 'All' which imports all filter templates regardless of platform.
+        Note: Linux device filters are not currently supported by Intune.
     .EXAMPLE
         Import-IntuneDeviceFilter
     .EXAMPLE
         Import-IntuneDeviceFilter -TemplatePath ./MyFilters
+    .EXAMPLE
+        Import-IntuneDeviceFilter -Platform Windows,macOS
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
         [string]$TemplatePath,
+
+        [Parameter()]
+        [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -32,7 +42,7 @@ function Import-IntuneDeviceFilter {
         return @()
     }
 
-    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "filter template"
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Prefix' -Recurse -ResourceType "filter template"
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No filter templates found in: $TemplatePath"
@@ -51,15 +61,14 @@ function Import-IntuneDeviceFilter {
             foreach ($existingFilter in $existingFiltersResponse.value) {
                 if (-not $existingFilters.ContainsKey($existingFilter.displayName)) {
                     $existingFilters[$existingFilter.displayName] = @{
-                        Id = $existingFilter.id
+                        Id          = $existingFilter.id
                         Description = $existingFilter.description
                     }
                 }
             }
             $listUri = $existingFiltersResponse.'@odata.nextLink'
         } while ($listUri)
-    }
-    catch {
+    } catch {
         Write-Warning "Could not retrieve existing filters: $_"
         $existingFilters = @{}
     }
@@ -71,30 +80,46 @@ function Import-IntuneDeviceFilter {
     }
 
     # Remove existing filters if requested
-    # SAFETY: Only delete filters that have "Imported by Intune-Hydration-Kit" in description
+    # SAFETY: Only delete filters that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         foreach ($filterName in $existingFilters.Keys) {
             $filterInfo = $existingFilters[$filterName]
 
             # Safety check: Only delete if created by this kit (has hydration marker in description)
             if (-not (Test-HydrationKitObject -Description $filterInfo.Description -ObjectName $filterName)) {
-                Write-Verbose "Skipping '$filterName' - not created by Intune-Hydration-Kit"
+                Write-Verbose "Skipping '$filterName' - not created by Intune Hydration Kit"
                 continue
             }
 
             if ($PSCmdlet.ShouldProcess($filterName, "Delete device filter")) {
-                try {
-                    Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/assignmentFilters/$($filterInfo.Id)" -ErrorAction Stop
-                    Write-HydrationLog -Message "  Deleted: $filterName" -Level Info
-                    $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Deleted' -Status 'Success'
+                $maxRetries = 3
+                $retryCount = 0
+                $success = $false
+
+                while (-not $success -and $retryCount -lt $maxRetries) {
+                    try {
+                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/assignmentFilters/$($filterInfo.Id)" -ErrorAction Stop
+                        Write-HydrationLog -Message "  Deleted: $filterName" -Level Info
+                        $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Deleted' -Status 'Success'
+                        $success = $true
+                    } catch {
+                        $statusCode = $_.Exception.Response.StatusCode.value__
+
+                        # Only retry on server errors (500+), not client errors (400-499)
+                        if ($statusCode -ge 500 -and $retryCount -lt ($maxRetries - 1)) {
+                            $retryCount++
+                            $waitSeconds = [math]::Pow(2, $retryCount)
+                            Write-HydrationLog -Message "  Retry $retryCount/$maxRetries for '$filterName' after ${waitSeconds}s (HTTP $statusCode)" -Level Info
+                            Start-Sleep -Seconds $waitSeconds
+                        } else {
+                            $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                            Write-HydrationLog -Message "  [!] Failed: $filterName - $errMessage" -Level Warning
+                            $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Failed' -Status "Delete failed: $errMessage"
+                            break
+                        }
+                    }
                 }
-                catch {
-                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                    Write-HydrationLog -Message "  Failed: $filterName - $errMessage" -Level Warning
-                    $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Failed' -Status "Delete failed: $errMessage"
-                }
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldDelete: $filterName" -Level Info
                 $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'WouldDelete' -Status 'DryRun'
             }
@@ -141,38 +166,57 @@ function Import-IntuneDeviceFilter {
                     if ($PSCmdlet.ShouldProcess($filter.displayName, "Create device filter")) {
                         # Build description with hydration kit marker
                         $description = if ($filter.description) {
-                            "$($filter.description) - Imported by Intune-Hydration-Kit"
+                            "$($filter.description) - Imported by Intune Hydration Kit"
                         } else {
-                            "Imported by Intune-Hydration-Kit"
+                            "Imported by Intune Hydration Kit"
                         }
 
                         $filterBody = @{
-                            displayName = $filter.displayName
-                            description = $description
-                            platform = $filter.platform
-                            rule = $filter.rule
+                            displayName   = $filter.displayName
+                            description   = $description
+                            platform      = $filter.platform
+                            rule          = $filter.rule
                             roleScopeTags = @("0")
                         }
 
-                        $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
+                        $maxRetries = 3
+                        $retryCount = 0
+                        $success = $false
 
-                        Write-HydrationLog -Message "  Created: $($filter.displayName)" -Level Info
+                        while (-not $success -and $retryCount -lt $maxRetries) {
+                            try {
+                                $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
+                                Write-HydrationLog -Message "  Created: $($filter.displayName)" -Level Info
+                                $results += New-HydrationResult -Name $filter.displayName -Id $newFilter.id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Created' -Status 'Success'
+                                $success = $true
+                            } catch {
+                                $statusCode = $_.Exception.Response.StatusCode.value__
 
-                        $results += New-HydrationResult -Name $filter.displayName -Id $newFilter.id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Created' -Status 'Success'
-                    }
-                    else {
+                                # Only retry on server errors (500+), not client errors (400-499)
+                                if ($statusCode -ge 500 -and $retryCount -lt ($maxRetries - 1)) {
+                                    $retryCount++
+                                    $waitSeconds = [math]::Pow(2, $retryCount)
+                                    Write-HydrationLog -Message "  Retry $retryCount/$maxRetries for '$($filter.displayName)' after ${waitSeconds}s (HTTP $statusCode)" -Level Info
+                                    Start-Sleep -Seconds $waitSeconds
+                                } else {
+                                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                                    Write-HydrationLog -Message "  [!] Failed: $($filter.displayName) - $errMessage" -Level Warning
+                                    $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errMessage
+                                    break
+                                }
+                            }
+                        }
+                    } else {
                         Write-HydrationLog -Message "  WouldCreate: $($filter.displayName)" -Level Info
                         $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
                     }
-                }
-                catch {
+                } catch {
                     $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                     Write-HydrationLog -Message "  Failed: $($filter.displayName) - $errMessage" -Level Warning
                     $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errMessage
                 }
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed to parse: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'DeviceFilter' -Action 'Failed' -Status "Parse error: $errMessage"

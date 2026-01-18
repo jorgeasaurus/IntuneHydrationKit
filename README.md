@@ -49,13 +49,13 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | Category | Count | Description |
 |----------|-------|-------------|
 | Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
-| Static Groups | 4 | Update ring groups (Pilot, UAT, Broad) and assignment groups |
+| Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
-| Security Baselines | 70+ | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS) |
+| Security Baselines | 113 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
 | Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
-| Enrollment Profiles | 3 | Autopilot deployment profiles + Enrollment Status Page |
+| Enrollment Profiles | 4 | Autopilot deployment profiles, Enrollment Status Page, and Autopilot device preparation |
 | Conditional Access | 21 | [Starter pack policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) (created disabled) |
 
 ---
@@ -82,7 +82,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
 
-- Objects must have `"Imported by Intune-Hydration-Kit"` in their description
+- Objects must have `"Imported by Intune-Hydration-Kit"` or `"Imported by Intune Hydration Kit"` in their description
 - Conditional Access policies must also be in `disabled` state to be deleted
 - Manually created objects with the same names will NOT be deleted
 
@@ -185,6 +185,20 @@ Invoke-IntuneHydration -TenantId "your-tenant-id" `
     -DynamicGroups `
     -DeviceFilters
 
+# Filter by platform (Windows only)
+Invoke-IntuneHydration -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -All `
+    -Platform Windows
+
+# Filter by multiple platforms
+Invoke-IntuneHydration -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -All `
+    -Platform Windows, macOS
+
 # Use service principal authentication
 $secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
 Invoke-IntuneHydration -TenantId "your-tenant-id" `
@@ -219,6 +233,13 @@ If you cloned the repository, use the wrapper script:
     -ComplianceTemplates `
     -DynamicGroups `
     -DeviceFilters
+
+# Filter by platform (Windows and macOS only)
+./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
+    -Interactive `
+    -Create `
+    -All `
+    -Platform Windows, macOS
 
 # Use service principal authentication
 $secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
@@ -389,6 +410,48 @@ Enable or disable specific configuration types (used for both create and delete 
 }
 ```
 
+#### Platform Filtering
+
+Filter imports by platform to only import resources for specific operating systems:
+
+```json
+"platforms": ["Windows", "macOS"]
+```
+
+**Available platforms:** `Windows`, `macOS`, `iOS`, `Android`, `Linux`, `All`
+
+**Default:** `["All"]` (imports resources for all platforms)
+
+**Affected resources:**
+- OpenIntuneBaseline policies
+- Compliance policies
+- App Protection policies
+- Device Filters
+- Mobile Apps
+- Enrollment Profiles
+
+**Cross-platform resources (not filtered):**
+- Dynamic Groups
+- Static Groups
+- Conditional Access policies
+- Notification Templates
+
+**Examples:**
+
+```json
+// Windows-only deployment
+"platforms": ["Windows"]
+
+// Windows and macOS
+"platforms": ["Windows", "macOS"]
+
+// Mobile platforms only
+"platforms": ["iOS", "Android"]
+
+// All platforms (default)
+"platforms": ["All"]
+```
+
 ---
 
 ## Command-Line Parameters
@@ -441,6 +504,14 @@ These modes cannot be combined - choose one or the other.
 | `-DeviceFilters` | Switch | Process device filters |
 | `-ConditionalAccess` | Switch | Process CA starter pack |
 | `-MobileApps` | Switch | Process mobile app templates |
+
+### Platform Filtering Parameter
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-Platform` | String[] | Filter imports by platform: `Windows`, `macOS`, `iOS`, `Android`, `Linux`, `All` (default: All) |
+
+Affects: OpenIntuneBaseline, ComplianceTemplates, AppProtection, DeviceFilters, MobileApps, EnrollmentProfiles. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
 
 ### OpenIntuneBaseline Parameters (Parameter Mode Only)
 
@@ -570,7 +641,7 @@ Install-Module Microsoft.Graph.Authentication -Force
 
 #### Objects not being deleted
 
-- Verify the object has "Imported by Intune-Hydration-Kit" in its description
+- Verify the object has "Imported by Intune Hydration Kit" in its description
 - For CA policies, ensure the policy is in `disabled` state
 
 ### Debug Mode

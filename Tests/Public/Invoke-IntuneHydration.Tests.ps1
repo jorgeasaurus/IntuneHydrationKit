@@ -229,20 +229,20 @@ Describe 'Invoke-IntuneHydration' {
             # Create a valid test settings file
             $testSettingsPath = Join-Path $script:TestTempPath 'test-settings.json'
             @{
-                tenant = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
                 authentication = @{ mode = 'interactive'; environment = 'Global' }
-                options = @{ create = $true; delete = $false }
-                imports = @{ dynamicGroups = $true }
-                reporting = @{ outputPath = 'Reports'; formats = @('markdown') }
+                options        = @{ create = $true; delete = $false }
+                imports        = @{ dynamicGroups = $true }
+                reporting      = @{ outputPath = 'Reports'; formats = @('markdown') }
             } | ConvertTo-Json -Depth 10 | Out-File -FilePath $testSettingsPath -Encoding utf8
 
             Mock Import-HydrationSettings {
                 return @{
-                    tenant = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
                     authentication = @{ mode = 'interactive'; environment = 'Global' }
-                    options = @{ create = $true; delete = $false }
-                    imports = @{ dynamicGroups = $true }
-                    reporting = @{ outputPath = 'Reports'; formats = @('markdown') }
+                    options        = @{ create = $true; delete = $false }
+                    imports        = @{ dynamicGroups = $true }
+                    reporting      = @{ outputPath = 'Reports'; formats = @('markdown') }
                 }
             } -ModuleName IntuneHydrationKit
 

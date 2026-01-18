@@ -231,7 +231,7 @@ Describe 'Copy-DeepObject' {
                     @{
                         settingDefinitionId = 'setting1'
                         settingInstance     = @{
-                            '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'
+                            '@odata.type'      = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'
                             choiceSettingValue = @{
                                 value = 'enabled'
                             }
@@ -240,7 +240,7 @@ Describe 'Copy-DeepObject' {
                     @{
                         settingDefinitionId = 'setting2'
                         settingInstance     = @{
-                            '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance'
+                            '@odata.type'      = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance'
                             simpleSettingValue = @{
                                 value = 100
                             }

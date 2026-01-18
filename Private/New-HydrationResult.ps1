@@ -33,9 +33,9 @@ function New-HydrationResult {
         [string]$State
     )
     $result = [PSCustomObject]@{
-        Name = $Name
-        Action = $Action
-        Status = $Status
+        Name      = $Name
+        Action    = $Action
+        Status    = $Status
         Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     }
     if ($Path) { $result | Add-Member -NotePropertyName 'Path' -NotePropertyValue $Path }

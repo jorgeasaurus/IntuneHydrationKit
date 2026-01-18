@@ -130,8 +130,7 @@ function Test-IntunePrerequisites {
 
         Write-Host "All prerequisite checks passed"
         return $true
-    }
-    catch {
+    } catch {
         if ($_.Exception.Message -match "Prerequisite checks failed") {
             throw
         }

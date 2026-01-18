@@ -6,13 +6,23 @@ function Import-IntuneAppProtectionPolicy {
         Reads app protection templates and upserts Android/iOS managed app protection policies via Graph.
     .PARAMETER TemplatePath
         Path to the app protection template directory (defaults to Templates/AppProtection)
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: iOS, Android, All.
+        Defaults to 'All' which imports all app protection templates regardless of platform.
+        Note: App protection policies only apply to iOS and Android platforms.
     .EXAMPLE
         Import-IntuneAppProtectionPolicy
+    .EXAMPLE
+        Import-IntuneAppProtectionPolicy -Platform iOS
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
         [string]$TemplatePath,
+
+        [Parameter()]
+        [ValidateSet('iOS', 'Android', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -27,7 +37,7 @@ function Import-IntuneAppProtectionPolicy {
         return @()
     }
 
-    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "app protection template"
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Suffix' -Recurse -ResourceType "app protection template"
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No app protection templates found in: $TemplatePath"
@@ -42,7 +52,7 @@ function Import-IntuneAppProtectionPolicy {
     $results = @()
 
     # Remove existing app protection policies if requested
-    # SAFETY: Only delete policies that have "Imported by Intune-Hydration-Kit" in description
+    # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         foreach ($endpoint in $typeToEndpoint.Values) {
             $listUri = $endpoint
@@ -55,7 +65,7 @@ function Import-IntuneAppProtectionPolicy {
 
                         # Safety check: Only delete if created by this kit (has hydration marker in description)
                         if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                            Write-Verbose "Skipping '$policyName' - not created by Intune-Hydration-Kit"
+                            Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
                             continue
                         }
 
@@ -64,21 +74,18 @@ function Import-IntuneAppProtectionPolicy {
                                 Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$policyId" -ErrorAction Stop
                                 Write-HydrationLog -Message "  Deleted: $policyName" -Level Info
                                 $results += New-HydrationResult -Name $policyName -Type 'AppProtection' -Action 'Deleted' -Status 'Success'
-                            }
-                            catch {
+                            } catch {
                                 $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                                 Write-HydrationLog -Message "  Failed: $policyName - $errMessage" -Level Warning
                                 $results += New-HydrationResult -Name $policyName -Type 'AppProtection' -Action 'Failed' -Status "Delete failed: $errMessage"
                             }
-                        }
-                        else {
+                        } else {
                             Write-HydrationLog -Message "  WouldDelete: $policyName" -Level Info
                             $results += New-HydrationResult -Name $policyName -Type 'AppProtection' -Action 'WouldDelete' -Status 'DryRun'
                         }
                     }
                     $listUri = $existing.'@odata.nextLink'
-                }
-                catch {
+                } catch {
                     break
                 }
             } while ($listUri)
@@ -134,7 +141,7 @@ function Import-IntuneAppProtectionPolicy {
 
             # Add hydration kit tag to description
             $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
 
             # Remove empty manufacturer/model allowlists
             if ($importBody.allowedAndroidDeviceManufacturers -eq "") {
@@ -148,13 +155,11 @@ function Import-IntuneAppProtectionPolicy {
                 $null = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'AppProtection' -Action 'Created' -Status 'Success'
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'AppProtection' -Action 'WouldCreate' -Status 'DryRun'
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'AppProtection' -Action 'Failed' -Status $errMessage

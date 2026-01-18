@@ -113,8 +113,7 @@ if ($AppType -eq 'winGetApp') {
         if (-not $SearchTerm -and -not $PackageIdentifier) {
             throw "When using -FetchFromStore, you must provide either -SearchTerm or -PackageIdentifier"
         }
-    }
-    else {
+    } else {
         # Manual mode requires DisplayName, Publisher, and PackageIdentifier
         if (-not $DisplayName) {
             throw "DisplayName is required for winGetApp when not using -FetchFromStore"
@@ -126,8 +125,7 @@ if ($AppType -eq 'winGetApp') {
             throw "PackageIdentifier is required for winGetApp when not using -FetchFromStore"
         }
     }
-}
-else {
+} else {
     # Non-winGetApp types always require DisplayName and Publisher
     if (-not $DisplayName) {
         throw "DisplayName is required for $AppType"
@@ -164,8 +162,7 @@ function Search-MicrosoftStore {
         Write-Verbose "Searching Microsoft Store for: $SearchTerm"
         $response = Invoke-RestMethod -Uri $storeSearchUrl -Method POST -ContentType 'application/json' -Body $searchBody -ErrorAction Stop
         return $response.Data
-    }
-    catch {
+    } catch {
         throw "Failed to search Microsoft Store: $($_.Exception.Message)"
     }
 }
@@ -187,8 +184,7 @@ function Get-StoreAppManifest {
         Write-Verbose "Fetching manifest for package: $PackageIdentifier"
         $response = Invoke-RestMethod -Uri $manifestUrl -Method GET -ErrorAction Stop
         return $response.Data
-    }
-    catch {
+    } catch {
         throw "Failed to get app manifest: $($_.Exception.Message)"
     }
 }
@@ -211,7 +207,7 @@ function Get-StoreAppDetails {
         $response = Invoke-RestMethod -Uri $catalogUrl -Method GET -ErrorAction Stop
 
         $result = @{
-            Icon = $null
+            Icon        = $null
             Description = $null
         }
 
@@ -261,11 +257,10 @@ function Get-StoreAppDetails {
         }
 
         return $result
-    }
-    catch {
+    } catch {
         Write-Warning "Failed to get app details: $($_.Exception.Message)"
         return @{
-            Icon = $null
+            Icon        = $null
             Description = $null
         }
     }
@@ -322,12 +317,10 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
         if ($exactMatch) {
             $selectedApp = $exactMatch
             Write-Host "Found exact match: $($selectedApp.PackageName)" -ForegroundColor Green
-        }
-        elseif ($searchResults.Count -eq 1) {
+        } elseif ($searchResults.Count -eq 1) {
             $selectedApp = $searchResults[0]
             Write-Host "Found: $($selectedApp.PackageName)" -ForegroundColor Green
-        }
-        else {
+        } else {
             Write-Host "`nMultiple apps found:" -ForegroundColor Yellow
             for ($i = 0; $i -lt [Math]::Min($searchResults.Count, 10); $i++) {
                 Write-Host "  [$($i + 1)] $($searchResults[$i].PackageName) - $($searchResults[$i].Publisher)" -ForegroundColor White
@@ -346,11 +339,9 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
 
         $resolvedPackageId = $selectedApp.PackageIdentifier.ToUpper()
         Write-Host "Package Identifier: $resolvedPackageId" -ForegroundColor Gray
-    }
-    elseif (-not $PackageIdentifier) {
+    } elseif (-not $PackageIdentifier) {
         throw "Either -SearchTerm or -PackageIdentifier is required when using -FetchFromStore"
-    }
-    else {
+    } else {
         # PackageIdentifier was provided directly, ensure uppercase
         $resolvedPackageId = $PackageIdentifier.ToUpper()
     }
@@ -418,8 +409,7 @@ if ($AppType -eq 'winGetApp' -and $storeAppInfo) {
     $body.developer = if ($Developer) { $Developer } else { $storeAppInfo.Publisher }
     $body.informationUrl = if ($InformationUrl) { $InformationUrl } else { $storeAppInfo.PublisherSupportUrl }
     $body.privacyInformationUrl = if ($PrivacyUrl) { $PrivacyUrl } else { $storeAppInfo.PrivacyUrl }
-}
-else {
+} else {
     $body.displayName = $DisplayName
     $body.description = if ($Description) { $Description } else { "" }
     $body.publisher = $Publisher
@@ -453,8 +443,7 @@ if ($IconPath -and (Test-Path -Path $IconPath)) {
         type  = $mimeType
         value = $iconBase64
     }
-}
-elseif ($storeIcon) {
+} elseif ($storeIcon) {
     $body.largeIcon = [ordered]@{
         type  = $storeIcon.Type
         value = $storeIcon.Value
@@ -477,16 +466,14 @@ switch ($AppType) {
         # Store manifest uses "machine" but Intune expects "system"
         $scope = if ($RunAsAccount) {
             $RunAsAccount
-        }
-        elseif ($storeInstaller -and $storeInstaller.Scope) {
+        } elseif ($storeInstaller -and $storeInstaller.Scope) {
             # Map store scope values to Intune runAsAccount values
             switch ($storeInstaller.Scope.ToLower()) {
                 'machine' { 'system' }
                 'user' { 'user' }
                 default { 'user' }
             }
-        }
-        else {
+        } else {
             'user'
         }
 

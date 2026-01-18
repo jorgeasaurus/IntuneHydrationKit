@@ -9,8 +9,14 @@ function Import-IntuneEnrollmentProfile {
         Path to the enrollment template directory
     .PARAMETER DeviceNameTemplate
         Custom device naming template (default: %SERIAL%)
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: Windows, macOS, All.
+        Defaults to 'All' which imports all enrollment profile templates regardless of platform.
+        Note: Enrollment profiles are available for Windows (Autopilot, ESP) and macOS (DEP).
     .EXAMPLE
         Import-IntuneEnrollmentProfile
+    .EXAMPLE
+        Import-IntuneEnrollmentProfile -Platform Windows
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -19,6 +25,10 @@ function Import-IntuneEnrollmentProfile {
 
         [Parameter()]
         [string]$DeviceNameTemplate,
+
+        [Parameter()]
+        [ValidateSet('Windows', 'macOS', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -36,7 +46,7 @@ function Import-IntuneEnrollmentProfile {
     $results = @()
 
     # Remove existing enrollment profiles if requested
-    # SAFETY: Only delete profiles that have "Imported by Intune-Hydration-Kit" in description
+    # SAFETY: Only delete profiles that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Delete matching Autopilot profiles
         try {
@@ -44,7 +54,7 @@ function Import-IntuneEnrollmentProfile {
             foreach ($enrollmentProfile in $existingAutopilot.value) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
                 if (-not (Test-HydrationKitObject -Description $enrollmentProfile.description -ObjectName $enrollmentProfile.displayName)) {
-                    Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune-Hydration-Kit"
+                    Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune Hydration Kit"
                     continue
                 }
 
@@ -53,20 +63,17 @@ function Import-IntuneEnrollmentProfile {
                         Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($enrollmentProfile.id)" -ErrorAction Stop
                         Write-HydrationLog -Message "  Deleted: $($enrollmentProfile.displayName)" -Level Info
                         $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Deleted' -Status 'Success'
-                    }
-                    catch {
+                    } catch {
                         $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                         Write-HydrationLog -Message "  Failed: $($enrollmentProfile.displayName) - $errMessage" -Level Warning
                         $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'Failed' -Status "Delete failed: $errMessage"
                     }
-                }
-                else {
+                } else {
                     Write-HydrationLog -Message "  WouldDelete: $($enrollmentProfile.displayName)" -Level Info
                     $results += New-HydrationResult -Name $enrollmentProfile.displayName -Type 'AutopilotDeploymentProfile' -Action 'WouldDelete' -Status 'DryRun'
                 }
             }
-        }
-        catch {
+        } catch {
             Write-HydrationLog -Message "Failed to list Autopilot profiles: $_" -Level Warning
         }
 
@@ -80,7 +87,7 @@ function Import-IntuneEnrollmentProfile {
             foreach ($espProfile in $espProfiles) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
                 if (-not (Test-HydrationKitObject -Description $espProfile.description -ObjectName $espProfile.displayName)) {
-                    Write-Verbose "Skipping '$($espProfile.displayName)' - not created by Intune-Hydration-Kit"
+                    Write-Verbose "Skipping '$($espProfile.displayName)' - not created by Intune Hydration Kit"
                     continue
                 }
 
@@ -89,42 +96,81 @@ function Import-IntuneEnrollmentProfile {
                         Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$($espProfile.id)" -ErrorAction Stop
                         Write-HydrationLog -Message "  Deleted: $($espProfile.displayName)" -Level Info
                         $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'Deleted' -Status 'Success'
-                    }
-                    catch {
+                    } catch {
                         $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                         Write-HydrationLog -Message "  Failed: $($espProfile.displayName) - $errMessage" -Level Warning
                         $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status "Delete failed: $errMessage"
                     }
-                }
-                else {
+                } else {
                     Write-HydrationLog -Message "  WouldDelete: $($espProfile.displayName)" -Level Info
                     $results += New-HydrationResult -Name $espProfile.displayName -Type 'EnrollmentStatusPage' -Action 'WouldDelete' -Status 'DryRun'
                 }
             }
-        }
-        catch {
+        } catch {
             Write-HydrationLog -Message "Failed to list ESP profiles: $_" -Level Warning
+        }
+
+        # Delete matching Autopilot Device Preparation policies (configurationPolicies with technologies = "enrollment")
+        try {
+            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
+            foreach ($policy in $existingPolicies.value) {
+                # Safety check: Only delete if created by this kit (has hydration marker in description)
+                if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policy.name)) {
+                    Write-Verbose "Skipping '$($policy.name)' - not created by Intune Hydration Kit"
+                    continue
+                }
+
+                if ($PSCmdlet.ShouldProcess($policy.name, "Delete Autopilot Device Preparation policy")) {
+                    try {
+                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/configurationPolicies/$($policy.id)" -ErrorAction Stop
+                        Write-HydrationLog -Message "  Deleted: $($policy.name)" -Level Info
+                        $results += New-HydrationResult -Name $policy.name -Type 'AutopilotDevicePreparation' -Action 'Deleted' -Status 'Success'
+                    } catch {
+                        $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                        Write-HydrationLog -Message "  Failed: $($policy.name) - $errMessage" -Level Warning
+                        $results += New-HydrationResult -Name $policy.name -Type 'AutopilotDevicePreparation' -Action 'Failed' -Status "Delete failed: $errMessage"
+                    }
+                } else {
+                    Write-HydrationLog -Message "  WouldDelete: $($policy.name)" -Level Info
+                    $results += New-HydrationResult -Name $policy.name -Type 'AutopilotDevicePreparation' -Action 'WouldDelete' -Status 'DryRun'
+                }
+            }
+        } catch {
+            Write-HydrationLog -Message "Failed to list Autopilot Device Preparation policies: $_" -Level Warning
         }
 
         return $results
     }
 
     #region Discover and process all enrollment templates
-    $templateFiles = Get-ChildItem -Path $TemplatePath -Filter "*.json" -File
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Prefix' -ResourceType "enrollment template"
+
+    if (-not $templateFiles -or $templateFiles.Count -eq 0) {
+        Write-Warning "No $Platform enrollment templates found."
+        return @()
+    }
 
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop |
                 ConvertFrom-Json -ErrorAction Stop
-        }
-        catch {
+        } catch {
             Write-Error "Failed to load or parse enrollment template file '$($templateFile.FullName)': $_"
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $($_.Exception.Message)" -Level Error
             $results += New-HydrationResult -Name $templateFile.Name -Type 'EnrollmentTemplate' -Action 'Failed' -Status $_.Exception.Message
             continue
         }
-        $profileName = $template.displayName
+        # Some templates use displayName, others use name (configurationPolicies)
+        $profileName = if ($template.displayName) { $template.displayName } else { $template.name }
         $odataType = $template.'@odata.type'
+        if ($template.technologies -eq 'enrollment') { $odataType = '#microsoft.graph.deviceManagementConfigurationPolicy' }
+
+        # Skip templates with empty or missing @odata.type
+        if ([string]::IsNullOrWhiteSpace($odataType)) {
+            Write-HydrationLog -Message "  Skipped: $($templateFile.Name) - Missing @odata.type" -Level Warning
+            $results += New-HydrationResult -Name $templateFile.Name -Type 'EnrollmentTemplate' -Action 'Skipped' -Status 'Missing @odata.type'
+            continue
+        }
 
         switch ($odataType) {
             '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile' {
@@ -137,37 +183,51 @@ function Import-IntuneEnrollmentProfile {
                     if ($existingProfiles.value.Count -gt 0) {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $existingProfiles.value[0].id -Action 'Skipped' -Status 'Already exists'
-                    }
-                    elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot deployment profile")) {
-                        # Update description with hydration tag (use newline to avoid API issues with dashes)
-                        $template.description = if ($template.description) {
-                            "$($template.description)`nImported by Intune Hydration Kit"
+                    } elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot deployment profile")) {
+                        # Build description with hydration tag
+                        $profileDescription = if ($template.description) {
+                            "$($template.description) Imported by Intune Hydration Kit"
                         } else {
                             "Imported by Intune Hydration Kit"
                         }
 
                         # Apply custom device name template if provided
-                        if ($DeviceNameTemplate) {
-                            $template.deviceNameTemplate = $DeviceNameTemplate
+                        $deviceName = if ($DeviceNameTemplate) { $DeviceNameTemplate } else { $template.deviceNameTemplate }
+
+                        # Build a clean hashtable to avoid PSObject serialization issues
+                        $profileBody = @{
+                            "@odata.type"                          = "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile"
+                            displayName                            = $template.displayName
+                            description                            = $profileDescription
+                            deviceNameTemplate                     = $deviceName
+                            locale                                 = $template.locale
+                            preprovisioningAllowed                 = $template.preprovisioningAllowed
+                            deviceType                             = $template.deviceType
+                            hardwareHashExtractionEnabled          = $template.hardwareHashExtractionEnabled
+                            hybridAzureADJoinSkipConnectivityCheck = $template.hybridAzureADJoinSkipConnectivityCheck
+                            outOfBoxExperienceSetting              = @{
+                                deviceUsageType              = $template.outOfBoxExperienceSetting.deviceUsageType
+                                escapeLinkHidden             = $template.outOfBoxExperienceSetting.escapeLinkHidden
+                                privacySettingsHidden        = $template.outOfBoxExperienceSetting.privacySettingsHidden
+                                eulaHidden                   = $template.outOfBoxExperienceSetting.eulaHidden
+                                userType                     = $template.outOfBoxExperienceSetting.userType
+                                keyboardSelectionPageSkipped = $template.outOfBoxExperienceSetting.keyboardSelectionPageSkipped
+                            }
                         }
 
-                        # Convert to JSON for API call
-                        $jsonBody = $template | ConvertTo-Json -Depth 10
-
-                        $newProfile = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -Body $jsonBody -ContentType "application/json" -OutputType PSObject -ErrorAction Stop
+                        $newProfile = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -Body $profileBody -ErrorAction Stop
 
                         Write-HydrationLog -Message "  Created: $profileName" -Level Info
 
                         $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $newProfile.id -Action 'Created' -Status 'Success'
-                    }
-                    else {
+                    } else {
                         Write-HydrationLog -Message "  WouldCreate: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Action 'WouldCreate' -Status 'DryRun'
                     }
-                }
-                catch {
-                    Write-Error "Failed to create Autopilot profile: $_"
-                    $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Action 'Failed' -Status $_.Exception.Message
+                } catch {
+                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                    Write-HydrationLog -Message "  Failed: $profileName - $errMessage" -Level Warning
+                    $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Action 'Failed' -Status $errMessage
                 }
                 #endregion
             }
@@ -184,22 +244,21 @@ function Import-IntuneEnrollmentProfile {
                     if ($customESP) {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'EnrollmentStatusPage' -Id $customESP.id -Action 'Skipped' -Status 'Already exists'
-                    }
-                    elseif ($PSCmdlet.ShouldProcess($profileName, "Create Enrollment Status Page profile")) {
+                    } elseif ($PSCmdlet.ShouldProcess($profileName, "Create Enrollment Status Page profile")) {
                         # Build ESP body
-                        $espDescriptionText = if ($template.description) { "$($template.description) - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+                        $espDescriptionText = if ($template.description) { "$($template.description) - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
                         $espBody = @{
-                            "@odata.type" = "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration"
-                            displayName = $template.displayName
-                            description = $espDescriptionText
-                            showInstallationProgress = $template.showInstallationProgress
-                            blockDeviceSetupRetryByUser = $template.blockDeviceSetupRetryByUser
-                            allowDeviceResetOnInstallFailure = $template.allowDeviceResetOnInstallFailure
-                            allowLogCollectionOnInstallFailure = $template.allowLogCollectionOnInstallFailure
-                            customErrorMessage = $template.customErrorMessage
-                            installProgressTimeoutInMinutes = $template.installProgressTimeoutInMinutes
-                            allowDeviceUseOnInstallFailure = $template.allowDeviceUseOnInstallFailure
-                            trackInstallProgressForAutopilotOnly = $template.trackInstallProgressForAutopilotOnly
+                            "@odata.type"                           = "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration"
+                            displayName                             = $template.displayName
+                            description                             = $espDescriptionText
+                            showInstallationProgress                = $template.showInstallationProgress
+                            blockDeviceSetupRetryByUser             = $template.blockDeviceSetupRetryByUser
+                            allowDeviceResetOnInstallFailure        = $template.allowDeviceResetOnInstallFailure
+                            allowLogCollectionOnInstallFailure      = $template.allowLogCollectionOnInstallFailure
+                            customErrorMessage                      = $template.customErrorMessage
+                            installProgressTimeoutInMinutes         = $template.installProgressTimeoutInMinutes
+                            allowDeviceUseOnInstallFailure          = $template.allowDeviceUseOnInstallFailure
+                            trackInstallProgressForAutopilotOnly    = $template.trackInstallProgressForAutopilotOnly
                             disableUserStatusTrackingAfterFirstUser = $template.disableUserStatusTrackingAfterFirstUser
                         }
 
@@ -208,13 +267,11 @@ function Import-IntuneEnrollmentProfile {
                         Write-HydrationLog -Message "  Created: $profileName" -Level Info
 
                         $results += New-HydrationResult -Name $profileName -Type 'EnrollmentStatusPage' -Id $newESP.id -Action 'Created' -Status 'Success'
-                    }
-                    else {
+                    } else {
                         Write-HydrationLog -Message "  WouldCreate: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'EnrollmentStatusPage' -Action 'WouldCreate' -Status 'DryRun'
                     }
-                }
-                catch {
+                } catch {
                     Write-HydrationLog -Message "  Failed: $profileName - $($_.Exception.Message)" -Level Warning
                     $results += New-HydrationResult -Name $profileName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status $_.Exception.Message
                 }
@@ -242,15 +299,13 @@ function Import-IntuneEnrollmentProfile {
                     if ($profileExists) {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Id $existingProfileId -Action 'Skipped' -Status 'Already exists'
-                    }
-                    elseif ($existingDEP.value.Count -eq 0) {
+                    } elseif ($existingDEP.value.Count -eq 0) {
                         Write-HydrationLog -Message "  Skipped: $profileName - No Apple DEP token configured" -Level Warning
                         $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Action 'Skipped' -Status 'No DEP token configured'
-                    }
-                    elseif ($PSCmdlet.ShouldProcess($profileName, "Create macOS DEP enrollment profile")) {
+                    } elseif ($PSCmdlet.ShouldProcess($profileName, "Create macOS DEP enrollment profile")) {
                         # Update description with hydration tag
                         $template.description = if ($template.description) {
-                            "$($template.description)`nImported by Intune Hydration Kit"
+                            "$($template.description) - Imported by Intune Hydration Kit"
                         } else {
                             "Imported by Intune Hydration Kit"
                         }
@@ -265,15 +320,90 @@ function Import-IntuneEnrollmentProfile {
                         Write-HydrationLog -Message "  Created: $profileName" -Level Info
 
                         $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Id $newProfile.id -Action 'Created' -Status 'Success'
-                    }
-                    else {
+                    } else {
                         Write-HydrationLog -Message "  WouldCreate: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Action 'WouldCreate' -Status 'DryRun'
                     }
-                }
-                catch {
+                } catch {
                     Write-HydrationLog -Message "  Failed: $profileName - $($_.Exception.Message)" -Level Warning
                     $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Action 'Failed' -Status $_.Exception.Message
+                }
+                #endregion
+            }
+
+            '#microsoft.graph.deviceManagementConfigurationPolicy' {
+                #region Windows Autopilot Device Preparation Policy
+
+                try {
+                    # Check if policy exists - filter by technologies (name filter not supported)
+                    $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
+
+                    $existingPolicy = $existingPolicies.value | Where-Object { $_.name -eq $profileName }
+
+                    if ($existingPolicy) {
+                        Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
+                        $results += New-HydrationResult -Name $profileName -Type 'AutopilotDevicePreparation' -Id $existingPolicy.id -Action 'Skipped' -Status 'Already exists'
+                    } elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot device preparation policy")) {
+                        # Update description with hydration tag
+                        $policyDescription = if ($template.description) {
+                            "$($template.description) - Imported by Intune Hydration Kit"
+                        } else {
+                            "Imported by Intune Hydration Kit"
+                        }
+
+                        # Build the policy body
+                        $policyBody = @{
+                            name              = $template.name
+                            description       = $policyDescription
+                            platforms         = $template.platforms
+                            technologies      = $template.technologies
+                            templateReference = $template.templateReference
+                            settings          = if ($template.settings) { $template.settings } else { @() }
+                        } | ConvertTo-Json -Depth 20
+
+                        $newPolicy = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/configurationPolicies" -Body $policyBody -ErrorAction Stop
+
+                        Write-HydrationLog -Message "  Created: $profileName" -Level Info
+
+                        # For "Windows Autopilot device preparation - User Driven", assign the device preparation group
+                        if ($profileName -eq "Windows Autopilot device preparation - User Driven") {
+                            try {
+                                # Check if the Autopilot device preparation group exists
+                                $groupName = "Windows Autopilot device preparation"
+                                $safeGroupName = $groupName -replace "'", "''"
+                                $groupResponse = Invoke-MgGraphRequest -Method GET -Uri "v1.0/groups?`$filter=displayName eq '$safeGroupName'" -ErrorAction Stop
+                                $prepGroup = $groupResponse.value | Select-Object -First 1
+
+                                if ($prepGroup) {
+                                    # Set the enrollment time device membership target
+                                    $targetBody = @{
+                                        enrollmentTimeDeviceMembershipTargets = @(
+                                            @{
+                                                targetType = "staticSecurityGroup"
+                                                targetId   = $prepGroup.id
+                                            }
+                                        )
+                                    }
+                                    Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/configurationPolicies('$($newPolicy.id)')/setEnrollmentTimeDeviceMembershipTarget" -Body $targetBody -ErrorAction Stop
+                                    Write-HydrationLog -Message "    Assigned group: $groupName" -Level Info
+                                } else {
+                                    Write-HydrationLog -Message "    Warning: Group '$groupName' not found - skipping group assignment" -Level Warning
+                                }
+                            } catch {
+                                $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                                Write-HydrationLog -Message "    Failed to assign group: $errMessage" -Level Warning
+                            }
+                        }
+
+                        $results += New-HydrationResult -Name $profileName -Type 'AutopilotDevicePreparation' -Id $newPolicy.id -Action 'Created' -Status 'Success'
+                    } else {
+                        Write-HydrationLog -Message "  WouldCreate: $profileName" -Level Info
+                        $results += New-HydrationResult -Name $profileName -Type 'AutopilotDevicePreparation' -Action 'WouldCreate' -Status 'DryRun'
+                    }
+                } catch {
+                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                    Write-HydrationLog -Message "  Failed: $profileName - $errMessage" -Level Warning
+                    $results += New-HydrationResult -Name $profileName -Type 'AutopilotDevicePreparation' -Action 'Failed' -Status $errMessage
                 }
                 #endregion
             }

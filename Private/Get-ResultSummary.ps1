@@ -13,14 +13,14 @@ function Get-ResultSummary {
 
     # Single-pass iteration for better performance
     $summary = @{
-        Created = 0
-        Updated = 0
-        Deleted = 0
-        Skipped = 0
+        Created     = 0
+        Updated     = 0
+        Deleted     = 0
+        Skipped     = 0
         WouldCreate = 0
         WouldUpdate = 0
         WouldDelete = 0
-        Failed = 0
+        Failed      = 0
     }
 
     foreach ($result in $Results) {

@@ -6,13 +6,22 @@ function Import-IntuneCompliancePolicy {
         Reads JSON templates from Templates/Compliance and creates compliance policies via Graph.
     .PARAMETER TemplatePath
         Path to the compliance template directory (defaults to Templates/Compliance)
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: Windows, macOS, iOS, Android, Linux, All.
+        Defaults to 'All' which imports all compliance templates regardless of platform.
     .EXAMPLE
         Import-IntuneCompliancePolicy
+    .EXAMPLE
+        Import-IntuneCompliancePolicy -Platform Windows,macOS
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
         [string]$TemplatePath,
+
+        [Parameter()]
+        [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'Linux', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -27,7 +36,7 @@ function Import-IntuneCompliancePolicy {
         return @()
     }
 
-    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "compliance template"
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Prefix' -Recurse -ResourceType "compliance template"
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No compliance templates found in: $TemplatePath"
@@ -50,16 +59,15 @@ function Import-IntuneCompliancePolicy {
                     $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
                     if ($policyName -and -not $existingPolicies.ContainsKey($policyName)) {
                         $existingPolicies[$policyName] = @{
-                            Id = $policy.id
+                            Id          = $policy.id
                             Description = $policy.description
-                            Endpoint = $listUriStart
+                            Endpoint    = $listUriStart
                         }
                     }
                 }
                 $listUri = $existingResponse.'@odata.nextLink'
             } while ($listUri)
-        }
-        catch {
+        } catch {
             continue
         }
     }
@@ -73,14 +81,14 @@ function Import-IntuneCompliancePolicy {
     $results = @()
 
     # Remove existing policies if requested
-    # SAFETY: Only delete policies that have "Imported by Intune-Hydration-Kit" in description
+    # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         foreach ($policyName in $existingPolicies.Keys) {
             $policyInfo = $existingPolicies[$policyName]
 
             # Safety check: Only delete if created by this kit (has hydration marker in description)
             if (-not (Test-HydrationKitObject -Description $policyInfo.Description -ObjectName $policyName)) {
-                Write-Verbose "Skipping '$policyName' - not created by Intune-Hydration-Kit"
+                Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
                 continue
             }
 
@@ -92,14 +100,12 @@ function Import-IntuneCompliancePolicy {
                     Invoke-MgGraphRequest -Method DELETE -Uri $deleteEndpoint -ErrorAction Stop
                     Write-HydrationLog -Message "  Deleted: $policyName" -Level Info
                     $results += New-HydrationResult -Name $policyName -Type 'CompliancePolicy' -Action 'Deleted' -Status 'Success'
-                }
-                catch {
+                } catch {
                     $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                     Write-HydrationLog -Message "  Failed: $policyName - $errMessage" -Level Warning
                     $results += New-HydrationResult -Name $policyName -Type 'CompliancePolicy' -Action 'Failed' -Status "Delete failed: $errMessage"
                 }
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldDelete: $policyName" -Level Info
                 $results += New-HydrationResult -Name $policyName -Type 'CompliancePolicy' -Action 'WouldDelete' -Status 'DryRun'
             }
@@ -151,7 +157,7 @@ function Import-IntuneCompliancePolicy {
 
             # Add hydration kit tag to description
             $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
 
             # Linux endpoint expects 'name' instead of displayName; ensure it's present
             if ($isLinuxCompliance) {
@@ -175,29 +181,26 @@ function Import-IntuneCompliancePolicy {
 
                     if ($existingScript) {
                         $scriptId = $existingScript.id
-                    }
-                    elseif ($scriptDefinition -and $scriptDefinition.detectionScriptContentBase64) {
+                    } elseif ($scriptDefinition -and $scriptDefinition.detectionScriptContentBase64) {
                         # Create the compliance script
                         $scriptBody = @{
-                            description = if ($scriptDefinition.description) { $scriptDefinition.description } else { "" }
+                            description            = if ($scriptDefinition.description) { $scriptDefinition.description } else { "" }
                             detectionScriptContent = $scriptDefinition.detectionScriptContentBase64
-                            displayName = $scriptDisplayName
-                            enforceSignatureCheck = [bool]$scriptDefinition.enforceSignatureCheck
-                            publisher = if ($scriptDefinition.publisher) { $scriptDefinition.publisher } else { "Publisher" }
-                            runAs32Bit = [bool]$scriptDefinition.runAs32Bit
-                            runAsAccount = if ($scriptDefinition.runAsAccount) { $scriptDefinition.runAsAccount } else { "system" }
+                            displayName            = $scriptDisplayName
+                            enforceSignatureCheck  = [bool]$scriptDefinition.enforceSignatureCheck
+                            publisher              = if ($scriptDefinition.publisher) { $scriptDefinition.publisher } else { "Publisher" }
+                            runAs32Bit             = [bool]$scriptDefinition.runAs32Bit
+                            runAsAccount           = if ($scriptDefinition.runAsAccount) { $scriptDefinition.runAsAccount } else { "system" }
                         }
 
                         $newScript = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceComplianceScripts" -Body ($scriptBody | ConvertTo-Json -Depth 10) -ContentType "application/json" -ErrorAction Stop
                         $scriptId = $newScript.id
-                    }
-                    else {
+                    } else {
                         Write-Warning "Skipping compliance policy '$displayName' - no script definition found with detectionScriptContentBase64"
                         $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status 'Missing detectionScriptContentBase64 in deviceCompliancePolicyScriptDefinition'
                         continue
                     }
-                }
-                catch {
+                } catch {
                     Write-Warning "Failed to create/find compliance script for '$displayName': $($_.Exception.Message)"
                     $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status "Script error: $($_.Exception.Message)"
                     continue
@@ -218,7 +221,7 @@ function Import-IntuneCompliancePolicy {
                 # Step 3: Update the policy body with resolved values
                 $importBody.deviceCompliancePolicyScript = @{
                     deviceComplianceScriptId = $scriptId
-                    rulesContent = $rulesBase64
+                    rulesContent             = $rulesBase64
                 }
             }
 
@@ -231,13 +234,11 @@ function Import-IntuneCompliancePolicy {
                 $null = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Created' -Status 'Success'
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'WouldCreate' -Status 'DryRun'
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status $errMessage

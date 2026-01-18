@@ -89,8 +89,7 @@ Describe 'Import-IntuneMobileApp' {
             try {
                 $result = Import-IntuneMobileApp -TemplatePath $emptyDir
                 $result | Should -BeNullOrEmpty
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $emptyDir -Force -ErrorAction SilentlyContinue
             }
         }
@@ -115,9 +114,9 @@ Describe 'Import-IntuneMobileApp' {
         It 'Should create app from valid template' {
             $templates = @(
                 [PSCustomObject]@{
-                    '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Test WinGet App'
-                    publisher     = 'Test Publisher'
+                    '@odata.type'     = '#microsoft.graph.winGetApp'
+                    displayName       = 'Test WinGet App'
+                    publisher         = 'Test Publisher'
                     packageIdentifier = '9WZDNCRFJ3PZ'
                 }
             )
@@ -129,8 +128,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
                 $result[0].Name | Should -Be 'Test WinGet App'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -141,7 +139,7 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{ id = 'existing-id'; displayName = 'Existing App'; notes = '' }
                         )
                         '@odata.nextLink' = $null
@@ -164,8 +162,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Skipped'
                 $result[0].Status | Should -Be 'Already exists'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -186,8 +183,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Failed'
                 $result[0].Status | Should -Be 'Missing displayName'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -218,9 +214,8 @@ Describe 'Import-IntuneMobileApp' {
                 $result = Import-IntuneMobileApp -TemplatePath $tempDir
 
                 $result[0].Action | Should -Be 'Created'
-                $script:capturedBody.notes | Should -BeLike '*Imported by Intune-Hydration-Kit*'
-            }
-            finally {
+                $script:capturedBody.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -253,9 +248,8 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result[0].Action | Should -Be 'Created'
                 $script:capturedBody.notes | Should -BeLike 'Existing notes here*'
-                $script:capturedBody.notes | Should -BeLike '*Imported by Intune-Hydration-Kit*'
-            }
-            finally {
+                $script:capturedBody.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -271,11 +265,11 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{
-                                id = 'app-to-delete'
+                                id          = 'app-to-delete'
                                 displayName = 'Hydration Kit App'
-                                notes = 'Imported by Intune-Hydration-Kit'
+                                notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
                         '@odata.nextLink' = $null
@@ -304,8 +298,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Deleted'
                 $result[0].Name | Should -Be 'Hydration Kit App'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -315,11 +308,11 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{
-                                id = 'manual-app'
+                                id          = 'manual-app'
                                 displayName = 'Manually Created App'
-                                notes = 'Created manually by admin'
+                                notes       = 'Created manually by admin'
                             }
                         )
                         '@odata.nextLink' = $null
@@ -341,8 +334,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result = Import-IntuneMobileApp -TemplatePath $tempDir -RemoveExisting
 
                 $result | Should -BeNullOrEmpty
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -352,11 +344,11 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{
-                                id = 'app-no-notes'
+                                id          = 'app-no-notes'
                                 displayName = 'App Without Notes'
-                                notes = $null
+                                notes       = $null
                             }
                         )
                         '@odata.nextLink' = $null
@@ -378,8 +370,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result = Import-IntuneMobileApp -TemplatePath $tempDir -RemoveExisting
 
                 $result | Should -BeNullOrEmpty
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -412,8 +403,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'WouldCreate'
                 $result[0].Status | Should -Be 'DryRun'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -423,11 +413,11 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{
-                                id = 'app-id'
+                                id          = 'app-id'
                                 displayName = 'App To Delete'
-                                notes = 'Imported by Intune-Hydration-Kit'
+                                notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
                         '@odata.nextLink' = $null
@@ -451,8 +441,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'WouldDelete'
                 $result[0].Status | Should -Be 'DryRun'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -489,8 +478,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Failed'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -500,11 +488,11 @@ Describe 'Import-IntuneMobileApp' {
                 param($Method)
                 if ($Method -eq 'GET') {
                     return @{
-                        value = @(
+                        value             = @(
                             @{
-                                id = 'app-id'
+                                id          = 'app-id'
                                 displayName = 'Delete Error App'
-                                notes = 'Imported by Intune-Hydration-Kit'
+                                notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
                         '@odata.nextLink' = $null
@@ -531,8 +519,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Failed'
                 $result[0].Status | Should -BeLike 'Delete failed*'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -551,15 +538,14 @@ Describe 'Import-IntuneMobileApp' {
                     $script:pageCount++
                     if ($script:pageCount -eq 1) {
                         return @{
-                            value = @(
+                            value             = @(
                                 @{ id = 'app1'; displayName = 'App 1'; notes = '' }
                             )
                             '@odata.nextLink' = 'https://graph.microsoft.com/beta/next-page'
                         }
-                    }
-                    else {
+                    } else {
                         return @{
-                            value = @(
+                            value             = @(
                                 @{ id = 'app2'; displayName = 'App 2'; notes = '' }
                             )
                             '@odata.nextLink' = $null
@@ -587,8 +573,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 # Both apps should be skipped since they exist
                 $result | Where-Object { $_.Action -eq 'Skipped' } | Should -HaveCount 2
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
@@ -627,8 +612,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result[0].PSObject.Properties.Name | Should -Contain 'Status'
                 $result[0].PSObject.Properties.Name | Should -Contain 'Type'
                 $result[0].Type | Should -Be 'MobileApp'
-            }
-            finally {
+            } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }

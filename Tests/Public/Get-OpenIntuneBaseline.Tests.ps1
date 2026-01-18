@@ -80,8 +80,7 @@ Describe 'Get-OpenIntuneBaseline' {
 
             try {
                 Get-OpenIntuneBaseline -DestinationPath $testPath
-            }
-            catch {
+            } catch {
                 # May fail due to mocks, but we want to verify the URL construction
             }
 
@@ -95,8 +94,7 @@ Describe 'Get-OpenIntuneBaseline' {
 
             try {
                 Get-OpenIntuneBaseline -DestinationPath $testPath -Branch 'develop'
-            }
-            catch {
+            } catch {
                 # May fail due to mocks
             }
 
@@ -110,8 +108,7 @@ Describe 'Get-OpenIntuneBaseline' {
 
             try {
                 Get-OpenIntuneBaseline -DestinationPath $testPath -RepoUrl 'https://github.com/custom/repo'
-            }
-            catch {
+            } catch {
                 # May fail due to mocks
             }
 

@@ -18,11 +18,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'ENTERPRISEPACK'
+                            skuPartNumber    = 'ENTERPRISEPACK'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'WIN10_PRO_ENT_SUB'
+                                    servicePlanName    = 'WIN10_PRO_ENT_SUB'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -42,11 +42,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -64,11 +64,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E5'
+                            skuPartNumber    = 'SPE_E5'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'M365_E5'
+                                    servicePlanName    = 'M365_E5'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -88,11 +88,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'O365_BUSINESS_PREMIUM'
+                            skuPartNumber    = 'O365_BUSINESS_PREMIUM'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPB'
+                                    servicePlanName    = 'SPB'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -110,11 +110,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPB'
+                            skuPartNumber    = 'SPB'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE'
+                                    servicePlanName    = 'WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -134,11 +134,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'M365EDU_A3_FACULTY'
+                            skuPartNumber    = 'M365EDU_A3_FACULTY'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'M365EDU_A3_FACULTY'
+                                    servicePlanName    = 'M365EDU_A3_FACULTY'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -158,11 +158,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'CPC_E_2C_8GB_128GB'
+                            skuPartNumber    = 'CPC_E_2C_8GB_128GB'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'CPC_E_2C_8GB_128GB'
+                                    servicePlanName    = 'CPC_E_2C_8GB_128GB'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -182,11 +182,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'EXCHANGESTANDARD'
+                            skuPartNumber    = 'EXCHANGESTANDARD'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'EXCHANGE_S_STANDARD'
+                                    servicePlanName    = 'EXCHANGE_S_STANDARD'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -217,11 +217,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Suspended'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -239,21 +239,21 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Suspended'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Success'
                                 }
                             )
                         },
                         @{
-                            skuPartNumber = 'SPE_E5'
+                            skuPartNumber    = 'SPE_E5'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E5'
+                                    servicePlanName    = 'SPE_E5'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -273,11 +273,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'PendingInput'
                                 }
                             )
@@ -295,11 +295,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Disabled'
                                 }
                             )
@@ -332,35 +332,35 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'EXCHANGESTANDARD'
+                            skuPartNumber    = 'EXCHANGESTANDARD'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'EXCHANGE_S_STANDARD'
+                                    servicePlanName    = 'EXCHANGE_S_STANDARD'
                                     provisioningStatus = 'Success'
                                 }
                             )
                         },
                         @{
-                            skuPartNumber = 'FLOW_FREE'
+                            skuPartNumber    = 'FLOW_FREE'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'FLOW_P2_VIRAL'
+                                    servicePlanName    = 'FLOW_P2_VIRAL'
                                     provisioningStatus = 'Success'
                                 }
                             )
                         },
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Success'
                                 },
                                 @{
-                                    servicePlanName = 'EXCHANGE_S_ENTERPRISE'
+                                    servicePlanName    = 'EXCHANGE_S_ENTERPRISE'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -380,11 +380,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3'
+                            skuPartNumber    = 'SPE_E3'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3'
+                                    servicePlanName    = 'SPE_E3'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -405,11 +405,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'EXCHANGESTANDARD'
+                            skuPartNumber    = 'EXCHANGESTANDARD'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'EXCHANGE_S_STANDARD'
+                                    servicePlanName    = 'EXCHANGE_S_STANDARD'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -432,11 +432,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E3_GOV'
+                            skuPartNumber    = 'SPE_E3_GOV'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E3_GOV'
+                                    servicePlanName    = 'SPE_E3_GOV'
                                     provisioningStatus = 'Success'
                                 }
                             )
@@ -454,11 +454,11 @@ Describe 'Test-WindowsDriverUpdateLicense' {
                 @{
                     value = @(
                         @{
-                            skuPartNumber = 'SPE_E5_USGOV_GCCHIGH'
+                            skuPartNumber    = 'SPE_E5_USGOV_GCCHIGH'
                             capabilityStatus = 'Enabled'
-                            servicePlans = @(
+                            servicePlans     = @(
                                 @{
-                                    servicePlanName = 'SPE_E5_USGOV_GCCHIGH'
+                                    servicePlanName    = 'SPE_E5_USGOV_GCCHIGH'
                                     provisioningStatus = 'Success'
                                 }
                             )

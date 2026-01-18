@@ -41,8 +41,7 @@ Describe 'Test-IntunePrerequisites' {
                             }
                         )
                     }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(
                             @{
@@ -132,8 +131,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -155,8 +153,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -178,8 +175,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -201,8 +197,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -224,8 +219,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -249,8 +243,7 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
@@ -332,13 +325,12 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'AAD_PREMIUM_P2'
-                                servicePlans = @(
+                                skuPartNumber    = 'AAD_PREMIUM_P2'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
@@ -362,13 +354,12 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'SPE_E5'
-                                servicePlans = @(
+                                skuPartNumber    = 'SPE_E5'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
@@ -392,13 +383,12 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'M365EDU_A5_FACULTY'
-                                servicePlans = @(
+                                skuPartNumber    = 'M365EDU_A5_FACULTY'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
@@ -422,13 +412,12 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'IDENTITY_THREAT_PROTECTION'
-                                servicePlans = @(
+                                skuPartNumber    = 'IDENTITY_THREAT_PROTECTION'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
@@ -452,14 +441,13 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(
                             @{
                                 capabilityStatus = 'Disabled'
-                                skuPartNumber = 'AAD_PREMIUM_P2'
-                                servicePlans = @(
+                                skuPartNumber    = 'AAD_PREMIUM_P2'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'AAD_PREMIUM_P2'
                                         provisioningStatus = 'Success'
@@ -468,8 +456,8 @@ Describe 'Test-IntunePrerequisites' {
                             },
                             @{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'ENTERPRISEPACK'
-                                servicePlans = @(
+                                skuPartNumber    = 'ENTERPRISEPACK'
+                                servicePlans     = @(
                                     @{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
@@ -491,13 +479,12 @@ Describe 'Test-IntunePrerequisites' {
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
-                }
-                elseif ($Uri -like '*subscribedSkus*') {
+                } elseif ($Uri -like '*subscribedSkus*') {
                     return @{
                         value = @(@{
                                 capabilityStatus = 'Enabled'
-                                skuPartNumber = 'ENTERPRISEPACK'
-                                servicePlans = @(@{
+                                skuPartNumber    = 'ENTERPRISEPACK'
+                                servicePlans     = @(@{
                                         servicePlanName    = 'INTUNE_A'
                                         provisioningStatus = 'Success'
                                     })

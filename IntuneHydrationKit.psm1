@@ -12,15 +12,15 @@ $script:ModuleRoot = $PSScriptRoot
 $script:TemplatesPath = Join-Path -Path $script:ModuleRoot -ChildPath 'Templates'
 $script:HydrationState = @{
     Connected = $false
-    TenantId = $null
-    Results = @{
-        Groups = @()
-        Policies = @()
-        Baselines = @()
-        Profiles = @()
+    TenantId  = $null
+    Results   = @{
+        Groups            = @()
+        Policies          = @()
+        Baselines         = @()
+        Profiles          = @()
         ConditionalAccess = @()
-        Errors = @()
-        Warnings = @()
+        Errors            = @()
+        Warnings          = @()
     }
 }
 
@@ -41,8 +41,7 @@ if (Test-Path -Path $privatePath) {
         try {
             . $file.FullName
             Write-Verbose "Imported private function: $($file.BaseName)"
-        }
-        catch {
+        } catch {
             Write-Error "Failed to import private function $($file.FullName): $_"
         }
     }
@@ -56,8 +55,7 @@ if (Test-Path -Path $publicPath) {
         try {
             . $file.FullName
             Write-Verbose "Imported public function: $($file.BaseName)"
-        }
-        catch {
+        } catch {
             Write-Error "Failed to import public function $($file.FullName): $_"
         }
     }

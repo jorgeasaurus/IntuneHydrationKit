@@ -84,8 +84,7 @@ function Test-WindowsDriverUpdateLicense {
 
         Write-Verbose "No Windows Driver Update compatible license found in tenant"
         return $false
-    }
-    catch {
+    } catch {
         Write-Warning "Failed to check Windows Driver Update license: $_"
         # Return $true to allow the attempt (will fail with 403 if truly not licensed)
         return $true

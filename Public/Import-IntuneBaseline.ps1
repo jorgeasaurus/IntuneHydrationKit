@@ -15,10 +15,18 @@ function Import-IntuneBaseline {
         Import mode: SkipIfExists (default - skip policies that already exist)
     .PARAMETER IncludeAssignments
         Include policy assignments during import
+    .PARAMETER Platform
+        Filter baseline imports by platform. Valid values: Windows, macOS, iOS, Android, All.
+        Defaults to 'All' which imports all baseline policies regardless of platform.
+        - Windows: Imports from WINDOWS/ and WINDOWS365/ folders
+        - macOS: Imports from MACOS/ folder
+        - iOS/Android: Imports from BYOD/ folder (app protection policies)
     .EXAMPLE
         Import-IntuneBaseline
     .EXAMPLE
         Import-IntuneBaseline -BaselinePath ./OpenIntuneBaseline -ImportMode SkipIfExists
+    .EXAMPLE
+        Import-IntuneBaseline -Platform Windows,macOS
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -27,6 +35,10 @@ function Import-IntuneBaseline {
 
         [Parameter()]
         [string]$TenantId,
+
+        [Parameter()]
+        [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [ValidateSet('SkipIfExists')]
@@ -55,60 +67,59 @@ function Import-IntuneBaseline {
     # - OS/NativeImport/ - Settings Catalog policies that can be imported via Graph API
     # - BYOD/AppProtection/ - App protection policies
 
-    # Map folder names to Graph API endpoints
+    # Map folder names to Graph API endpoints (normalized names only, no duplicates)
     $endpointMap = @{
-        'NativeImport'                      = 'deviceManagement/configurationPolicies'
-        'AppProtection'                     = 'deviceAppManagement/managedAppPolicies'
-        'Administrative Templates'           = 'deviceManagement/groupPolicyConfigurations'
-        'Compliance'                        = 'deviceManagement/deviceCompliancePolicies'
-        'Compliance Policies'               = 'deviceManagement/deviceCompliancePolicies'
-        'Configuration Profiles'            = 'deviceManagement/deviceConfigurations'
-        'Device Configuration'              = 'deviceManagement/deviceConfigurations'
-        'Device Enrollment Configurations'  = 'deviceManagement/deviceEnrollmentConfigurations'
-        'Endpoint Security'                 = 'deviceManagement/intents'
-        'Settings Catalog'                  = 'deviceManagement/configurationPolicies'
-        'Scripts'                           = 'deviceManagement/deviceManagementScripts'
-        'Proactive Remediations'            = 'deviceManagement/deviceHealthScripts'
-        'Windows Autopilot'                 = 'deviceManagement/windowsAutopilotDeploymentProfiles'
-        'App Configuration'                 = 'deviceAppManagement/mobileAppConfigurations'
-        'App Protection'                    = 'deviceAppManagement/managedAppPolicies'
-        'App Protection Policies'           = 'deviceAppManagement/managedAppPolicies'
+        'NativeImport'                     = 'deviceManagement/configurationPolicies'
+        'AppProtection'                    = 'deviceAppManagement/managedAppPolicies'
+        'Administrative Templates'         = 'deviceManagement/groupPolicyConfigurations'
+        'Compliance'                       = 'deviceManagement/deviceCompliancePolicies'
+        'Compliance Policies'              = 'deviceManagement/deviceCompliancePolicies'
+        'Configuration Profiles'           = 'deviceManagement/deviceConfigurations'
+        'Device Configuration'             = 'deviceManagement/deviceConfigurations'
+        'Device Enrollment Configurations' = 'deviceManagement/deviceEnrollmentConfigurations'
+        'Endpoint Security'                = 'deviceManagement/intents'
+        'Settings Catalog'                 = 'deviceManagement/configurationPolicies'
+        'Scripts'                          = 'deviceManagement/deviceManagementScripts'
+        'Proactive Remediations'           = 'deviceManagement/deviceHealthScripts'
+        'Windows Autopilot'                = 'deviceManagement/windowsAutopilotDeploymentProfiles'
+        'App Configuration'                = 'deviceAppManagement/mobileAppConfigurations'
+        'App Protection Policies'          = 'deviceAppManagement/managedAppPolicies'
     }
 
     # Map @odata.type to Graph API endpoints for IntuneManagement exports
     $odataTypeToEndpoint = @{
         # Device Configurations
-        '#microsoft.graph.windowsHealthMonitoringConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10GeneralConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10EndpointProtectionConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10CustomConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsDeliveryOptimizationConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsUpdateForBusinessConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsIdentityProtectionConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsKioskConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.editionUpgradeConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.sharedPCConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsWifiConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsWiredNetworkConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSGeneralDeviceConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSCustomConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSEndpointProtectionConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.iosGeneralDeviceConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.iosCustomConfiguration' = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.androidGeneralDeviceConfiguration' = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsHealthMonitoringConfiguration'         = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windows10GeneralConfiguration'                = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windows10EndpointProtectionConfiguration'     = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windows10CustomConfiguration'                 = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsDeliveryOptimizationConfiguration'     = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsUpdateForBusinessConfiguration'        = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsIdentityProtectionConfiguration'       = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsKioskConfiguration'                    = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.editionUpgradeConfiguration'                  = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.sharedPCConfiguration'                        = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsWifiConfiguration'                     = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.windowsWiredNetworkConfiguration'             = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.macOSGeneralDeviceConfiguration'              = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.macOSCustomConfiguration'                     = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.macOSEndpointProtectionConfiguration'         = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.iosGeneralDeviceConfiguration'                = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.iosCustomConfiguration'                       = 'deviceManagement/deviceConfigurations'
+        '#microsoft.graph.androidGeneralDeviceConfiguration'            = 'deviceManagement/deviceConfigurations'
         '#microsoft.graph.androidWorkProfileGeneralDeviceConfiguration' = 'deviceManagement/deviceConfigurations'
         # Compliance Policies
-        '#microsoft.graph.windows10CompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.windows81CompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.macOSCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.iosCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidWorkProfileCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidDeviceOwnerCompliancePolicy' = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.windows10CompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.windows81CompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.macOSCompliancePolicy'                        = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.iosCompliancePolicy'                          = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.androidCompliancePolicy'                      = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.androidWorkProfileCompliancePolicy'           = 'deviceManagement/deviceCompliancePolicies'
+        '#microsoft.graph.androidDeviceOwnerCompliancePolicy'           = 'deviceManagement/deviceCompliancePolicies'
         # Settings Catalog / Configuration Policies
-        '#microsoft.graph.deviceManagementConfigurationPolicy' = 'deviceManagement/configurationPolicies'
+        '#microsoft.graph.deviceManagementConfigurationPolicy'          = 'deviceManagement/configurationPolicies'
         # Windows Update for Business - Driver Updates
-        '#microsoft.graph.windowsDriverUpdateProfile' = 'deviceManagement/windowsDriverUpdateProfiles'
+        '#microsoft.graph.windowsDriverUpdateProfile'                   = 'deviceManagement/windowsDriverUpdateProfiles'
     }
 
     # Folders that previously required IntuneManagement tool - now we try to import via Graph API
@@ -120,7 +131,7 @@ function Import-IntuneBaseline {
     $hasDriverUpdateLicense = $null  # Lazy-loaded when needed
 
     # Remove existing baseline policies if requested
-    # SAFETY: Only delete policies that have "Imported by Intune-Hydration-Kit" in description
+    # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Delete from main endpoints used by baselines
         $deleteEndpoints = @(
@@ -142,7 +153,7 @@ function Import-IntuneBaseline {
 
                         # Safety check: Only delete if created by this kit (has hydration marker in description)
                         if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                            Write-Verbose "Skipping '$policyName' - not created by Intune-Hydration-Kit"
+                            Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
                             continue
                         }
 
@@ -151,22 +162,19 @@ function Import-IntuneBaseline {
                                 Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$policyId" -ErrorAction Stop
                                 Write-HydrationLog -Message "  Deleted: $policyName" -Level Info
                                 $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'Deleted' -Status 'Success'
-                            }
-                            catch {
+                            } catch {
                                 $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                                 Write-HydrationLog -Message "  Failed: $policyName - $errMessage" -Level Warning
                                 $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'Failed' -Status "Delete failed: $errMessage"
                             }
-                        }
-                        else {
+                        } else {
                             Write-HydrationLog -Message "  WouldDelete: $policyName" -Level Info
                             $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'WouldDelete' -Status 'DryRun'
                         }
                     }
                     $listUri = $existing.'@odata.nextLink'
                 } while ($listUri)
-            }
-            catch {
+            } catch {
                 Write-Warning "Failed to process endpoint $endpoint : $_"
             }
         }
@@ -176,8 +184,35 @@ function Import-IntuneBaseline {
 
     # Find all policy type subfolders within OS folders (WINDOWS, MACOS, BYOD, WINDOWS365)
     # OpenIntuneBaseline structure: OS/PolicyType/policy.json
+
+    # Platform to folder mapping for filtering
+    $platformFolderMapping = @{
+        'Windows' = @('WINDOWS', 'WINDOWS365', 'Windows', 'Windows365')
+        'macOS'   = @('MACOS', 'macOS', 'MacOS')
+        'iOS'     = @('BYOD', 'byod')
+        'Android' = @('BYOD', 'byod')
+    }
+
     $osFolders = Get-ChildItem -Path $BaselinePath -Directory | Where-Object {
         $_.Name -notmatch '^\.'
+    }
+
+    # Filter OS folders by platform if specified
+    if ($Platform -and $Platform -notcontains 'All') {
+        $allowedFolders = @()
+        foreach ($plat in $Platform) {
+            if ($platformFolderMapping.ContainsKey($plat)) {
+                $allowedFolders += $platformFolderMapping[$plat]
+            }
+        }
+        $allowedFolders = $allowedFolders | Select-Object -Unique
+
+        $osFolders = $osFolders | Where-Object {
+            $folderName = $_.Name
+            $allowedFolders -contains $folderName
+        }
+
+        Write-Verbose "Platform filter active: Processing folders: $($osFolders.Name -join ', ')"
     }
 
     $totalPolicies = 0
@@ -193,8 +228,8 @@ function Import-IntuneBaseline {
             $jsonFiles = Get-ChildItem -Path $subFolder.FullName -Filter "*.json" -File -Recurse
             $totalPolicies += $jsonFiles.Count
             $policyTypefolders += @{
-                Folder = $subFolder
-                OsFolder = $osFolder.Name
+                Folder     = $subFolder
+                OsFolder   = $osFolder.Name
                 PolicyType = $subFolder.Name
             }
         }
@@ -224,8 +259,7 @@ function Import-IntuneBaseline {
                     }
                     $listUri = $cacheResponse.'@odata.nextLink'
                 } while ($listUri)
-            }
-            catch {
+            } catch {
                 # Endpoint might not support listing, continue without cache for this endpoint
                 Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
             }
@@ -306,15 +340,15 @@ function Import-IntuneBaseline {
 
                         # Add hydration kit tag to description
                         $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                        $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+                        $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
 
                         # Remove properties with @odata annotations (metadata) except @odata.type
                         # Also remove #microsoft.graph.* action properties
                         $metadataProps = @($importBody.PSObject.Properties | Where-Object {
-                            ($_.Name -match '^@odata\.' -and $_.Name -ne '@odata.type') -or
-                            ($_.Name -match '@odata\.') -or
-                            ($_.Name -match '^#microsoft\.graph\.')
-                        })
+                                ($_.Name -match '^@odata\.' -and $_.Name -ne '@odata.type') -or
+                                ($_.Name -match '@odata\.') -or
+                                ($_.Name -match '^#microsoft\.graph\.')
+                            })
                         foreach ($prop in $metadataProps) {
                             if ($prop.Name -ne '@odata.type') {
                                 $importBody.PSObject.Properties.Remove($prop.Name)
@@ -324,67 +358,44 @@ function Import-IntuneBaseline {
                         # Special handling for Settings Catalog (configurationPolicies)
                         if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') {
                             Write-Verbose "  Processing Settings Catalog policy: $displayName"
-                            Write-Verbose "  Original properties: $($importBody.PSObject.Properties.Name -join ', ')"
 
                             # Build a clean body with only the required properties
                             $cleanBody = @{
-                                name = $importBody.name
-                                description = $importBody.description
-                                platforms = $importBody.platforms
+                                name         = $importBody.name
+                                description  = $importBody.description
+                                platforms    = $importBody.platforms
                                 technologies = $importBody.technologies
-                                settings = @()
+                                settings     = @()
                             }
-
-                            Write-Verbose "  Building clean body with: name, description, platforms, technologies"
 
                             # Add optional properties if present
                             if ($importBody.roleScopeTagIds) {
                                 $cleanBody.roleScopeTagIds = $importBody.roleScopeTagIds
-                                Write-Verbose "  Added roleScopeTagIds"
                             }
                             if ($importBody.templateReference -and $importBody.templateReference.templateId) {
                                 $cleanBody.templateReference = @{
                                     templateId = $importBody.templateReference.templateId
                                 }
-                                Write-Verbose "  Added templateReference with templateId: $($importBody.templateReference.templateId)"
                             }
 
                             # Clean settings - remove id and odata navigation properties from each setting
                             if ($importBody.settings) {
-                                Write-Verbose "  Processing $($importBody.settings.Count) settings"
-                                $settingIndex = 0
                                 foreach ($setting in $importBody.settings) {
-                                    $settingJson = $setting | ConvertTo-Json -Depth 100 -Compress
-                                    $cleanSetting = $settingJson | ConvertFrom-Json
+                                    $cleanSetting = $setting | ConvertTo-Json -Depth 100 -Compress | ConvertFrom-Json
 
-                                    # Remove 'id' and odata navigation link properties from the setting
-                                    $propsToRemoveFromSetting = @($cleanSetting.PSObject.Properties | Where-Object {
-                                        $_.Name -eq 'id' -or
-                                        $_.Name -match '@odata\.' -or
-                                        $_.Name -match 'settingDefinitions'
-                                    })
-
-                                    if ($propsToRemoveFromSetting.Count -gt 0) {
-                                        Write-Verbose "  Setting[$settingIndex] - Removing properties: $($propsToRemoveFromSetting.Name -join ', ')"
-                                    }
-
-                                    foreach ($prop in $propsToRemoveFromSetting) {
+                                    # Remove read-only properties from the setting
+                                    $propsToRemove = @($cleanSetting.PSObject.Properties | Where-Object {
+                                            $_.Name -eq 'id' -or $_.Name -match '@odata\.' -or $_.Name -eq 'settingDefinitions'
+                                        })
+                                    foreach ($prop in $propsToRemove) {
                                         $cleanSetting.PSObject.Properties.Remove($prop.Name)
                                     }
 
                                     $cleanBody.settings += $cleanSetting
-                                    $settingIndex++
                                 }
                             }
 
                             $importBody = [PSCustomObject]$cleanBody
-
-                            # Debug: Show final body properties
-                            Write-Verbose "  Final body properties: $($importBody.PSObject.Properties.Name -join ', ')"
-
-                            # Debug: Show first 500 chars of JSON being sent
-                            $debugJson = $importBody | ConvertTo-Json -Depth 100 -Compress
-                            Write-Verbose "  Request body preview (first 500 chars): $($debugJson.Substring(0, [Math]::Min(500, $debugJson.Length)))"
                         }
 
                         # Clean up scheduledActionsForRule - remove nested @odata.context and IDs
@@ -403,9 +414,9 @@ function Import-IntuneBaseline {
                                             $ccList = @($config.notificationMessageCCList)
                                         }
                                         $cleanConfig = @{
-                                            actionType = $config.actionType
-                                            gracePeriodHours = [int]$config.gracePeriodHours
-                                            notificationTemplateId = if ($config.notificationTemplateId) { $config.notificationTemplateId } else { "" }
+                                            actionType                = $config.actionType
+                                            gracePeriodHours          = [int]$config.gracePeriodHours
+                                            notificationTemplateId    = if ($config.notificationTemplateId) { $config.notificationTemplateId } else { "" }
                                             notificationMessageCCList = $ccList
                                         }
                                         $cleanConfigs += $cleanConfig
@@ -422,8 +433,7 @@ function Import-IntuneBaseline {
 
                         Write-HydrationLog -Message "  Created: $displayName" -Level Info
                         $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Created' -Status 'Success'
-                    }
-                    catch {
+                    } catch {
                         $errorMsg = Get-GraphErrorMessage -ErrorRecord $_
                         Write-HydrationLog -Message "  Failed: $policyName - $errorMsg" -Level Warning
                         $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Failed' -Status $errorMsg
@@ -463,8 +473,7 @@ function Import-IntuneBaseline {
                     }
                     $listUri = $existingResponse.'@odata.nextLink'
                 } while ($listUri)
-            }
-            catch {
+            } catch {
                 # Endpoint might not support listing, continue without cache
                 Write-Verbose "Could not cache policies from $endpoint - will check individually"
             }
@@ -515,7 +524,7 @@ function Import-IntuneBaseline {
 
                     # Add hydration kit tag to description
                     $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                    $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+                    $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
 
                     # Create the policy
                     $null = Invoke-MgGraphRequest -Method POST -Uri "beta/$endpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
@@ -523,8 +532,7 @@ function Import-IntuneBaseline {
                     Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
                     $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Created' -Status 'Success'
-                }
-                catch {
+                } catch {
                     $errorMsg = Get-GraphErrorMessage -ErrorRecord $_
                     Write-HydrationLog -Message "  Failed: $policyName - $errorMsg" -Level Warning
 
@@ -537,8 +545,7 @@ function Import-IntuneBaseline {
             Write-Progress -Activity "Importing $osName/$folderName" -Completed
         }
 
-    }
-    else {
+    } else {
         # WhatIf mode - just report what would be imported
         foreach ($policyFolder in $policyTypefolders) {
             $folder = $policyFolder.Folder

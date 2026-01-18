@@ -18,6 +18,6 @@
   "packageIdentifier": "9WZDNCRFJ3PZ",
   "repositoryType": "microsoftStore",
   "installExperience": {
-    "runAsAccount": "user"
+    "runAsAccount": "system"
   }
 }

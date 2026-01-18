@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-01-17
+
+### Added
+
+- **Windows Autopilot device preparation** support:
+  - New enrollment profile template: Windows Autopilot device preparation - User Driven
+  - New static group: Windows Autopilot device preparation (with Intune Provisioning Client as owner)
+  - Automatic group assignment for device preparation policy
+- Platform filtering for template imports - filter baselines, compliance policies, and other imports by platform (Windows, macOS, iOS, Android, Linux)
+- `settings.schema.json` for JSON schema validation of settings files
+
 ## [0.3.3] - 2026-01-11
 
 ### Added

@@ -1,9 +1,9 @@
 function Test-HydrationKitObject {
     <#
     .SYNOPSIS
-        Tests if an object was created by the Intune-Hydration-Kit
+        Tests if an object was created by the Intune Hydration Kit
     .DESCRIPTION
-        Checks if an object's description contains "Imported by Intune-Hydration-Kit".
+        Checks if an object's description contains "Imported by Intune Hydration Kit".
         This is the standard marker used to identify objects created by this module.
     .PARAMETER Description
         The description field of the object to check
@@ -14,13 +14,13 @@ function Test-HydrationKitObject {
             # Safe to delete - created by this kit
         }
     .EXAMPLE
-        Test-HydrationKitObject -Description "Some policy - Imported by Intune-Hydration-Kit"
+        Test-HydrationKitObject -Description "Some policy - Imported by Intune Hydration Kit"
         # Returns: $true
     .EXAMPLE
         Test-HydrationKitObject -Description "Manually created policy"
         # Returns: $false
     .OUTPUTS
-        System.Boolean - $true if the object was created by Intune-Hydration-Kit, $false otherwise
+        System.Boolean - $true if the object was created by Intune Hydration Kit, $false otherwise
     #>
     [CmdletBinding()]
     [OutputType([bool])]
@@ -52,8 +52,7 @@ function Test-HydrationKitObject {
     if ($ObjectName) {
         if ($isHydrationKit) {
             Write-Verbose "Object '$ObjectName' is a Hydration Kit object (marker found in description)"
-        }
-        else {
+        } else {
             Write-Verbose "Object '$ObjectName' is NOT a Hydration Kit object (no marker in description)"
         }
     }

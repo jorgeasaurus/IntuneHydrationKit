@@ -7,16 +7,26 @@ function Import-IntuneMobileApp {
     .PARAMETER TemplatePath
         Path to the mobile apps template directory (defaults to Templates/MobileApps)
     .PARAMETER RemoveExisting
-        If specified, removes existing mobile apps that were created by Intune-Hydration-Kit
+        If specified, removes existing mobile apps that were created by Intune Hydration Kit
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: Windows, macOS, All.
+        Defaults to 'All' which imports all mobile app templates regardless of platform.
+        Note: Mobile app templates are organized by Windows and macOS directories.
     .EXAMPLE
         Import-IntuneMobileApp
     .EXAMPLE
         Import-IntuneMobileApp -RemoveExisting
+    .EXAMPLE
+        Import-IntuneMobileApp -Platform Windows
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
         [string]$TemplatePath,
+
+        [Parameter()]
+        [ValidateSet('Windows', 'macOS', 'All')]
+        [string[]]$Platform = @('All'),
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -31,7 +41,7 @@ function Import-IntuneMobileApp {
         return @()
     }
 
-    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "mobile app template"
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Directory' -Recurse -ResourceType "mobile app template"
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No mobile app templates found in: $TemplatePath"
@@ -48,15 +58,14 @@ function Import-IntuneMobileApp {
                 $appName = $app.displayName
                 if ($appName -and -not $existingApps.ContainsKey($appName)) {
                     $existingApps[$appName] = @{
-                        Id = $app.id
+                        Id    = $app.id
                         Notes = $app.notes
                     }
                 }
             }
             $listUri = $existingResponse.'@odata.nextLink'
         } while ($listUri)
-    }
-    catch {
+    } catch {
         Write-Warning "Failed to list existing mobile apps: $($_.Exception.Message)"
     }
 
@@ -69,7 +78,7 @@ function Import-IntuneMobileApp {
 
             # Safety check: Only delete if created by this kit (has hydration marker in notes)
             if (-not (Test-HydrationKitObject -Description $appInfo.Notes -ObjectName $appName)) {
-                Write-Verbose "Skipping '$appName' - not created by Intune-Hydration-Kit"
+                Write-Verbose "Skipping '$appName' - not created by Intune Hydration Kit"
                 continue
             }
 
@@ -80,14 +89,12 @@ function Import-IntuneMobileApp {
                     Invoke-MgGraphRequest -Method DELETE -Uri $deleteEndpoint -ErrorAction Stop
                     Write-HydrationLog -Message "  Deleted: $appName" -Level Info
                     $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'Deleted' -Status 'Success'
-                }
-                catch {
+                } catch {
                     $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                     Write-HydrationLog -Message "  Failed: $appName - $errMessage" -Level Warning
                     $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'Failed' -Status "Delete failed: $errMessage"
                 }
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldDelete: $appName" -Level Info
                 $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'WouldDelete' -Status 'DryRun'
             }
@@ -117,7 +124,7 @@ function Import-IntuneMobileApp {
 
             # Add hydration kit tag to notes field (mobile apps use notes instead of description for this)
             $existingNotes = if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { "" }
-            $newNotes = if ($existingNotes) { "$existingNotes - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            $newNotes = if ($existingNotes) { "$existingNotes - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
             if ($importBody.PSObject.Properties['notes']) {
                 $importBody.notes = $newNotes
             } else {
@@ -130,13 +137,11 @@ function Import-IntuneMobileApp {
                 $null = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'MobileApp' -Action 'Created' -Status 'Success'
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'MobileApp' -Action 'WouldCreate' -Status 'DryRun'
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'MobileApp' -Action 'Failed' -Status $errMessage

@@ -45,15 +45,14 @@ function Import-IntuneNotificationTemplate {
             foreach ($tmpl in $existingResponse.value) {
                 if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
                     $existingTemplates[$tmpl.displayName] = @{
-                        Id = $tmpl.id
+                        Id          = $tmpl.id
                         Description = $tmpl.description
                     }
                 }
             }
             $listUri = $existingResponse.'@odata.nextLink'
         } while ($listUri)
-    }
-    catch {
+    } catch {
         $existingTemplates = @{}
     }
 
@@ -71,8 +70,7 @@ function Import-IntuneNotificationTemplate {
             if ($templateContent.displayName) {
                 $templateNames[$templateContent.displayName] = $true
             }
-        }
-        catch {
+        } catch {
             Write-Verbose "Could not read template file: $($templateFile.FullName)"
         }
     }
@@ -95,14 +93,12 @@ function Import-IntuneNotificationTemplate {
                     Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/notificationMessageTemplates/$($templateInfo.Id)" -ErrorAction Stop
                     Write-HydrationLog -Message "  Deleted: $templateName" -Level Info
                     $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'Deleted' -Status 'Success'
-                }
-                catch {
+                } catch {
                     $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                     Write-HydrationLog -Message "  Failed: $templateName - $errMessage" -Level Warning
                     $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'Failed' -Status "Delete failed: $errMessage"
                 }
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldDelete: $templateName" -Level Info
                 $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'WouldDelete' -Status 'DryRun'
             }
@@ -146,20 +142,17 @@ function Import-IntuneNotificationTemplate {
                     try {
                         $locBody = $loc | ConvertTo-Json -Depth 20
                         Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
-                    }
-                    catch {
+                    } catch {
                         Write-HydrationLog -Message "  Failed to add localized message ($($loc.locale)): $($_.Exception.Message)" -Level Warning
                     }
                 }
 
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status 'Success'
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'WouldCreate' -Status 'DryRun'
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Failed' -Status $errMessage

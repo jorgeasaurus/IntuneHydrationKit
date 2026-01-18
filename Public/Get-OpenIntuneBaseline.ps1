@@ -61,8 +61,7 @@ function Get-OpenIntuneBaseline {
         Write-Host "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
 
         return $DestinationPath
-    }
-    catch {
+    } catch {
         Write-Error "Failed to download OpenIntuneBaseline: $_"
         throw
     }

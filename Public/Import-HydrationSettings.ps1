@@ -25,8 +25,7 @@ function Import-HydrationSettings {
 
         Write-HydrationLog -Message "Settings loaded from: $Path" -Level Info
         return $settings
-    }
-    catch {
+    } catch {
         Write-HydrationLog -Message "Failed to load settings: $_" -Level Error
         throw
     }

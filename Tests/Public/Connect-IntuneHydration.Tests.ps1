@@ -211,8 +211,7 @@ Describe 'Connect-IntuneHydration' {
 
             try {
                 Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
-            }
-            catch {
+            } catch {
                 # Expected
             }
 

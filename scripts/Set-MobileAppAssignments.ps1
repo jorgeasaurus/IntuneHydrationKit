@@ -56,8 +56,7 @@ function Connect-ToGraph {
     if (-not $context) {
         Write-Host "Connecting to Microsoft Graph..." -ForegroundColor Cyan
         Connect-MgGraph -Scopes $requiredScopes -NoWelcome
-    }
-    else {
+    } else {
         # Check if we have the required scope
         $hasScope = $context.Scopes | Where-Object { $_ -like '*DeviceManagementApps*' }
         if (-not $hasScope) {
@@ -127,7 +126,7 @@ function Set-AppAvailableToAllUsers {
     if ($hasAllUsersAssignment) {
         Write-Host "  [Skip] $AppName - Already assigned to All Users" -ForegroundColor DarkGray
         return @{
-            Name = $AppName
+            Name   = $AppName
             Status = 'Skipped'
             Reason = 'Already assigned'
         }
@@ -138,11 +137,11 @@ function Set-AppAvailableToAllUsers {
             mobileAppAssignments = @(
                 @{
                     "@odata.type" = "#microsoft.graph.mobileAppAssignment"
-                    intent = "available"
-                    target = @{
+                    intent        = "available"
+                    target        = @{
                         "@odata.type" = "#microsoft.graph.allLicensedUsersAssignmentTarget"
                     }
-                    settings = $null
+                    settings      = $null
                 }
             )
         }
@@ -153,24 +152,22 @@ function Set-AppAvailableToAllUsers {
 
             Write-Host "  [OK] $AppName" -ForegroundColor Green
             return @{
-                Name = $AppName
+                Name   = $AppName
                 Status = 'Assigned'
                 Reason = $null
             }
-        }
-        catch {
+        } catch {
             Write-Host "  [Error] $AppName - $($_.Exception.Message)" -ForegroundColor Red
             return @{
-                Name = $AppName
+                Name   = $AppName
                 Status = 'Failed'
                 Reason = $_.Exception.Message
             }
         }
-    }
-    else {
+    } else {
         Write-Host "  [WhatIf] Would assign: $AppName" -ForegroundColor Yellow
         return @{
-            Name = $AppName
+            Name   = $AppName
             Status = 'WhatIf'
             Reason = $null
         }

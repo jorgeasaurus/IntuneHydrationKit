@@ -3,102 +3,122 @@
         {
             "displayName": "Intune - Windows Devices",
             "description": "All Windows devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.managementType -eq \"MDM\")"
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.managementType -eq \"MDM\")",
+            "platform": "Windows"
         },
         {
             "displayName": "Intune - Windows 10 Devices",
             "description": "All Windows 10 devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.1\") and (device.managementType -eq \"MDM\")"
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.1\") and (device.managementType -eq \"MDM\")",
+            "platform": "Windows"
         },
         {
             "displayName": "Intune - Windows 11 Devices",
             "description": "All Windows 11 devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.2\") and (device.managementType -eq \"MDM\")"
+            "membershipRule": "(device.deviceOSType -eq \"Windows\") and (device.deviceOSVersion -startsWith \"10.0.2\") and (device.managementType -eq \"MDM\")",
+            "platform": "Windows"
         },
         {
             "displayName": "Intune - Windows ConfigMgr Managed Devices",
             "description": "All Windows devices managed by ConfigMgr (co-managed)",
-            "membershipRule": "(device.deviceManagementAppId -eq \"54b943f8-d761-4f8d-951e-9cea1846db5a\")"
+            "membershipRule": "(device.deviceManagementAppId -eq \"54b943f8-d761-4f8d-951e-9cea1846db5a\")",
+            "platform": "Windows"
         },
         {
             "displayName": "Intune - macOS Devices",
             "description": "All macOS devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"MacMDM\")"
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\")",
+            "platform": "macOS"
         },
         {
             "displayName": "Intune - macOS Corporate Devices",
             "description": "All corporate owned macOS devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Company\")"
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Company\")",
+            "platform": "macOS"
         },
         {
             "displayName": "Intune - macOS BYOD Devices",
             "description": "All personally owned macOS devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Personal\")"
+            "membershipRule": "(device.deviceOSType -eq \"MacMDM\") and (device.deviceOwnership -eq \"Personal\")",
+            "platform": "macOS"
         },
         {
             "displayName": "Intune - iOS iPadOS Devices",
             "description": "All iOS and iPadOS devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iOS\") or (device.deviceOSType -eq \"iPad\")"
+            "membershipRule": "(device.deviceOSType -eq \"iOS\") or (device.deviceOSType -eq \"iPad\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPhone Devices",
             "description": "All iPhone devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPhone\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPhone Corporate Devices",
             "description": "All corporate owned iPhone devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Company\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Company\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPhone BYOD Devices",
             "description": "All personally owned iPhone devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Personal\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPhone\") and (device.deviceOwnership -eq \"Personal\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPad Devices",
             "description": "All iPad devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPad\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPad\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPad Corporate Devices",
             "description": "All corporate owned iPad devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Company\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Company\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - iPad BYOD Devices",
             "description": "All personally owned iPad devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Personal\")"
+            "membershipRule": "(device.deviceOSType -eq \"iPad\") and (device.deviceOwnership -eq \"Personal\")",
+            "platform": "iOS"
         },
         {
             "displayName": "Intune - Android Devices",
             "description": "All Android devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -match \"Android\")"
+            "membershipRule": "(device.deviceOSType -match \"Android\")",
+            "platform": "Android"
         },
         {
             "displayName": "Intune - Android Corporate Devices",
             "description": "All corporate owned Android devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Company\")"
+            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Company\")",
+            "platform": "Android"
         },
         {
             "displayName": "Intune - Android BYOD Devices",
             "description": "All personally owned Android devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Personal\")"
+            "membershipRule": "(device.deviceOSType -eq \"Android\") and (device.deviceOwnership -eq \"Personal\")",
+            "platform": "Android"
         },
         {
             "displayName": "Intune - Android Enterprise Devices",
             "description": "All Android Enterprise devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -match \"AndroidEnterprise\")"
+            "membershipRule": "(device.deviceOSType -match \"AndroidEnterprise\")",
+            "platform": "Android"
         },
         {
             "displayName": "Intune - Android Work Profile Devices",
             "description": "All Android Work Profile devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"AndroidForWork\") and (device.managementType -eq \"MDM\")"
+            "membershipRule": "(device.deviceOSType -eq \"AndroidForWork\") and (device.managementType -eq \"MDM\")",
+            "platform": "Android"
         },
         {
             "displayName": "Intune - Android Fully Managed Devices",
             "description": "All Android Fully Managed devices managed by Intune",
-            "membershipRule": "(device.deviceOSType -eq \"AndroidEnterprise\") and (device.enrollmentProfileName -eq null)"
+            "membershipRule": "(device.deviceOSType -eq \"AndroidEnterprise\") and (device.enrollmentProfileName -eq null)",
+            "platform": "Android"
         }
     ]
 }

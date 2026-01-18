@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.3.3'
+    ModuleVersion     = '0.3.4'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,15 +89,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.3.3
+## v0.3.4
 
 - **Added:**
-  - Issue #15: License-based dynamic user groups (E3, E5, F3, Business Premium, Copilot, Power BI Pro, Visio, Project)
-  - Dynamic groups count increased from 43 to 51
-
-- **Changed:**
-  - OpenIntuneBaseline now pulls from maintained fork to prevent unplanned breaking changes
-  - Issue #15: Simplified dynamic group membership rules (removed complex exclusion logic for better processing)
+  - **Windows Autopilot device preparation** support:
+    - New enrollment profile template: Windows Autopilot device preparation - User Driven
+    - New static group: Windows Autopilot device preparation (with Intune Provisioning Client as owner)
+    - Automatic group assignment for device preparation policy
+  - Platform filtering for template imports - filter baselines, compliance policies, and other imports by platform (Windows, macOS, iOS, Android, Linux)
+  - `settings.schema.json` for JSON schema validation of settings files
 
 '@
         }

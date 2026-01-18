@@ -1,12 +1,12 @@
 {
     "@odata.type": "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile",
     "displayName": "Self Deploy Default Autopilot Deployment Profile",
-    "description": "",
+    "description": "Self Deploy Azure AD Join with Standard User",
     "deviceNameTemplate": "%SERIAL%",
     "locale": "os-default",
     "preprovisioningAllowed": false,
     "deviceType": "windowsPc",
-    "hardwareHashExtractionEnabled": false,
+    "hardwareHashExtractionEnabled": true,
     "roleScopeTagIds": [],
     "hybridAzureADJoinSkipConnectivityCheck": false,
     "outOfBoxExperienceSetting": {

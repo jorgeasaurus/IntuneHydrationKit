@@ -54,27 +54,25 @@ function New-IntuneDynamicGroup {
 
         # Create new dynamic group
         if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
-            $fullDescription = if ($Description) { "$Description - Imported by Intune-Hydration-Kit" } else { "Imported by Intune-Hydration-Kit" }
+            $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
             $groupBody = @{
-                displayName = $DisplayName
-                description = $fullDescription
-                mailEnabled = $false
-                mailNickname = ($DisplayName -replace '[^a-zA-Z0-9]', '')
-                securityEnabled = $true
-                groupTypes = @('DynamicMembership')
-                membershipRule = $MembershipRule
+                displayName                   = $DisplayName
+                description                   = $fullDescription
+                mailEnabled                   = $false
+                mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')
+                securityEnabled               = $true
+                groupTypes                    = @('DynamicMembership')
+                membershipRule                = $MembershipRule
                 membershipRuleProcessingState = $MembershipRuleProcessingState
             }
 
             $newGroup = Invoke-MgGraphRequest -Method POST -Uri "beta/groups" -Body $groupBody -ErrorAction Stop
 
             return New-HydrationResult -Name $newGroup.displayName -Id $newGroup.id -Type 'DynamicGroup' -Action 'Created' -Status 'New group created'
-        }
-        else {
+        } else {
             return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'WouldCreate' -Status 'DryRun'
         }
-    }
-    catch {
+    } catch {
         Write-Error "Failed to create group '$DisplayName': $_"
         return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'Failed' -Status $_.Exception.Message
     }

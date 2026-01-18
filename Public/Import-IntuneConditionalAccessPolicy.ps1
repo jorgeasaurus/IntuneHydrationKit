@@ -59,8 +59,7 @@ function Import-IntuneConditionalAccessPolicy {
             }
             if ($hasPremiumP2) { break }
         }
-    }
-    catch {
+    } catch {
         Write-Verbose "Failed to check Premium P2 license: $_"
         $hasPremiumP2 = $true  # Allow attempt if check fails
     }
@@ -105,22 +104,19 @@ function Import-IntuneConditionalAccessPolicy {
                             Invoke-MgGraphRequest -Method DELETE -Uri "beta/identity/conditionalAccess/policies/$($policy.id)" -ErrorAction Stop
                             Write-HydrationLog -Message "  Deleted: $($policy.displayName)" -Level Info
                             $results += New-HydrationResult -Name $policy.displayName -Type 'ConditionalAccessPolicy' -Action 'Deleted' -Status 'Success'
-                        }
-                        catch {
+                        } catch {
                             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
                             Write-HydrationLog -Message "  Failed: $($policy.displayName) - $errMessage" -Level Warning
                             $results += New-HydrationResult -Name $policy.displayName -Type 'ConditionalAccessPolicy' -Action 'Failed' -Status "Delete failed: $errMessage"
                         }
-                    }
-                    else {
+                    } else {
                         Write-HydrationLog -Message "  WouldDelete: $($policy.displayName)" -Level Info
                         $results += New-HydrationResult -Name $policy.displayName -Type 'ConditionalAccessPolicy' -Action 'WouldDelete' -Status 'DryRun'
                     }
                 }
                 $listUri = $existingPolicies.'@odata.nextLink'
             } while ($listUri)
-        }
-        catch {
+        } catch {
             Write-Warning "Failed to list CA policies: $_"
         }
 
@@ -164,9 +160,9 @@ function Import-IntuneConditionalAccessPolicy {
             if ($PSCmdlet.ShouldProcess($displayName, "Create Conditional Access policy (disabled)")) {
                 # Build the policy body - force state to disabled
                 $policyBody = @{
-                    displayName = $displayName
-                    state = "disabled"  # Always disabled for safety
-                    conditions = $policy.conditions
+                    displayName   = $displayName
+                    state         = "disabled"  # Always disabled for safety
+                    conditions    = $policy.conditions
                     grantControls = $policy.grantControls
                 }
 
@@ -186,13 +182,11 @@ function Import-IntuneConditionalAccessPolicy {
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
                 $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Id $newPolicy.id -Action 'Created' -Status 'Success' -State 'disabled'
-            }
-            else {
+            } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'WouldCreate' -Status 'DryRun' -State 'disabled'
             }
-        }
-        catch {
+        } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $displayName - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Action 'Failed' -Status $errMessage
