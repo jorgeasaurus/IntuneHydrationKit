@@ -32,3 +32,4 @@ Publishing.md
 Test-Adhoc.ps1
 Templates/MobileApps/*.png
 scripts/Export-ConditionalAccessTemplates.ps1
+video/

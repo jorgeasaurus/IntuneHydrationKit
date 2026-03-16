@@ -137,14 +137,14 @@ Describe 'Import-IntuneMobileApp' {
             }
         }
 
-        It 'Should skip apps that already exist' {
-            # Mock existing app
+        It 'Should skip apps that already exist with hydration kit tag' {
+            # Mock existing app with hydration kit tag
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
-                            @{ id = 'existing-id'; displayName = 'Existing App'; notes = '' }
+                            @{ id = 'existing-id'; displayName = 'Existing App'; notes = 'Imported by Intune Hydration Kit' }
                         )
                         '@odata.nextLink' = $null
                     }
@@ -166,6 +166,91 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Skipped'
                 $result[0].Status | Should -Be 'Already exists'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should create app when existing app lacks hydration kit tag' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{
+                        value             = @(
+                            @{ id = 'untagged-id'; displayName = 'PowerShell'; notes = '' }
+                        )
+                        '@odata.nextLink' = $null
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-kit-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $templates = @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'PowerShell'
+                    publisher     = 'Microsoft'
+                }
+            )
+            $tempDir = New-TestTemplateDirectory -Templates $templates
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $result[0].Name | Should -Be 'PowerShell'
+                $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should create app when existing app has null notes' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{
+                        value             = @(
+                            @{ id = 'null-notes-id'; displayName = 'Slack'; notes = $null }
+                        )
+                        '@odata.nextLink' = $null
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-kit-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $templates = @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Slack'
+                    publisher     = 'Slack Technologies'
+                }
+            )
+            $tempDir = New-TestTemplateDirectory -Templates $templates
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $result[0].Name | Should -Be 'Slack'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -563,14 +648,14 @@ Describe 'Import-IntuneMobileApp' {
                     if ($script:pageCount -eq 1) {
                         return @{
                             value             = @(
-                                @{ id = 'app1'; displayName = 'App 1'; notes = '' }
+                                @{ id = 'app1'; displayName = 'App 1'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = 'https://graph.microsoft.com/beta/next-page'
                         }
                     } else {
                         return @{
                             value             = @(
-                                @{ id = 'app2'; displayName = 'App 2'; notes = '' }
+                                @{ id = 'app2'; displayName = 'App 2'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = $null
                         }

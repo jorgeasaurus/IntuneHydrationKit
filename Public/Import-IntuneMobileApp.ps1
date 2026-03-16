@@ -56,10 +56,21 @@ function Import-IntuneMobileApp {
             $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
             foreach ($app in $existingResponse.value) {
                 $appName = $app.displayName
-                if ($appName -and -not $existingApps.ContainsKey($appName)) {
-                    $existingApps[$appName] = @{
-                        Id    = $app.id
-                        Notes = $app.notes
+                if ($appName) {
+                    $isTagged = Test-HydrationKitObject -Description $app.notes
+                    if (-not $existingApps.ContainsKey($appName)) {
+                        $existingApps[$appName] = @{
+                            Id       = $app.id
+                            Notes    = $app.notes
+                            IsTagged = $isTagged
+                        }
+                    } elseif ($isTagged -and -not $existingApps[$appName].IsTagged) {
+                        # Prefer the tagged (kit-created) version
+                        $existingApps[$appName] = @{
+                            Id       = $app.id
+                            Notes    = $app.notes
+                            IsTagged = $true
+                        }
                     }
                 }
             }
@@ -116,7 +127,7 @@ function Import-IntuneMobileApp {
                 continue
             }
 
-            if ($existingApps.ContainsKey($displayName)) {
+            if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Id $existingApps[$displayName].Id -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
                 continue

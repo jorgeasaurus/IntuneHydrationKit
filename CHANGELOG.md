@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Mobile app import skip logic now checks hydration kit tag, not just display name** — Previously, `Import-IntuneMobileApp` would skip any app matching by `displayName` regardless of whether it was created by the kit. Now it only skips apps that have the `"Imported by Intune Hydration Kit"` marker in `notes`, allowing the kit to create its own tagged version alongside pre-existing untagged apps.
+
 ## [0.4.0] - 2026-01-18
 
 ### Added
