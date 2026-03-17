@@ -59,10 +59,20 @@ function Import-IntuneDeviceFilter {
         do {
             $existingFiltersResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
             foreach ($existingFilter in $existingFiltersResponse.value) {
-                if (-not $existingFilters.ContainsKey($existingFilter.displayName)) {
-                    $existingFilters[$existingFilter.displayName] = @{
-                        Id          = $existingFilter.id
-                        Description = $existingFilter.description
+                if ($existingFilter.displayName) {
+                    $isTagged = Test-HydrationKitObject -Description $existingFilter.description
+                    if (-not $existingFilters.ContainsKey($existingFilter.displayName)) {
+                        $existingFilters[$existingFilter.displayName] = @{
+                            Id          = $existingFilter.id
+                            Description = $existingFilter.description
+                            IsTagged    = $isTagged
+                        }
+                    } elseif ($isTagged -and -not $existingFilters[$existingFilter.displayName].IsTagged) {
+                        $existingFilters[$existingFilter.displayName] = @{
+                            Id          = $existingFilter.id
+                            Description = $existingFilter.description
+                            IsTagged    = $true
+                        }
                     }
                 }
             }
@@ -82,9 +92,10 @@ function Import-IntuneDeviceFilter {
     # Remove existing filters if requested
     # SAFETY: Only delete filters that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
-        $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
+        # Load template names to scope deletes to only filters this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -ArrayProperty 'filters' -Recurse
 
-        # Collect filters to delete (only those with hydration marker)
+        # Collect filters to delete (only those with hydration marker AND matching a template name)
         $filtersToDelete = @()
         foreach ($filterName in $existingFilters.Keys) {
             $filterInfo = $existingFilters[$filterName]
@@ -92,6 +103,11 @@ function Import-IntuneDeviceFilter {
             # Safety check: Only delete if created by this kit (has hydration marker in description)
             if (-not (Test-HydrationKitObject -Description $filterInfo.Description -ObjectName $filterName)) {
                 Write-Verbose "Skipping '$filterName' - not created by Intune Hydration Kit"
+                continue
+            }
+
+            if (-not $knownTemplateNames.Contains($filterName)) {
+                Write-Verbose "Skipping '$filterName' - not in this kit's templates (may be from another tool)"
                 continue
             }
 
@@ -115,78 +131,8 @@ function Import-IntuneDeviceFilter {
             return $results
         }
 
-        # Batch delete filters with retry logic
-        $maxRetries = 3
-        $retryDelaySeconds = 2
-        Write-Verbose "Deleting $($filtersToDelete.Count) device filters in batches..."
-
-        for ($batchStart = 0; $batchStart -lt $filtersToDelete.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $filtersToDelete.Count) - 1
-            $currentBatch = $filtersToDelete[$batchStart..$batchEnd]
-
-            # Track which items need retry
-            $pendingItems = @($currentBatch)
-            $retryCount = 0
-
-            while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                if ($retryCount -gt 0) {
-                    $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                    Write-Verbose "Retrying $($pendingItems.Count) failed delete(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                    Start-Sleep -Seconds $delay
-                }
-
-                $batchRequests = @()
-                for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                    $filter = $pendingItems[$i]
-                    $batchRequests += @{
-                        id     = ($i + 1).ToString()
-                        method = "DELETE"
-                        url    = "/deviceManagement/assignmentFilters/$($filter.Id)"
-                    }
-                }
-
-                $batchBody = @{ requests = $batchRequests }
-                $itemsToRetry = @()
-
-                try {
-                    $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-
-                    foreach ($resp in $batchResponse.responses) {
-                        $requestIndex = [int]$resp.id - 1
-                        $filter = $pendingItems[$requestIndex]
-
-                        if ($resp.status -eq 204 -or $resp.status -eq 200) {
-                            Write-HydrationLog -Message "  Deleted: $($filter.Name)" -Level Info
-                            $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'Deleted' -Status 'Success'
-                        } elseif ($resp.status -eq 404) {
-                            Write-HydrationLog -Message "  Skipped: $($filter.Name) (already deleted)" -Level Info
-                            $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already deleted'
-                        } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                            # Server error - queue for retry
-                            Write-Verbose "Server error ($($resp.status)) for '$($filter.Name)' - will retry"
-                            $itemsToRetry += $filter
-                        } else {
-                            $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                            Write-HydrationLog -Message "  [!] Failed: $($filter.Name) - $errorMessage" -Level Warning
-                            $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'Failed' -Status "Delete failed: $errorMessage"
-                        }
-                    }
-                } catch {
-                    if ($retryCount -lt $maxRetries) {
-                        Write-Verbose "Batch delete failed, will retry: $_"
-                        $itemsToRetry = $pendingItems
-                    } else {
-                        Write-Warning "Batch delete failed: $_"
-                        foreach ($filter in $pendingItems) {
-                            $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'Failed' -Status "Batch delete failed: $_"
-                        }
-                    }
-                }
-
-                $pendingItems = $itemsToRetry
-                $retryCount++
-            }
-        }
+        # Batch delete filters using centralized helper
+        $results += Invoke-GraphBatchOperation -Items $filtersToDelete -Operation 'DELETE' -BaseUrl '/deviceManagement/assignmentFilters' -ResultType 'DeviceFilter'
 
         return $results
     }
@@ -219,10 +165,10 @@ function Import-IntuneDeviceFilter {
                     continue
                 }
 
-                # Check if filter already exists using pre-fetched list
-                if ($existingFilterNames.ContainsKey($filter.displayName)) {
+                # Check if filter already exists using pre-fetched list - only skip if tagged by kit
+                if ($existingFilters.ContainsKey($filter.displayName) -and $existingFilters[$filter.displayName].IsTagged) {
                     Write-HydrationLog -Message "  Skipped: $($filter.displayName)" -Level Info
-                    $results += New-HydrationResult -Name $filter.displayName -Id $existingFilterNames[$filter.displayName] -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
+                    $results += New-HydrationResult -Name $filter.displayName -Id $existingFilters[$filter.displayName].Id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
                     continue
                 }
 
@@ -245,99 +191,24 @@ function Import-IntuneDeviceFilter {
         return $results
     }
 
-    # Batch create filters with retry logic
+    # Batch create filters using centralized helper
     if ($filtersToCreate.Count -gt 0) {
-        $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
-        $maxRetries = 3
-        $retryDelaySeconds = 2
-        Write-Verbose "Creating $($filtersToCreate.Count) device filters in batches..."
-
-        for ($batchStart = 0; $batchStart -lt $filtersToCreate.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $filtersToCreate.Count) - 1
-            $currentBatch = $filtersToCreate[$batchStart..$batchEnd]
-
-            # Track which items need retry
-            $pendingItems = @($currentBatch)
-            $retryCount = 0
-
-            while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                if ($retryCount -gt 0) {
-                    $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                    Write-Verbose "Retrying $($pendingItems.Count) failed create(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                    Start-Sleep -Seconds $delay
-                }
-
-                $batchRequests = @()
-                for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                    $filter = $pendingItems[$i]
-
-                    # Build description with hydration kit marker
-                    $description = if ($filter.description) {
-                        "$($filter.description) - Imported by Intune Hydration Kit"
-                    } else {
-                        "Imported by Intune Hydration Kit"
-                    }
-
-                    $filterBody = @{
-                        displayName   = $filter.displayName
-                        description   = $description
-                        platform      = $filter.platform
-                        rule          = $filter.rule
-                        roleScopeTags = @("0")
-                    }
-
-                    $batchRequests += @{
-                        id      = ($i + 1).ToString()
-                        method  = "POST"
-                        url     = "/deviceManagement/assignmentFilters"
-                        headers = @{ "Content-Type" = "application/json" }
-                        body    = $filterBody
-                    }
-                }
-
-                $batchBody = @{ requests = $batchRequests }
-                $itemsToRetry = @()
-
-                try {
-                    $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-
-                    foreach ($resp in $batchResponse.responses) {
-                        $requestIndex = [int]$resp.id - 1
-                        $filter = $pendingItems[$requestIndex]
-
-                        if ($resp.status -eq 201) {
-                            Write-HydrationLog -Message "  Created: $($filter.displayName)" -Level Info
-                            $results += New-HydrationResult -Name $filter.displayName -Id $resp.body.id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Created' -Status 'Success'
-                        } elseif ($resp.status -eq 409) {
-                            # Conflict - filter was created between check and creation (race condition)
-                            Write-HydrationLog -Message "  Skipped: $($filter.displayName) (race condition)" -Level Info
-                            $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists (race condition)'
-                        } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                            # Server error - queue for retry
-                            Write-Verbose "Server error ($($resp.status)) for '$($filter.displayName)' - will retry"
-                            $itemsToRetry += $filter
-                        } else {
-                            $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                            Write-HydrationLog -Message "  [!] Failed: $($filter.displayName) - $errorMessage" -Level Warning
-                            $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errorMessage
-                        }
-                    }
-                } catch {
-                    if ($retryCount -lt $maxRetries) {
-                        Write-Verbose "Batch create failed, will retry: $_"
-                        $itemsToRetry = $pendingItems
-                    } else {
-                        Write-Warning "Batch create failed: $_"
-                        foreach ($filter in $pendingItems) {
-                            $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status "Batch create failed: $_"
-                        }
-                    }
-                }
-
-                $pendingItems = $itemsToRetry
-                $retryCount++
+        $batchItems = @()
+        foreach ($filter in $filtersToCreate) {
+            $filterBody = @{
+                displayName   = $filter.displayName
+                description   = New-HydrationDescription -ExistingText $filter.description
+                platform      = $filter.platform
+                rule          = $filter.rule
+                roleScopeTags = @("0")
+            }
+            $batchItems += @{
+                Name     = $filter.displayName
+                Platform = $filter.platform
+                BodyJson = ($filterBody | ConvertTo-Json -Depth 10 -Compress)
             }
         }
+        $results += Invoke-GraphBatchOperation -Items $batchItems -Operation 'POST' -BaseUrl '/deviceManagement/assignmentFilters' -ResultType 'DeviceFilter'
     }
 
     return $results

@@ -57,11 +57,22 @@ function Import-IntuneCompliancePolicy {
                 $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
                 foreach ($policy in $existingResponse.value) {
                     $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
-                    if ($policyName -and -not $existingPolicies.ContainsKey($policyName)) {
-                        $existingPolicies[$policyName] = @{
-                            Id          = $policy.id
-                            Description = $policy.description
-                            Endpoint    = $listUriStart
+                    if ($policyName) {
+                        $isTagged = Test-HydrationKitObject -Description $policy.description
+                        if (-not $existingPolicies.ContainsKey($policyName)) {
+                            $existingPolicies[$policyName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $listUriStart
+                                IsTagged    = $isTagged
+                            }
+                        } elseif ($isTagged -and -not $existingPolicies[$policyName].IsTagged) {
+                            $existingPolicies[$policyName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $listUriStart
+                                IsTagged    = $true
+                            }
                         }
                     }
                 }
@@ -83,10 +94,6 @@ function Import-IntuneCompliancePolicy {
     # Remove existing policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
-        $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
-        $maxRetries = 3
-        $retryDelaySeconds = 2
-
         # Collect policies to delete (only those with hydration marker)
         $policiesToDelete = @()
         foreach ($policyName in $existingPolicies.Keys) {
@@ -99,9 +106,9 @@ function Import-IntuneCompliancePolicy {
             }
 
             $policiesToDelete += @{
-                Name     = $policyName
-                Id       = $policyInfo.Id
-                Endpoint = $policyInfo.Endpoint
+                Name = $policyName
+                Id   = $policyInfo.Id
+                Url  = "/$($policyInfo.Endpoint -replace '^beta/', '')/$($policyInfo.Id)"
             }
         }
 
@@ -119,84 +126,11 @@ function Import-IntuneCompliancePolicy {
             return $results
         }
 
-        # Batch delete policies with retry logic
-        Write-Verbose "Deleting $($policiesToDelete.Count) compliance policies in batches..."
-        for ($batchStart = 0; $batchStart -lt $policiesToDelete.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $policiesToDelete.Count) - 1
-            $currentBatch = $policiesToDelete[$batchStart..$batchEnd]
-
-            # Track which items need retry
-            $pendingItems = @($currentBatch)
-            $retryCount = 0
-
-            while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                if ($retryCount -gt 0) {
-                    $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                    Write-Verbose "Retrying $($pendingItems.Count) failed delete(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                    Start-Sleep -Seconds $delay
-                }
-
-                $batchRequests = @()
-                for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                    $policy = $pendingItems[$i]
-                    # Strip 'beta/' prefix from endpoint for batch URL
-                    $batchUrl = "/$($policy.Endpoint -replace '^beta/', '')/$($policy.Id)"
-                    $batchRequests += @{
-                        id     = ($i + 1).ToString()
-                        method = "DELETE"
-                        url    = $batchUrl
-                    }
-                }
-
-                $batchBody = @{ requests = $batchRequests }
-                $itemsToRetry = @()
-
-                try {
-                    $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-
-                    foreach ($resp in $batchResponse.responses) {
-                        $requestIndex = [int]$resp.id - 1
-                        $policy = $pendingItems[$requestIndex]
-
-                        if ($resp.status -eq 204 -or $resp.status -eq 200) {
-                            Write-HydrationLog -Message "  Deleted: $($policy.Name)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Type 'CompliancePolicy' -Action 'Deleted' -Status 'Success'
-                        } elseif ($resp.status -eq 404) {
-                            Write-HydrationLog -Message "  Skipped: $($policy.Name) (already deleted)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Type 'CompliancePolicy' -Action 'Skipped' -Status 'Already deleted'
-                        } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                            Write-Verbose "Server error ($($resp.status)) for '$($policy.Name)' - will retry"
-                            $itemsToRetry += $policy
-                        } else {
-                            $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                            Write-HydrationLog -Message "  [!] Failed: $($policy.Name) - $errorMessage" -Level Warning
-                            $results += New-HydrationResult -Name $policy.Name -Type 'CompliancePolicy' -Action 'Failed' -Status "Delete failed: $errorMessage"
-                        }
-                    }
-                } catch {
-                    if ($retryCount -lt $maxRetries) {
-                        Write-Verbose "Batch delete failed, will retry: $_"
-                        $itemsToRetry = $pendingItems
-                    } else {
-                        Write-Warning "Batch delete failed: $_"
-                        foreach ($policy in $pendingItems) {
-                            $results += New-HydrationResult -Name $policy.Name -Type 'CompliancePolicy' -Action 'Failed' -Status "Batch delete failed: $_"
-                        }
-                    }
-                }
-
-                $pendingItems = $itemsToRetry
-                $retryCount++
-            }
-        }
+        # Batch delete policies using centralized helper
+        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -ResultType 'CompliancePolicy'
 
         return $results
     }
-
-    # Batch settings
-    $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
-    $maxRetries = 3
-    $retryDelaySeconds = 2
 
     # Collect policies to create - separate standard and custom (with scripts)
     $standardPoliciesToCreate = @()
@@ -228,7 +162,7 @@ function Import-IntuneCompliancePolicy {
 
             $alreadyExists = $false
             foreach ($ln in $lookupNames) {
-                if ($existingByName.ContainsKey($ln)) {
+                if ($existingPolicies.ContainsKey($ln) -and $existingPolicies[$ln].IsTagged) {
                     $alreadyExists = $true
                     break
                 }
@@ -273,7 +207,7 @@ function Import-IntuneCompliancePolicy {
                 $standardPoliciesToCreate += @{
                     Name     = $displayName
                     Path     = $templateFile.FullName
-                    Endpoint = $endpoint
+                    Url      = "/$endpoint"
                     BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
                 }
             }
@@ -297,74 +231,9 @@ function Import-IntuneCompliancePolicy {
         return $results
     }
 
-    # Batch create standard policies with retry logic
+    # Batch create standard policies using centralized helper
     if ($standardPoliciesToCreate.Count -gt 0) {
-        Write-Verbose "Creating $($standardPoliciesToCreate.Count) standard compliance policies in batches..."
-
-        for ($batchStart = 0; $batchStart -lt $standardPoliciesToCreate.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $standardPoliciesToCreate.Count) - 1
-            $currentBatch = $standardPoliciesToCreate[$batchStart..$batchEnd]
-
-            # Track which items need retry
-            $pendingItems = @($currentBatch)
-            $retryCount = 0
-
-            while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                if ($retryCount -gt 0) {
-                    $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                    Write-Verbose "Retrying $($pendingItems.Count) failed create(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                    Start-Sleep -Seconds $delay
-                }
-
-                # Build batch request as JSON string to avoid PowerShell serialization issues
-                $batchRequestsJson = @()
-                for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                    $policy = $pendingItems[$i]
-                    $requestJson = "{`"id`":`"$(($i + 1).ToString())`",`"method`":`"POST`",`"url`":`"/$($policy.Endpoint)`",`"headers`":{`"Content-Type`":`"application/json`"},`"body`":$($policy.BodyJson)}"
-                    $batchRequestsJson += $requestJson
-                }
-
-                $batchBodyJson = "{`"requests`":[" + ($batchRequestsJson -join ",") + "]}"
-                $itemsToRetry = @()
-
-                try {
-                    $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBodyJson -ContentType 'application/json' -ErrorAction Stop
-
-                    foreach ($resp in $batchResponse.responses) {
-                        $requestIndex = [int]$resp.id - 1
-                        $policy = $pendingItems[$requestIndex]
-
-                        if ($resp.status -eq 201 -or $resp.status -eq 200) {
-                            Write-HydrationLog -Message "  Created: $($policy.Name)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'CompliancePolicy' -Action 'Created' -Status 'Success'
-                        } elseif ($resp.status -eq 409) {
-                            Write-HydrationLog -Message "  Skipped: $($policy.Name) (race condition)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'CompliancePolicy' -Action 'Skipped' -Status 'Already exists (race condition)'
-                        } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                            Write-Verbose "Server error ($($resp.status)) for '$($policy.Name)' - will retry"
-                            $itemsToRetry += $policy
-                        } else {
-                            $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                            Write-HydrationLog -Message "  [!] Failed: $($policy.Name) - $errorMessage" -Level Warning
-                            $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'CompliancePolicy' -Action 'Failed' -Status $errorMessage
-                        }
-                    }
-                } catch {
-                    if ($retryCount -lt $maxRetries) {
-                        Write-Verbose "Batch create failed, will retry: $_"
-                        $itemsToRetry = $pendingItems
-                    } else {
-                        Write-Warning "Batch create failed: $_"
-                        foreach ($policy in $pendingItems) {
-                            $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'CompliancePolicy' -Action 'Failed' -Status "Batch create failed: $_"
-                        }
-                    }
-                }
-
-                $pendingItems = $itemsToRetry
-                $retryCount++
-            }
-        }
+        $results += Invoke-GraphBatchOperation -Items $standardPoliciesToCreate -Operation 'POST' -ResultType 'CompliancePolicy'
     }
 
     # Process custom compliance policies with scripts sequentially (require script creation first)

@@ -355,6 +355,12 @@ Describe 'Import-IntuneMobileApp' {
     Context 'App Deletion' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test app names
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Hydration Kit App', 'Manually Created App', 'App To Delete', 'Delete Error App') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should delete apps with hydration kit marker in notes' {
@@ -526,6 +532,12 @@ Describe 'Import-IntuneMobileApp' {
                 }
             } -ModuleName IntuneHydrationKit
 
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                [void]$names.Add('App To Delete')
+                return $names
+            } -ModuleName IntuneHydrationKit
+
             # Create a template file so the function doesn't exit early
             $templates = @(
                 @{
@@ -552,6 +564,12 @@ Describe 'Import-IntuneMobileApp' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
             Mock Get-GraphErrorMessage { return 'Graph API error' } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test app names for delete tests
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Delete Error App') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should handle Graph API errors during creation' {

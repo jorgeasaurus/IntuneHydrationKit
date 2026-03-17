@@ -39,10 +39,9 @@ function Import-IntuneNotificationTemplate {
     # Prefetch existing templates with descriptions for safety checks
     $existingTemplates = @{}
     try {
-        $listUri = "beta/deviceManagement/notificationMessageTemplates"
-        do {
-            $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            foreach ($tmpl in $existingResponse.value) {
+        Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates" -ProcessItems {
+            param($items)
+            foreach ($tmpl in $items) {
                 if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
                     $existingTemplates[$tmpl.displayName] = @{
                         Id          = $tmpl.id
@@ -50,8 +49,7 @@ function Import-IntuneNotificationTemplate {
                     }
                 }
             }
-            $listUri = $existingResponse.'@odata.nextLink'
-        } while ($listUri)
+        }
     } catch {
         $existingTemplates = @{}
     }

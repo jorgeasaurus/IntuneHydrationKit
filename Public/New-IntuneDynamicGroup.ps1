@@ -37,16 +37,8 @@ function New-IntuneDynamicGroup {
         # Check if group already exists (escape single quotes for OData filter)
         # Use pagination to handle large result sets
         $safeDisplayName = $DisplayName -replace "'", "''"
-        $listUri = "beta/groups?`$filter=displayName eq '$safeDisplayName'"
-        $existingGroup = $null
-        do {
-            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
-                break
-            }
-            $listUri = $response.'@odata.nextLink'
-        } while ($listUri)
+        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$filter=displayName eq '$safeDisplayName'"
+        $existingGroup = $allMatches | Select-Object -First 1
 
         if ($existingGroup) {
             return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'DynamicGroup' -Action 'Skipped' -Status 'Group already exists'
@@ -54,7 +46,7 @@ function New-IntuneDynamicGroup {
 
         # Create new dynamic group
         if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
-            $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $fullDescription = New-HydrationDescription -ExistingText $Description
             $groupBody = @{
                 displayName                   = $DisplayName
                 description                   = $fullDescription

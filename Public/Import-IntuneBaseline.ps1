@@ -161,9 +161,8 @@ function Import-IntuneBaseline {
     # Remove existing baseline policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
-        $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
-        $maxRetries = 3
-        $retryDelaySeconds = 2
+        # Load template names to scope deletes to only policies this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -Recurse
 
         # Delete from main endpoints used by baselines
         # Note: App protection policies are handled separately by Import-IntuneAppProtectionPolicy
@@ -177,26 +176,29 @@ function Import-IntuneBaseline {
         $policiesToDelete = @()
         foreach ($endpoint in $deleteEndpoints) {
             try {
-                $listUri = $endpoint
-                do {
-                    $existing = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $existing.value) {
+                Get-GraphPagedResults -Uri $endpoint -ProcessItems {
+                    param($items)
+                    foreach ($policy in $items) {
                         $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
 
-                        # Safety check: Only delete if created by this kit (has hydration marker in description)
+                        # Safety check: Only delete if created by this kit AND name matches a known template
                         if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
                             Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
                             continue
                         }
 
+                        if (-not $knownTemplateNames.Contains($policyName)) {
+                            Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
+                            continue
+                        }
+
                         $policiesToDelete += @{
-                            Name     = $policyName
-                            Id       = $policy.id
-                            Endpoint = $endpoint
+                            Name = $policyName
+                            Id   = $policy.id
+                            Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
                         }
                     }
-                    $listUri = $existing.'@odata.nextLink'
-                } while ($listUri)
+                }
             } catch {
                 Write-Warning "Failed to list policies from $endpoint : $_"
             }
@@ -216,76 +218,8 @@ function Import-IntuneBaseline {
             return $results
         }
 
-        # Batch delete policies with retry logic
-        Write-Verbose "Deleting $($policiesToDelete.Count) baseline policies in batches..."
-        for ($batchStart = 0; $batchStart -lt $policiesToDelete.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $policiesToDelete.Count) - 1
-            $currentBatch = $policiesToDelete[$batchStart..$batchEnd]
-
-            # Track which items need retry
-            $pendingItems = @($currentBatch)
-            $retryCount = 0
-
-            while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                if ($retryCount -gt 0) {
-                    $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                    Write-Verbose "Retrying $($pendingItems.Count) failed delete(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                    Start-Sleep -Seconds $delay
-                }
-
-                $batchRequests = @()
-                for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                    $policy = $pendingItems[$i]
-                    # Strip 'beta/' prefix from endpoint for batch URL
-                    $batchUrl = "/$($policy.Endpoint -replace '^beta/', '')/$($policy.Id)"
-                    $batchRequests += @{
-                        id     = ($i + 1).ToString()
-                        method = "DELETE"
-                        url    = $batchUrl
-                    }
-                }
-
-                $batchBody = @{ requests = $batchRequests }
-                $itemsToRetry = @()
-
-                try {
-                    $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-
-                    foreach ($resp in $batchResponse.responses) {
-                        $requestIndex = [int]$resp.id - 1
-                        $policy = $pendingItems[$requestIndex]
-
-                        if ($resp.status -eq 204 -or $resp.status -eq 200) {
-                            Write-HydrationLog -Message "  Deleted: $($policy.Name)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'Deleted' -Status 'Success'
-                        } elseif ($resp.status -eq 404) {
-                            Write-HydrationLog -Message "  Skipped: $($policy.Name) (already deleted)" -Level Info
-                            $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'Skipped' -Status 'Already deleted'
-                        } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                            Write-Verbose "Server error ($($resp.status)) for '$($policy.Name)' - will retry"
-                            $itemsToRetry += $policy
-                        } else {
-                            $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                            Write-HydrationLog -Message "  [!] Failed: $($policy.Name) - $errorMessage" -Level Warning
-                            $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'Failed' -Status "Delete failed: $errorMessage"
-                        }
-                    }
-                } catch {
-                    if ($retryCount -lt $maxRetries) {
-                        Write-Verbose "Batch delete failed, will retry: $_"
-                        $itemsToRetry = $pendingItems
-                    } else {
-                        Write-Warning "Batch delete failed: $_"
-                        foreach ($policy in $pendingItems) {
-                            $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'Failed' -Status "Batch delete failed: $_"
-                        }
-                    }
-                }
-
-                $pendingItems = $itemsToRetry
-                $retryCount++
-            }
-        }
+        # Batch delete policies using centralized helper
+        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -ResultType 'BaselinePolicy'
 
         return $results
     }
@@ -344,20 +278,15 @@ function Import-IntuneBaseline {
     }
 
     if ($PSCmdlet.ShouldProcess("$totalPolicies policies from OpenIntuneBaseline", "Import to Intune")) {
-        $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
-        $maxRetries = 3
-        $retryDelaySeconds = 2
-
         # Pre-fetch existing policies from all unique endpoints to avoid repeated API calls
         $endpointPolicyCache = @{}
         $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
         foreach ($cacheEndpoint in $uniqueEndpoints) {
             $endpointPolicyCache[$cacheEndpoint] = @{}
             try {
-                $listUri = "beta/$cacheEndpoint"
-                do {
-                    $cacheResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $cacheResponse.value) {
+                Get-GraphPagedResults -Uri "beta/$cacheEndpoint" -ProcessItems {
+                    param($items)
+                    foreach ($policy in $items) {
                         # Use 'name' for configurationPolicies, 'displayName' for others
                         $policyDisplayName = if ($cacheEndpoint -eq 'deviceManagement/configurationPolicies') {
                             $policy.name
@@ -368,8 +297,7 @@ function Import-IntuneBaseline {
                             $endpointPolicyCache[$cacheEndpoint][$policyDisplayName] = $policy.id
                         }
                     }
-                    $listUri = $cacheResponse.'@odata.nextLink'
-                } while ($listUri)
+                }
             } catch {
                 # Endpoint might not support listing, continue without cache for this endpoint
                 Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
@@ -460,8 +388,7 @@ function Import-IntuneBaseline {
                         )
 
                         # Add hydration kit tag to description
-                        $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                        $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+                        $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
                         # Remove properties with @odata annotations (metadata) except @odata.type
                         # Also remove #microsoft.graph.* action properties
@@ -555,7 +482,7 @@ function Import-IntuneBaseline {
                             Name     = $displayName
                             Path     = $jsonFile.FullName
                             Type     = "$osName/$folderName"
-                            Endpoint = $typeEndpoint
+                            Url      = "/$typeEndpoint"
                             BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
                         }
                     } catch {
@@ -581,17 +508,15 @@ function Import-IntuneBaseline {
             # Pre-fetch existing policies for this endpoint to avoid repeated API calls (page through all results)
             $existingPolicies = @{}
             try {
-                $listUri = "beta/$endpoint"
-                do {
-                    $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $existingResponse.value) {
+                Get-GraphPagedResults -Uri "beta/$endpoint" -ProcessItems {
+                    param($items)
+                    foreach ($policy in $items) {
                         $policyDisplayName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
                         if ($policyDisplayName -and -not $existingPolicies.ContainsKey($policyDisplayName)) {
                             $existingPolicies[$policyDisplayName] = $policy.id
                         }
                     }
-                    $listUri = $existingResponse.'@odata.nextLink'
-                } while ($listUri)
+                }
             } catch {
                 # Endpoint might not support listing, continue without cache
                 Write-Verbose "Could not cache policies from $endpoint - will check individually"
@@ -639,8 +564,7 @@ function Import-IntuneBaseline {
                     )
 
                     # Add hydration kit tag to description
-                    $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                    $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+                    $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
                     # Add to collection for batch creation
                     # Store body as JSON string to avoid PowerShell serialization issues with circular references
@@ -648,7 +572,7 @@ function Import-IntuneBaseline {
                         Name     = $displayName
                         Path     = $jsonFile.FullName
                         Type     = "$osName/$folderName"
-                        Endpoint = $endpoint
+                        Url      = "/$endpoint"
                         BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
                     }
                 } catch {
@@ -659,76 +583,9 @@ function Import-IntuneBaseline {
             }
         }
 
-        # Batch create all collected policies with retry logic
+        # Batch create all collected policies using centralized helper
         if ($policiesToCreate.Count -gt 0) {
-            Write-Verbose "Creating $($policiesToCreate.Count) baseline policies in batches..."
-
-            for ($batchStart = 0; $batchStart -lt $policiesToCreate.Count; $batchStart += $maxBatchSize) {
-                $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $policiesToCreate.Count) - 1
-                $currentBatch = $policiesToCreate[$batchStart..$batchEnd]
-
-                # Track which items need retry
-                $pendingItems = @($currentBatch)
-                $retryCount = 0
-
-                while ($pendingItems.Count -gt 0 -and $retryCount -le $maxRetries) {
-                    if ($retryCount -gt 0) {
-                        $delay = $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                        Write-Verbose "Retrying $($pendingItems.Count) failed create(s) after ${delay}s delay (attempt $retryCount of $maxRetries)..."
-                        Start-Sleep -Seconds $delay
-                    }
-
-                    # Build batch request as JSON string to avoid PowerShell serialization issues
-                    $batchRequestsJson = @()
-                    for ($i = 0; $i -lt $pendingItems.Count; $i++) {
-                        $policy = $pendingItems[$i]
-                        # Build each request as a JSON string fragment
-                        $requestJson = "{`"id`":`"$(($i + 1).ToString())`",`"method`":`"POST`",`"url`":`"/$($policy.Endpoint)`",`"headers`":{`"Content-Type`":`"application/json`"},`"body`":$($policy.BodyJson)}"
-                        $batchRequestsJson += $requestJson
-                    }
-
-                    $batchBodyJson = "{`"requests`":[" + ($batchRequestsJson -join ",") + "]}"
-                    $itemsToRetry = @()
-
-                    try {
-                        $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBodyJson -ContentType 'application/json' -ErrorAction Stop
-
-                        foreach ($resp in $batchResponse.responses) {
-                            $requestIndex = [int]$resp.id - 1
-                            $policy = $pendingItems[$requestIndex]
-
-                            if ($resp.status -eq 201 -or $resp.status -eq 200) {
-                                Write-HydrationLog -Message "  Created: $($policy.Name)" -Level Info
-                                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type $policy.Type -Action 'Created' -Status 'Success'
-                            } elseif ($resp.status -eq 409) {
-                                # Conflict - policy was created between check and creation (race condition)
-                                Write-HydrationLog -Message "  Skipped: $($policy.Name) (race condition)" -Level Info
-                                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type $policy.Type -Action 'Skipped' -Status 'Already exists (race condition)'
-                            } elseif ($resp.status -ge 500 -and $retryCount -lt $maxRetries) {
-                                Write-Verbose "Server error ($($resp.status)) for '$($policy.Name)' - will retry"
-                                $itemsToRetry += $policy
-                            } else {
-                                $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                                Write-HydrationLog -Message "  [!] Failed: $($policy.Name) - $errorMessage" -Level Warning
-                                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type $policy.Type -Action 'Failed' -Status $errorMessage
-                            }
-                        }
-                    } catch {
-                        if ($retryCount -lt $maxRetries) {
-                            Write-Verbose "Batch create failed, will retry: $_"
-                            $itemsToRetry = $pendingItems
-                        } else {
-                            Write-Warning "Batch create failed: $_"
-                            foreach ($policy in $pendingItems) {
-                                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type $policy.Type -Action 'Failed' -Status "Batch create failed: $_"
-                            }
-                        }
-                    }
-
-                    $pendingItems = $itemsToRetry
-                    $retryCount++
-                }
-            }
+            $results += Invoke-GraphBatchOperation -Items $policiesToCreate -Operation 'POST' -ResultType 'BaselinePolicy'
         }
 
     } else {

@@ -9,7 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Mobile app import skip logic now checks hydration kit tag, not just display name** — Previously, `Import-IntuneMobileApp` would skip any app matching by `displayName` regardless of whether it was created by the kit. Now it only skips apps that have the `"Imported by Intune Hydration Kit"` marker in `notes`, allowing the kit to create its own tagged version alongside pre-existing untagged apps.
+- **All import functions now use tag-aware skip logic** — Previously, every import function would skip any object matching by `displayName` alone, regardless of whether it was created by the kit. Now each function only skips objects that have the `"Imported by Intune Hydration Kit"` marker in their `description` or `notes` field, allowing the kit to create its own tagged version alongside pre-existing untagged objects. Affected functions:
+  - `Import-IntuneMobileApp` (checks `notes` field)
+  - `Import-IntuneCompliancePolicy` (checks `description` field)
+  - `Import-IntuneAppProtectionPolicy` (checks `description` field)
+  - `Import-IntuneDeviceFilter` (checks `description` field)
+  - `Import-IntuneEnrollmentProfile` — all 4 sub-types: Autopilot, ESP, macOS DEP, Device Preparation (checks `description` field)
+
+- **Delete operations now scoped to template names** — Previously, `-RemoveExisting` would delete any object with the hydration kit tag, including objects created by other tools (e.g., CIS policies from the web toolkit). Now delete operations require both the kit tag AND a matching template name. This prevents accidental deletion of objects created by other tools that share the same tag. Affected functions:
+  - `Import-IntuneBaseline` (scoped to OpenIntuneBaseline template names)
+  - `Import-IntuneMobileApp` (scoped to MobileApps template names)
+  - `Import-IntuneAppProtectionPolicy` (scoped to AppProtection template names)
+  - `Import-IntuneDeviceFilter` (scoped to Filters template names)
+  - `Import-IntuneEnrollmentProfile` (scoped to Enrollment template names)
+  - `Import-IntuneConditionalAccessPolicy` and `Import-IntuneNotificationTemplate` already used template name matching
+
+### Added
+
+- **`Get-TemplateDisplayNames` private helper** — Extracts display names from template JSON files into a case-insensitive lookup set. Supports nested array properties (e.g., device filter templates), file-based naming, and optional prefix. Used by all delete flows for template-scoped safety.
+
+### Changed
+
+- **`Test-HydrationKitObject` now accepts both `-Description` and `-Notes` parameters** — Returns `$true` if either field contains the hydration kit marker. Backward compatible with existing callers that only pass `-Description`.
 
 ## [0.4.0] - 2026-01-18
 

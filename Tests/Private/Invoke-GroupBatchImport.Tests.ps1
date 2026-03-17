@@ -6,10 +6,12 @@ BeforeAll {
     $newHydrationResultPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationResult.ps1'
     $getGraphErrorMessagePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphErrorMessage.ps1'
     $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Test-HydrationKitObject.ps1'
+    $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphPagedResults.ps1'
     . $functionPath
     . $newHydrationResultPath
     . $getGraphErrorMessagePath
     . $testHydrationKitObjectPath
+    . $getGraphPagedResultsPath
 }
 
 Describe 'Invoke-GroupBatchImport' {

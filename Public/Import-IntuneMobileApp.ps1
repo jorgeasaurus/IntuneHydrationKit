@@ -84,12 +84,20 @@ function Import-IntuneMobileApp {
 
     # Remove existing apps if requested
     if ($RemoveExisting) {
+        # Load template names to scope deletes to only apps this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+
         $appsToDelete = @()
         foreach ($appName in $existingApps.Keys) {
             $appInfo = $existingApps[$appName]
 
             if (-not (Test-HydrationKitObject -Description $appInfo.Notes -ObjectName $appName)) {
                 Write-Verbose "Skipping '$appName' - not created by Intune Hydration Kit"
+                continue
+            }
+
+            if (-not $knownTemplateNames.Contains($appName)) {
+                Write-Verbose "Skipping '$appName' - not in this kit's templates (may be from another tool)"
                 continue
             }
 
@@ -137,8 +145,7 @@ function Import-IntuneMobileApp {
             Remove-ReadOnlyGraphProperties -InputObject $importBody
 
             # Add hydration kit tag to notes field (mobile apps use notes instead of description for this)
-            $existingNotes = if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { "" }
-            $newNotes = if ($existingNotes) { "$existingNotes - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $newNotes = New-HydrationDescription -ExistingText $(if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { '' })
             if ($importBody.PSObject.Properties['notes']) {
                 $importBody.notes = $newNotes
             } else {

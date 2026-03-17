@@ -7,12 +7,15 @@ function Invoke-GraphBatchOperation {
         for transient server errors. Returns results in standardized New-HydrationResult format.
     .PARAMETER Items
         Array of items to process. Each item must be a hashtable with at least 'Name' key.
-        For DELETE operations: must include 'Id' key.
+        For DELETE operations: must include 'Id' key (or 'Url' for the full batch URL path).
         For POST operations: must include 'BodyJson' key with JSON string payload.
+        Optional keys: 'Url' (overrides BaseUrl for per-item endpoints), 'Type' (overrides ResultType),
+        'Path' (source file path), 'State' (e.g., CA policy state).
     .PARAMETER Operation
         The HTTP operation: 'POST' for creation or 'DELETE' for removal.
     .PARAMETER BaseUrl
-        The Graph API URL path (without /beta prefix), e.g., '/deviceAppManagement/mobileApps'
+        The Graph API URL path (without /beta prefix), e.g., '/deviceAppManagement/mobileApps'.
+        Optional if each item provides its own 'Url' key.
     .PARAMETER ResultType
         The Type value to use in New-HydrationResult (e.g., 'MobileApp', 'AppProtection')
     .PARAMETER MaxBatchSize
@@ -34,7 +37,7 @@ function Invoke-GraphBatchOperation {
         [ValidateSet('POST', 'DELETE')]
         [string]$Operation,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string]$BaseUrl,
 
         [Parameter(Mandatory)]
@@ -80,10 +83,11 @@ function Invoke-GraphBatchOperation {
                 $batchRequests = @()
                 for ($i = 0; $i -lt $pendingItems.Count; $i++) {
                     $item = $pendingItems[$i]
+                    $url = if ($item.Url) { $item.Url } else { "$BaseUrl/$($item.Id)" }
                     $batchRequests += @{
                         id     = ($i + 1).ToString()
                         method = "DELETE"
-                        url    = "$BaseUrl/$($item.Id)"
+                        url    = $url
                     }
                 }
 
@@ -108,10 +112,38 @@ function Invoke-GraphBatchOperation {
                 }
             } else {
                 # POST operation - build JSON manually to avoid serialization issues
+                # Filter out items with missing URLs before building the batch
+                $validItems = @()
+                $invalidItems = @()
+                foreach ($item in $pendingItems) {
+                    $url = if ($item.Url) { $item.Url } else { $BaseUrl }
+                    if ([string]::IsNullOrWhiteSpace($url)) {
+                        $invalidItems += $item
+                    } else {
+                        $validItems += $item
+                    }
+                }
+
+                if ($invalidItems.Count -gt 0) {
+                    foreach ($item in $invalidItems) {
+                        Write-HydrationLog -Message "  [!] Failed: $($item.Name) - No API endpoint URL resolved" -Level Warning
+                        $resultParams = @{ Name = $item.Name; Type = if ($item.Type) { $item.Type } else { $ResultType } }
+                        if ($item.Path) { $resultParams.Path = $item.Path }
+                        $results += New-HydrationResult @resultParams -Action 'Failed' -Status 'No API endpoint URL resolved'
+                    }
+                }
+
+                if ($validItems.Count -eq 0) {
+                    $pendingItems = @()
+                    continue
+                }
+
+                $pendingItems = $validItems
                 $batchRequestsJson = @()
                 for ($i = 0; $i -lt $pendingItems.Count; $i++) {
                     $item = $pendingItems[$i]
-                    $requestJson = "{`"id`":`"$(($i + 1).ToString())`",`"method`":`"POST`",`"url`":`"$BaseUrl`",`"headers`":{`"Content-Type`":`"application/json`"},`"body`":$($item.BodyJson)}"
+                    $url = if ($item.Url) { $item.Url } else { $BaseUrl }
+                    $requestJson = "{`"id`":`"$(($i + 1).ToString())`",`"method`":`"POST`",`"url`":`"$url`",`"headers`":{`"Content-Type`":`"application/json`"},`"body`":$($item.BodyJson)}"
                     $batchRequestsJson += $requestJson
                 }
 
@@ -164,14 +196,15 @@ function Invoke-GraphBatchOperation {
 
                 $resultParams = @{
                     Name = $item.Name
-                    Type = $ResultType
+                    Type = if ($item.Type) { $item.Type } else { $ResultType }
                 }
                 if ($item.Path) { $resultParams.Path = $item.Path }
                 if ($item.State) { $resultParams.State = $item.State }
+                if ($item.Platform) { $resultParams.Platform = $item.Platform }
 
                 if ($Operation -eq 'DELETE') {
                     if ($resp.status -in @(200, 202, 204)) {
-                        Write-HydrationLog -Message "Deleted: $($item.Name)" -Level Info
+                        Write-HydrationLog -Message "  Deleted: $($item.Name)" -Level Info
                         $results += New-HydrationResult @resultParams -Action 'Deleted' -Status 'Success'
                     } elseif ($resp.status -eq 404) {
                         Write-HydrationLog -Message "  Skipped: $($item.Name) (already deleted)" -Level Info
@@ -186,7 +219,7 @@ function Invoke-GraphBatchOperation {
                     }
                 } else {
                     # POST response handling
-                    if ($resp.status -eq 201) {
+                    if ($resp.status -in @(200, 201)) {
                         Write-HydrationLog -Message "  Created: $($item.Name)" -Level Info
                         $resultParams.Id = $resp.body.id
                         $results += New-HydrationResult @resultParams -Action 'Created' -Status 'Success'

@@ -119,22 +119,19 @@ function Invoke-GroupBatchImport {
 
         # Get all groups of this type
         $groupsToDelete = @()
-        $listUri = "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true"
         $headers = @{ 'ConsistencyLevel' = 'eventual' }
 
         try {
-            do {
-                $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -Headers $headers -ErrorAction Stop
-                foreach ($group in $response.value) {
-                    # Safety check: Only delete if created by this kit
+            Get-GraphPagedResults -Uri "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true" -Headers $headers -ProcessItems {
+                param($items)
+                foreach ($group in $items) {
                     if (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName) {
                         $groupsToDelete += $group
                     } else {
                         Write-Verbose "  Skipping '$($group.displayName)' - not created by Intune Hydration Kit"
                     }
                 }
-                $listUri = $response.'@odata.nextLink'
-            } while ($listUri)
+            }
         } catch {
             Write-Warning "Failed to list $GroupType groups: $_"
             $results += New-HydrationResult -Type $resultTypeName -Name 'List operation' -Action 'Failed' -Status "Failed to list groups: $_"

@@ -101,6 +101,22 @@ Describe 'Import-IntuneCompliancePolicy' {
             $result[0].Action | Should -Be 'Skipped'
         }
 
+        It 'Should create policy when existing object with same name is not tagged by kit' {
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 10 Compliance Policy'; description = 'Manually created policy' }) }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneCompliancePolicy -Platform Windows -WhatIf
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'WouldCreate'
+        }
+
         It 'Should create policy if it does not exist' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)

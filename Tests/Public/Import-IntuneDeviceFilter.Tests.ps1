@@ -104,6 +104,22 @@ Describe 'Import-IntuneDeviceFilter' {
             $result[0].Action | Should -Be 'Skipped'
         }
 
+        It 'Should create filter when existing object with same name is not tagged by kit' {
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 11 Devices'; description = 'Manually created filter' }) }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneDeviceFilter -Platform Windows -WhatIf
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'WouldCreate'
+        }
+
         It 'Should create filter if it does not exist' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri, $Body)
@@ -184,9 +200,11 @@ Describe 'Import-IntuneDeviceFilter' {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
-                    # Return success for all filters in batch
-                    $responses = $Body.requests | ForEach-Object {
-                        @{ id = $_.id; status = 201; body = @{ id = "filter-$($_.id)"; displayName = $_.body.displayName } }
+                    # Body may be a JSON string (from batch helper) or a hashtable
+                    $parsed = if ($Body -is [string]) { $Body | ConvertFrom-Json } else { $Body }
+                    $responses = @()
+                    foreach ($req in $parsed.requests) {
+                        $responses += @{ id = $req.id; status = 201; body = @{ id = "filter-$($req.id)"; displayName = "Filter $($req.id)" } }
                     }
                     return @{ responses = $responses }
                 }
@@ -245,6 +263,12 @@ Describe 'Import-IntuneDeviceFilter' {
             } -ModuleName IntuneHydrationKit
             Mock Get-Content {
                 '{"filters": []}'
+            } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test filter names
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Filter 1', 'Hydration Filter', 'Manual Filter', 'Test Filter') | ForEach-Object { [void]$names.Add($_) }
+                return $names
             } -ModuleName IntuneHydrationKit
         }
 

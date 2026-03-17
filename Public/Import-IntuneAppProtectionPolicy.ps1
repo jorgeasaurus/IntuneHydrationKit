@@ -60,11 +60,22 @@ function Import-IntuneAppProtectionPolicy {
             do {
                 $existing = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
                 foreach ($policy in $existing.value) {
-                    if (-not $existingPolicies.ContainsKey($policy.displayName)) {
-                        $existingPolicies[$policy.displayName] = @{
-                            Id          = $policy.id
-                            Description = $policy.description
-                            Endpoint    = $endpoint
+                    if ($policy.displayName) {
+                        $isTagged = Test-HydrationKitObject -Description $policy.description
+                        if (-not $existingPolicies.ContainsKey($policy.displayName)) {
+                            $existingPolicies[$policy.displayName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $endpoint
+                                IsTagged    = $isTagged
+                            }
+                        } elseif ($isTagged -and -not $existingPolicies[$policy.displayName].IsTagged) {
+                            $existingPolicies[$policy.displayName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $endpoint
+                                IsTagged    = $true
+                            }
                         }
                     }
                 }
@@ -78,6 +89,9 @@ function Import-IntuneAppProtectionPolicy {
     # Remove existing app protection policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
+        # Load template names to scope deletes to only policies this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+
         # Group policies by endpoint for batch deletion
         $policiesByEndpoint = @{}
         foreach ($policyName in $existingPolicies.Keys) {
@@ -85,6 +99,11 @@ function Import-IntuneAppProtectionPolicy {
 
             if (-not (Test-HydrationKitObject -Description $policyInfo.Description -ObjectName $policyName)) {
                 Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
+                continue
+            }
+
+            if (-not $knownTemplateNames.Contains($policyName)) {
+                Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
                 continue
             }
 
@@ -142,8 +161,8 @@ function Import-IntuneAppProtectionPolicy {
                 continue
             }
 
-            # Check for existing policy using prefetched list
-            if ($existingPolicies.ContainsKey($displayName)) {
+            # Check for existing policy using prefetched list - only skip if tagged by kit
+            if ($existingPolicies.ContainsKey($displayName) -and $existingPolicies[$displayName].IsTagged) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Id $existingPolicies[$displayName].Id -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status 'Already exists'
                 continue
@@ -158,8 +177,7 @@ function Import-IntuneAppProtectionPolicy {
             )
 
             # Add hydration kit tag to description
-            $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
             # Remove empty manufacturer/model allowlists
             if ($importBody.allowedAndroidDeviceManufacturers -eq "") {

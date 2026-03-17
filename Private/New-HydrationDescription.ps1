@@ -1,0 +1,29 @@
+function New-HydrationDescription {
+    <#
+    .SYNOPSIS
+        Builds a description or notes string with the hydration kit tag appended
+    .DESCRIPTION
+        Appends "Imported by Intune Hydration Kit" to an existing description string,
+        separated by " - " if existing text is present. Used across all import functions
+        to consistently tag created objects.
+    .PARAMETER ExistingText
+        The existing description or notes text. If empty or null, returns just the tag.
+    .EXAMPLE
+        New-HydrationDescription
+        # Returns: "Imported by Intune Hydration Kit"
+    .EXAMPLE
+        New-HydrationDescription -ExistingText "My policy description"
+        # Returns: "My policy description - Imported by Intune Hydration Kit"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$ExistingText
+    )
+
+    $tag = 'Imported by Intune Hydration Kit'
+    if ($ExistingText) {
+        return "$ExistingText - $tag"
+    }
+    return $tag
+}

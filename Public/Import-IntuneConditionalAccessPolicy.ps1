@@ -80,10 +80,9 @@ function Import-IntuneConditionalAccessPolicy {
     # Prefetch existing CA policies
     $existingPolicies = @{}
     try {
-        $listUri = "beta/identity/conditionalAccess/policies?`$select=id,displayName,state"
-        do {
-            $existing = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            foreach ($policy in $existing.value) {
+        Get-GraphPagedResults -Uri "beta/identity/conditionalAccess/policies?`$select=id,displayName,state" -ProcessItems {
+            param($items)
+            foreach ($policy in $items) {
                 if (-not $existingPolicies.ContainsKey($policy.displayName)) {
                     $existingPolicies[$policy.displayName] = @{
                         Id    = $policy.id
@@ -91,8 +90,7 @@ function Import-IntuneConditionalAccessPolicy {
                     }
                 }
             }
-            $listUri = $existing.'@odata.nextLink'
-        } while ($listUri)
+        }
     } catch {
         Write-Warning "Could not retrieve existing CA policies: $_"
     }
