@@ -117,19 +117,18 @@ function Invoke-GroupBatchImport {
             "securityEnabled eq true and NOT groupTypes/any(c:c eq 'DynamicMembership')"
         }
 
-        # Get all groups of this type
+        # Get all groups of this type, then filter locally.
+        # Avoids ProcessItems scriptblock scope issue ($var += inside & {} creates a local copy).
         $groupsToDelete = @()
         $headers = @{ 'ConsistencyLevel' = 'eventual' }
 
         try {
-            Get-GraphPagedResults -Uri "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true" -Headers $headers -ProcessItems {
-                param($items)
-                foreach ($group in $items) {
-                    if (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName) {
-                        $groupsToDelete += $group
-                    } else {
-                        Write-Verbose "  Skipping '$($group.displayName)' - not created by Intune Hydration Kit"
-                    }
+            $allGroups = Get-GraphPagedResults -Uri "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true" -Headers $headers
+            foreach ($group in $allGroups) {
+                if (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName) {
+                    $groupsToDelete += $group
+                } else {
+                    Write-Verbose "  Skipping '$($group.displayName)' - not created by Intune Hydration Kit"
                 }
             }
         } catch {

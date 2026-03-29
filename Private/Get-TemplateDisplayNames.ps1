@@ -54,14 +54,14 @@ function Get-TemplateDisplayNames {
 
     if (-not (Test-Path -Path $Path)) {
         Write-Verbose "Template path not found: $Path"
-        return $names
+        return , $names
     }
 
     $templateFiles = Get-ChildItem -Path $Path -Filter "*.json" -File -Recurse:$Recurse
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Verbose "No template files found in: $Path"
-        return $names
+        return , $names
     }
 
     foreach ($file in $templateFiles) {
@@ -98,5 +98,7 @@ function Get-TemplateDisplayNames {
 
     Write-Verbose "Loaded $($names.Count) template name(s) from $Path"
 
-    return $names
+    # Comma operator prevents PowerShell from enumerating the HashSet on output.
+    # Without it, an empty HashSet is enumerated to nothing and the caller gets $null.
+    return , $names
 }

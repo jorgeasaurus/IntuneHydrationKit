@@ -57,34 +57,31 @@ function Import-IntuneBaseline {
         throw "TenantId is required. Either connect using Connect-IntuneHydration or specify -TenantId parameter."
     }
 
-    # Use bundled OpenIntuneBaseline templates if not provided (only needed for import, not delete)
-    if (-not $RemoveExisting) {
-        # If BaselinePath was provided but doesn't exist, fall back to bundled templates
-        if ($BaselinePath -and -not (Test-Path -Path $BaselinePath)) {
-            Write-Verbose "Specified BaselinePath '$BaselinePath' not found, using bundled templates"
-            $BaselinePath = $null
-        }
+    # Resolve BaselinePath to bundled templates if not provided
+    if ($BaselinePath -and -not (Test-Path -Path $BaselinePath)) {
+        Write-Verbose "Specified BaselinePath '$BaselinePath' not found, using bundled templates"
+        $BaselinePath = $null
+    }
 
-        if (-not $BaselinePath) {
-            if ($script:TemplatesPath -and (Test-Path -Path $script:TemplatesPath)) {
-                $BaselinePath = Join-Path -Path $script:TemplatesPath -ChildPath 'OpenIntuneBaseline'
-            } elseif ($script:ModuleRoot -and (Test-Path -Path $script:ModuleRoot)) {
-                $BaselinePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Templates\OpenIntuneBaseline'
-            } else {
-                # Fallback: Calculate from this function's script file location
-                $scriptPath = $MyInvocation.MyCommand.ScriptBlock.File
-                if ($scriptPath) {
-                    $moduleRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
-                    $BaselinePath = Join-Path -Path $moduleRoot -ChildPath 'Templates\OpenIntuneBaseline'
-                } else {
-                    throw "Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."
-                }
+    if (-not $BaselinePath) {
+        if ($script:TemplatesPath -and (Test-Path -Path $script:TemplatesPath)) {
+            $BaselinePath = Join-Path -Path $script:TemplatesPath -ChildPath 'OpenIntuneBaseline'
+        } elseif ($script:ModuleRoot -and (Test-Path -Path $script:ModuleRoot)) {
+            $BaselinePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Templates\OpenIntuneBaseline'
+        } else {
+            # Fallback: Calculate from this function's script file location
+            $scriptPath = $MyInvocation.MyCommand.ScriptBlock.File
+            if ($scriptPath) {
+                $moduleRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
+                $BaselinePath = Join-Path -Path $moduleRoot -ChildPath 'Templates\OpenIntuneBaseline'
+            } elseif (-not $RemoveExisting) {
+                throw "Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."
             }
         }
+    }
 
-        if (-not (Test-Path -Path $BaselinePath)) {
-            throw "OpenIntuneBaseline templates not found at: $BaselinePath"
-        }
+    if (-not $RemoveExisting -and (-not $BaselinePath -or -not (Test-Path -Path $BaselinePath))) {
+        throw "OpenIntuneBaseline templates not found at: $BaselinePath"
     }
 
     # OpenIntuneBaseline uses OS-based folder structure:
@@ -172,31 +169,31 @@ function Import-IntuneBaseline {
             'beta/deviceManagement/deviceCompliancePolicies'
         )
 
-        # Collect all policies to delete across all endpoints
+        # Collect all policies to delete across all endpoints.
+        # Uses accumulation pattern instead of ProcessItems scriptblock to avoid
+        # scope issue ($var += inside & {} creates a local copy that is discarded).
         $policiesToDelete = @()
         foreach ($endpoint in $deleteEndpoints) {
             try {
-                Get-GraphPagedResults -Uri $endpoint -ProcessItems {
-                    param($items)
-                    foreach ($policy in $items) {
-                        $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
+                $allPolicies = Get-GraphPagedResults -Uri $endpoint
+                foreach ($policy in $allPolicies) {
+                    $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
 
-                        # Safety check: Only delete if created by this kit AND name matches a known template
-                        if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                            Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
-                            continue
-                        }
+                    # Safety check: Only delete if created by this kit (has hydration marker in description)
+                    if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
+                        Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
+                        continue
+                    }
 
-                        if (-not $knownTemplateNames.Contains($policyName)) {
-                            Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
-                            continue
-                        }
+                    # Warn if policy name doesn't match current templates (may be from older version)
+                    if ($knownTemplateNames -and -not $knownTemplateNames.Contains($policyName)) {
+                        Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
+                    }
 
-                        $policiesToDelete += @{
-                            Name = $policyName
-                            Id   = $policy.id
-                            Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
-                        }
+                    $policiesToDelete += @{
+                        Name = $policyName
+                        Id   = $policy.id
+                        Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
                     }
                 }
             } catch {

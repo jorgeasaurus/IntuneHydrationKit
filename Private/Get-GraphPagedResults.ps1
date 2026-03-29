@@ -43,12 +43,30 @@ function Get-GraphPagedResults {
         }
         if ($Headers) { $params['Headers'] = $Headers }
 
-        $response = Invoke-MgGraphRequest @params
+        $response = $null
+        try {
+            $response = Invoke-MgGraphRequest @params
+        } catch {
+            # Invoke-MgGraphRequest deserializes JSON into a Dictionary which throws
+            # on duplicate keys. Fall back to raw HTTP response + ConvertFrom-Json
+            # (returns PSCustomObject where last-key-wins, no error).
+            if ($_.Exception.Message -like '*Item has already been added*' -or
+                ($_.Exception.InnerException -and $_.Exception.InnerException.Message -like '*Item has already been added*')) {
+                Write-Verbose "Dictionary deserialization failed for '$listUri', retrying with raw HTTP response"
+                $httpResponse = Invoke-MgGraphRequest @params -OutputType HttpResponseMessage
+                $jsonContent = $httpResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                $response = $jsonContent | ConvertFrom-Json
+            } else {
+                throw
+            }
+        }
+
+        $responseValue = if ($null -ne $response.value) { $response.value } else { @() }
 
         if ($ProcessItems) {
-            & $ProcessItems $response.value
+            & $ProcessItems $responseValue
         } else {
-            $results += $response.value
+            $results += $responseValue
         }
 
         $listUri = $response.'@odata.nextLink'
