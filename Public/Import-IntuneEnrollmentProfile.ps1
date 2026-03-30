@@ -213,10 +213,9 @@ function Import-IntuneEnrollmentProfile {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $existingProfileId -Action 'Skipped' -Status 'Already exists'
                     } elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot deployment profile")) {
-                        # Autopilot deployment profiles reject dashes in descriptions (undocumented API restriction)
-                        # Strip dashes from original text first, then build tag with space separator (no dash)
-                        $cleanDesc = ($template.description -replace '-', '').Trim() -replace '  +', ' '
-                        $profileDescription = New-HydrationDescription -ExistingText $cleanDesc -Separator ' '
+                        # Autopilot deployment profiles reject the ' - ' separator in descriptions;
+                        # use a space-only separator so no dash is introduced by the hydration tag.
+                        $profileDescription = New-HydrationDescription -ExistingText $template.description -Separator ' '
 
                         # Apply custom device name template if provided
                         $deviceName = if ($DeviceNameTemplate) { $DeviceNameTemplate } else { $template.deviceNameTemplate }
