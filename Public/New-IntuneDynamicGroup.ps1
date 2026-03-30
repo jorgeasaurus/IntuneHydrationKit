@@ -48,7 +48,7 @@ function New-IntuneDynamicGroup {
         if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
             $fullDescription = New-HydrationDescription -ExistingText $Description
             $groupBody = @{
-                displayName                   = $DisplayName
+                displayName                   = "$($script:ImportPrefix)$DisplayName"
                 description                   = $fullDescription
                 mailEnabled                   = $false
                 mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')

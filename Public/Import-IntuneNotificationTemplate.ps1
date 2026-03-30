@@ -81,7 +81,8 @@ function Import-IntuneNotificationTemplate {
             $templateInfo = $existingTemplates[$templateName]
 
             # Safety check: Only delete if the name matches one of our template files
-            if (-not $templateNames.ContainsKey($templateName)) {
+            $nameForLookup = $templateName -replace '^\[IHD\] ', ''
+            if (-not ($templateNames.ContainsKey($templateName) -or $templateNames.ContainsKey($nameForLookup))) {
                 Write-Verbose "Skipping '$templateName' - not in hydration kit templates"
                 continue
             }
@@ -108,9 +109,9 @@ function Import-IntuneNotificationTemplate {
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = $template.displayName
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
 
-            if (-not $displayName) {
+            if (-not $template.displayName) {
                 Write-Warning "Template missing displayName: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Failed' -Status 'Missing displayName'
                 continue
@@ -130,6 +131,9 @@ function Import-IntuneNotificationTemplate {
             }
 
             $importBody = Copy-DeepObject -InputObject $template
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
 
             if ($PSCmdlet.ShouldProcess($displayName, "Create notification template")) {
                 $newTemplate = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates" -Body ($importBody | ConvertTo-Json -Depth 50) -ContentType "application/json" -ErrorAction Stop

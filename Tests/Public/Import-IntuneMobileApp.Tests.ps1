@@ -131,7 +131,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be 'Test WinGet App'
+                $result[0].Name | Should -Be '[IHD] Test WinGet App'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -144,7 +144,7 @@ Describe 'Import-IntuneMobileApp' {
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
-                            @{ id = 'existing-id'; displayName = 'Existing App'; notes = 'Imported by Intune Hydration Kit' }
+                            @{ id = 'existing-id'; displayName = '[IHD] Existing App'; notes = 'Imported by Intune Hydration Kit' }
                         )
                         '@odata.nextLink' = $null
                     }
@@ -207,7 +207,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be 'PowerShell'
+                $result[0].Name | Should -Be '[IHD] PowerShell'
                 $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -250,7 +250,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be 'Slack'
+                $result[0].Name | Should -Be '[IHD] Slack'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -666,14 +666,14 @@ Describe 'Import-IntuneMobileApp' {
                     if ($script:pageCount -eq 1) {
                         return @{
                             value             = @(
-                                @{ id = 'app1'; displayName = 'App 1'; notes = 'Imported by Intune Hydration Kit' }
+                                @{ id = 'app1'; displayName = '[IHD] App 1'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = 'https://graph.microsoft.com/beta/next-page'
                         }
                     } else {
                         return @{
                             value             = @(
-                                @{ id = 'app2'; displayName = 'App 2'; notes = 'Imported by Intune Hydration Kit' }
+                                @{ id = 'app2'; displayName = '[IHD] App 2'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = $null
                         }

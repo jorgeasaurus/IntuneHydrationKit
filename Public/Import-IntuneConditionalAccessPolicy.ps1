@@ -20,7 +20,7 @@ function Import-IntuneConditionalAccessPolicy {
         [string]$TemplatePath,
 
         [Parameter()]
-        [string]$Prefix = "",
+        [string]$Prefix = $script:ImportPrefix,
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -102,7 +102,8 @@ function Import-IntuneConditionalAccessPolicy {
     if ($RemoveExisting) {
         $policiesToDelete = @()
         foreach ($policyName in $existingPolicies.Keys) {
-            if ($policyName -notin $templateNames) {
+            $nameWithoutPrefix = $policyName -replace '^\[IHD\] ', ''
+            if ($policyName -notin $templateNames -and "$($Prefix)$nameWithoutPrefix" -notin $templateNames) {
                 continue
             }
 

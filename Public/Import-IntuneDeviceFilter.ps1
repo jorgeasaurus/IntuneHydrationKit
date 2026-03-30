@@ -106,7 +106,8 @@ function Import-IntuneDeviceFilter {
                 continue
             }
 
-            if (-not $knownTemplateNames.Contains($filterName)) {
+            $nameForLookup = $filterName -replace '^\[IHD\] ', ''
+            if (-not ($knownTemplateNames.Contains($filterName) -or $knownTemplateNames.Contains($nameForLookup))) {
                 Write-Verbose "Skipping '$filterName' - not in this kit's templates (may be from another tool)"
                 continue
             }
@@ -196,14 +197,14 @@ function Import-IntuneDeviceFilter {
         $batchItems = @()
         foreach ($filter in $filtersToCreate) {
             $filterBody = @{
-                displayName   = $filter.displayName
+                displayName   = "$($script:ImportPrefix)$($filter.displayName)"
                 description   = New-HydrationDescription -ExistingText $filter.description
                 platform      = $filter.platform
                 rule          = $filter.rule
                 roleScopeTags = @("0")
             }
             $batchItems += @{
-                Name     = $filter.displayName
+                Name     = "$($script:ImportPrefix)$($filter.displayName)"
                 Platform = $filter.platform
                 BodyJson = ($filterBody | ConvertTo-Json -Depth 10 -Compress)
             }

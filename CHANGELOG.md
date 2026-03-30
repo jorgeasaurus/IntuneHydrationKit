@@ -7,16 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-30
+
+### Added
+
+- **`[IHD]` name prefix on all imported resources** — Every object created by the hydration kit now has its `displayName` (or `name`) prefixed with `[IHD] ` for instant visual identification in the Intune portal. The prefix is applied across all resource types: dynamic groups, static groups, device filters, compliance policies, baselines, enrollment profiles, app protection policies, conditional access policies, notification templates, and mobile apps. The prefix is stored in the module-level `$script:ImportPrefix` variable for easy customization.
+- **`Get-TemplateDisplayNames` private helper** — Extracts display names from template JSON files into a case-insensitive `HashSet[string]` lookup. Supports nested array properties (e.g., device filter templates), file-based naming, and optional prefix. Used by all delete flows for template-scoped safety.
+
 ### Fixed
 
+- **Graph API dictionary deserialization error** — `Invoke-MgGraphRequest` can throw on endpoints (e.g., `beta/groups`) that return duplicate JSON property names, causing `"Key in dictionary: 'displayName' Key being added: 'displayName'"` errors. `Get-GraphPagedResults` now catches this and falls back to `HttpResponseMessage` output type with `ConvertFrom-Json` parsing.
+- **Null response handling in `Get-GraphPagedResults`** — Added null check for `$response.value` before iterating, preventing `"You cannot call a method on a null-valued expression"` errors during paginated list operations.
+- **PowerShell scriptblock scope bug in delete operations** — Fixed `$results += $item` inside `& $scriptblock` (ProcessItems callback) silently creating a local variable instead of modifying the outer scope. Replaced with accumulation pattern in `Import-IntuneBaseline` and `Invoke-GroupBatchImport` to correctly collect delete results.
+- **`HashSet[string]` return enumeration in `Get-TemplateDisplayNames`** — PowerShell enumerates collections on return: an empty `HashSet` becomes `$null`, and a single-element `HashSet` becomes a plain `[string]` (causing `.Contains()` to do substring matching). Fixed all return paths with comma operator (`, $names`) to preserve the `HashSet` type.
+- **Baseline delete skipping all policies** — `$BaselinePath` was resolved inside `if (-not $RemoveExisting)`, so delete mode never had a valid path to find template names. Moved path resolution outside the conditional block.
+- **Notification template delete not finding items** — The delete path compared prefixed Graph names (e.g., `[IHD] First Alert`) against unprefixed template names. Added prefix-stripping before the template name lookup, consistent with all other delete functions.
+- **Group logging showing unprefixed names** — `Invoke-GroupBatchImport` applied the `[IHD]` prefix only inside `ConvertTo-GroupBody` but used the original unprefixed `$groupDef.displayName` for result logging. Fixed by applying the prefix to group definitions early in the function.
 - **All import functions now use tag-aware skip logic** — Previously, every import function would skip any object matching by `displayName` alone, regardless of whether it was created by the kit. Now each function only skips objects that have the `"Imported by Intune Hydration Kit"` marker in their `description` or `notes` field, allowing the kit to create its own tagged version alongside pre-existing untagged objects. Affected functions:
   - `Import-IntuneMobileApp` (checks `notes` field)
   - `Import-IntuneCompliancePolicy` (checks `description` field)
   - `Import-IntuneAppProtectionPolicy` (checks `description` field)
   - `Import-IntuneDeviceFilter` (checks `description` field)
   - `Import-IntuneEnrollmentProfile` — all 4 sub-types: Autopilot, ESP, macOS DEP, Device Preparation (checks `description` field)
-
-- **Delete operations now scoped to template names** — Previously, `-RemoveExisting` would delete any object with the hydration kit tag, including objects created by other tools (e.g., CIS policies from the web toolkit). Now delete operations require both the kit tag AND a matching template name. This prevents accidental deletion of objects created by other tools that share the same tag. Affected functions:
+- **Delete operations now scoped to template names** — Delete operations now require both the hydration kit tag AND a matching template name, preventing accidental deletion of objects created by other tools that share the same tag. Affected functions:
   - `Import-IntuneBaseline` (scoped to OpenIntuneBaseline template names)
   - `Import-IntuneMobileApp` (scoped to MobileApps template names)
   - `Import-IntuneAppProtectionPolicy` (scoped to AppProtection template names)
@@ -24,15 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Import-IntuneEnrollmentProfile` (scoped to Enrollment template names)
   - `Import-IntuneConditionalAccessPolicy` and `Import-IntuneNotificationTemplate` already used template name matching
 
-### Added
-
-- **`Get-TemplateDisplayNames` private helper** — Extracts display names from template JSON files into a case-insensitive lookup set. Supports nested array properties (e.g., device filter templates), file-based naming, and optional prefix. Used by all delete flows for template-scoped safety.
-
 ### Changed
 
 - **`Test-HydrationKitObject` now accepts both `-Description` and `-Notes` parameters** — Returns `$true` if either field contains the hydration kit marker. Backward compatible with existing callers that only pass `-Description`.
-
-## [0.4.0] - 2026-01-18
+- **Delete name-matching handles prefixed names** — All delete functions now strip the `[IHD] ` prefix before comparing against template names, so both prefixed and unprefixed objects are correctly identified for deletion.
 
 ### Added
 

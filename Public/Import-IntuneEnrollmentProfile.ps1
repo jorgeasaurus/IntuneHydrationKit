@@ -60,7 +60,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                if (-not $knownTemplateNames.Contains($enrollmentProfile.displayName)) {
+                $autopilotNameForLookup = $enrollmentProfile.displayName -replace '^\[IHD\] ', ''
+                if (-not ($knownTemplateNames.Contains($enrollmentProfile.displayName) -or $knownTemplateNames.Contains($autopilotNameForLookup))) {
                     Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not in this kit's templates (may be from another tool)"
                     continue
                 }
@@ -97,7 +98,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                if (-not $knownTemplateNames.Contains($espProfile.displayName)) {
+                $espNameForLookup = $espProfile.displayName -replace '^\[IHD\] ', ''
+                if (-not ($knownTemplateNames.Contains($espProfile.displayName) -or $knownTemplateNames.Contains($espNameForLookup))) {
                     Write-Verbose "Skipping '$($espProfile.displayName)' - not in this kit's templates (may be from another tool)"
                     continue
                 }
@@ -130,7 +132,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                if (-not $knownTemplateNames.Contains($policy.name)) {
+                $prepNameForLookup = $policy.name -replace '^\[IHD\] ', ''
+                if (-not ($knownTemplateNames.Contains($policy.name) -or $knownTemplateNames.Contains($prepNameForLookup))) {
                     Write-Verbose "Skipping '$($policy.name)' - not in this kit's templates (may be from another tool)"
                     continue
                 }
@@ -176,7 +179,7 @@ function Import-IntuneEnrollmentProfile {
             continue
         }
         # Some templates use displayName, others use name (configurationPolicies)
-        $profileName = if ($template.displayName) { $template.displayName } else { $template.name }
+        $profileName = if ($template.displayName) { "$($script:ImportPrefix)$($template.displayName)" } else { "$($script:ImportPrefix)$($template.name)" }
         $odataType = $template.'@odata.type'
         if ($template.technologies -eq 'enrollment') { $odataType = '#microsoft.graph.deviceManagementConfigurationPolicy' }
 
@@ -219,7 +222,7 @@ function Import-IntuneEnrollmentProfile {
                         # (verified against Intune console's working POST payload)
                         $profileBody = @{
                             "@odata.type"                          = "#microsoft.graph.azureADWindowsAutopilotDeploymentProfile"
-                            displayName                            = $template.displayName
+                            displayName                            = $profileName
                             description                            = $profileDescription
                             deviceNameTemplate                     = $deviceName
                             locale                                 = $template.locale
@@ -313,7 +316,7 @@ function Import-IntuneEnrollmentProfile {
                         $espDescriptionText = New-HydrationDescription -ExistingText $template.description
                         $espBody = @{
                             "@odata.type"                           = "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration"
-                            displayName                             = $template.displayName
+                            displayName                             = "$($script:ImportPrefix)$($template.displayName)"
                             description                             = $espDescriptionText
                             showInstallationProgress                = $template.showInstallationProgress
                             blockDeviceSetupRetryByUser             = $template.blockDeviceSetupRetryByUser
@@ -433,10 +436,10 @@ function Import-IntuneEnrollmentProfile {
                         Write-HydrationLog -Message "  Created: $profileName" -Level Info
 
                         # For "Windows Autopilot device preparation - User Driven", assign the device preparation group
-                        if ($profileName -eq "Windows Autopilot device preparation - User Driven") {
+                        if ($profileName -eq "$($script:ImportPrefix)Windows Autopilot device preparation - User Driven") {
                             try {
                                 # Check if the Autopilot device preparation group exists
-                                $groupName = "Windows Autopilot device preparation"
+                                $groupName = "$($script:ImportPrefix)Windows Autopilot device preparation"
                                 $safeGroupName = $groupName -replace "'", "''"
                                 $groupResponse = Invoke-MgGraphRequest -Method GET -Uri "v1.0/groups?`$filter=displayName eq '$safeGroupName'" -ErrorAction Stop
                                 $prepGroup = $groupResponse.value | Select-Object -First 1

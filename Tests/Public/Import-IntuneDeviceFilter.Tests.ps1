@@ -509,7 +509,7 @@ Describe 'Import-IntuneDeviceFilter' {
             $result = Import-IntuneDeviceFilter -Platform Windows
 
             $result | Should -Not -BeNullOrEmpty
-            $result[0].Name | Should -Be 'Test Filter'
+            $result[0].Name | Should -Be '[IHD] Test Filter'
             $result[0].Type | Should -Be 'DeviceFilter'
             $result[0].Id | Should -Be 'filter-123'
             $result[0].Action | Should -Be 'Created'

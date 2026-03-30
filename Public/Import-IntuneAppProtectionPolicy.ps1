@@ -102,7 +102,8 @@ function Import-IntuneAppProtectionPolicy {
                 continue
             }
 
-            if (-not $knownTemplateNames.Contains($policyName)) {
+            $nameForLookup = $policyName -replace '^\[IHD\] ', ''
+            if (-not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($nameForLookup))) {
                 Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
                 continue
             }
@@ -145,10 +146,10 @@ function Import-IntuneAppProtectionPolicy {
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = $template.displayName
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
             $odataType = $template.'@odata.type'
 
-            if (-not $displayName -or -not $odataType) {
+            if (-not $template.displayName -or -not $odataType) {
                 Write-Warning "Template missing displayName or @odata.type: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'AppProtection' -Action 'Failed' -Status 'Missing displayName or @odata.type'
                 continue
@@ -178,6 +179,9 @@ function Import-IntuneAppProtectionPolicy {
 
             # Add hydration kit tag to description
             $importBody.description = New-HydrationDescription -ExistingText $importBody.description
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
 
             # Remove empty manufacturer/model allowlists
             if ($importBody.allowedAndroidDeviceManufacturers -eq "") {

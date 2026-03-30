@@ -186,7 +186,8 @@ function Import-IntuneBaseline {
                     }
 
                     # Warn if policy name doesn't match current templates (may be from older version)
-                    if ($knownTemplateNames -and -not $knownTemplateNames.Contains($policyName)) {
+                    $baselineNameForLookup = $policyName -replace '^\[IHD\] ', ''
+                    if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
                         Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
                     }
 
@@ -358,10 +359,11 @@ function Import-IntuneBaseline {
                             }
                         }
 
-                        # Get display name
-                        $displayName = $policyContent.displayName
-                        if (-not $displayName) {
-                            $displayName = $policyName
+                        # Get display name with import prefix
+                        $displayName = if ($policyContent.displayName) {
+                            "$($script:ImportPrefix)$($policyContent.displayName)"
+                        } else {
+                            "$($script:ImportPrefix)$policyName"
                         }
 
                         # Check if policy exists using pre-fetched cache
@@ -386,6 +388,10 @@ function Import-IntuneBaseline {
 
                         # Add hydration kit tag to description
                         $importBody.description = New-HydrationDescription -ExistingText $importBody.description
+
+                        # Apply import prefix to body properties
+                        if ($importBody.displayName) { $importBody.displayName = $displayName }
+                        if ($importBody.name) { $importBody.name = $displayName }
 
                         # Remove properties with @odata annotations (metadata) except @odata.type
                         # Also remove #microsoft.graph.* action properties
@@ -531,13 +537,13 @@ function Import-IntuneBaseline {
                     }
                     $policyContent = $jsonContent | ConvertFrom-Json
 
-                    # Get display name from policy
-                    $displayName = $policyContent.displayName
-                    if (-not $displayName) {
-                        $displayName = $policyContent.name
-                    }
-                    if (-not $displayName) {
-                        $displayName = $policyName
+                    # Get display name from policy with import prefix
+                    $displayName = if ($policyContent.displayName) {
+                        "$($script:ImportPrefix)$($policyContent.displayName)"
+                    } elseif ($policyContent.name) {
+                        "$($script:ImportPrefix)$($policyContent.name)"
+                    } else {
+                        "$($script:ImportPrefix)$policyName"
                     }
 
                     # Check if policy exists using cached list
@@ -562,6 +568,10 @@ function Import-IntuneBaseline {
 
                     # Add hydration kit tag to description
                     $importBody.description = New-HydrationDescription -ExistingText $importBody.description
+
+                    # Apply import prefix to body properties
+                    if ($importBody.displayName) { $importBody.displayName = $displayName }
+                    if ($importBody.name) { $importBody.name = $displayName }
 
                     # Add to collection for batch creation
                     # Store body as JSON string to avoid PowerShell serialization issues with circular references
@@ -602,7 +612,7 @@ function Import-IntuneBaseline {
             foreach ($jsonFile in $jsonFiles) {
                 $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
-                $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'WouldCreate' -Status 'DryRun'
+                $results += New-HydrationResult -Name "$($script:ImportPrefix)$policyName" -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'WouldCreate' -Status 'DryRun'
             }
         }
     }

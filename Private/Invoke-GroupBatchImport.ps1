@@ -213,6 +213,13 @@ function Invoke-GroupBatchImport {
 
     #endregion
 
+    # Apply import prefix to group definition display names
+    foreach ($gd in $GroupDefinitions) {
+        if ($gd.displayName -and -not $gd.displayName.StartsWith($script:ImportPrefix)) {
+            $gd.displayName = "$($script:ImportPrefix)$($gd.displayName)"
+        }
+    }
+
     #region Phase 1: Batch Existence Checks
 
     Write-Verbose "Checking existence of $($GroupDefinitions.Count) groups in batches..."

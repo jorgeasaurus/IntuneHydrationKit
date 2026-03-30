@@ -91,7 +91,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
-                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 10 Compliance Policy'; description = 'Existing policy' }) }
+                    return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Existing policy' }) }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -107,7 +107,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
-                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 10 Compliance Policy'; description = 'Manually created policy' }) }
+                    return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Manually created policy' }) }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -410,7 +410,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             $result = Import-IntuneCompliancePolicy -Platform Windows
 
             $result | Should -Not -BeNullOrEmpty
-            $result[0].Name | Should -Be 'Test Policy'
+            $result[0].Name | Should -Be '[IHD] Test Policy'
             $result[0].Type | Should -Be 'CompliancePolicy'
             $result[0].Action | Should -Be 'Created'
         }

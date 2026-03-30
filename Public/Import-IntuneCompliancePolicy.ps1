@@ -139,8 +139,8 @@ function Import-IntuneCompliancePolicy {
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = $template.displayName
-            if (-not $displayName) {
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
+            if (-not $template.displayName) {
                 Write-Warning "Template missing displayName: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status 'Missing displayName'
                 continue
@@ -176,6 +176,9 @@ function Import-IntuneCompliancePolicy {
 
             $importBody = Copy-DeepObject -InputObject $template
             Remove-ReadOnlyGraphProperties -InputObject $importBody
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
 
             # Add hydration kit tag to description
             $existingDesc = if ($importBody.description) { $importBody.description } else { "" }

@@ -105,7 +105,7 @@ function New-IntuneStaticGroup {
             }
 
             $groupBody = @{
-                displayName     = $DisplayName
+                displayName     = "$($script:ImportPrefix)$DisplayName"
                 description     = $fullDescription
                 mailEnabled     = $false
                 mailNickname    = $mailNickname

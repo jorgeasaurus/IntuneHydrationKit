@@ -538,7 +538,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $result = Import-IntuneEnrollmentProfile -Platform Windows
 
             $result | Should -Not -BeNullOrEmpty
-            $result[0].Name | Should -Be 'Test Profile'
+            $result[0].Name | Should -Be '[IHD] Test Profile'
             $result[0].Type | Should -Be 'AutopilotDeploymentProfile'
             $result[0].Id | Should -Be 'profile-123'
             $result[0].Action | Should -Be 'Created'
