@@ -96,7 +96,8 @@ function Import-IntuneMobileApp {
                 continue
             }
 
-            $nameForLookup = $appName -replace '^\[IHD\] ', ''
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $appName -replace "^$escapedPrefix", ''
             if (-not ($knownTemplateNames.Contains($appName) -or $knownTemplateNames.Contains($nameForLookup))) {
                 Write-Verbose "Skipping '$appName' - not in this kit's templates (may be from another tool)"
                 continue

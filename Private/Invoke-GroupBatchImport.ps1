@@ -44,11 +44,7 @@ function Invoke-GroupBatchImport {
             [string]$GroupType
         )
 
-        $description = if ($GroupDef.description) {
-            "$($GroupDef.description) - Imported by Intune Hydration Kit"
-        } else {
-            "Imported by Intune Hydration Kit"
-        }
+        $description = New-HydrationDescription -ExistingText $GroupDef.description
 
         # Generate safe mailNickname (alphanumeric only, max 64 chars)
         $mailNickname = ($GroupDef.displayName -replace '[^a-zA-Z0-9]', '')

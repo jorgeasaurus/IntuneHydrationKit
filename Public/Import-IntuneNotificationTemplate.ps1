@@ -81,7 +81,8 @@ function Import-IntuneNotificationTemplate {
             $templateInfo = $existingTemplates[$templateName]
 
             # Safety check: Only delete if the name matches one of our template files
-            $nameForLookup = $templateName -replace '^\[IHD\] ', ''
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $templateName -replace "^$escapedPrefix", ''
             if (-not ($templateNames.ContainsKey($templateName) -or $templateNames.ContainsKey($nameForLookup))) {
                 Write-Verbose "Skipping '$templateName' - not in hydration kit templates"
                 continue

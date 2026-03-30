@@ -102,7 +102,8 @@ function Import-IntuneAppProtectionPolicy {
                 continue
             }
 
-            $nameForLookup = $policyName -replace '^\[IHD\] ', ''
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $policyName -replace "^$escapedPrefix", ''
             if (-not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($nameForLookup))) {
                 Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
                 continue

@@ -4,11 +4,13 @@ BeforeAll {
     # Import the function under test and its dependencies
     $functionPath = Join-Path $PSScriptRoot '..\..\Private\Invoke-GroupBatchImport.ps1'
     $newHydrationResultPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationResult.ps1'
+    $newHydrationDescriptionPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationDescription.ps1'
     $getGraphErrorMessagePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphErrorMessage.ps1'
     $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Test-HydrationKitObject.ps1'
     $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphPagedResults.ps1'
     . $functionPath
     . $newHydrationResultPath
+    . $newHydrationDescriptionPath
     . $getGraphErrorMessagePath
     . $testHydrationKitObjectPath
     . $getGraphPagedResultsPath

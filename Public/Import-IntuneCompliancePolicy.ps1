@@ -181,8 +181,7 @@ function Import-IntuneCompliancePolicy {
             if ($importBody.displayName) { $importBody.displayName = $displayName }
 
             # Add hydration kit tag to description
-            $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-            $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
             # Linux endpoint expects 'name' instead of displayName; ensure it's present
             if ($isLinuxCompliance) {

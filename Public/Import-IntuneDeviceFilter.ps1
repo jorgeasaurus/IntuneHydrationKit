@@ -106,7 +106,8 @@ function Import-IntuneDeviceFilter {
                 continue
             }
 
-            $nameForLookup = $filterName -replace '^\[IHD\] ', ''
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $filterName -replace "^$escapedPrefix", ''
             if (-not ($knownTemplateNames.Contains($filterName) -or $knownTemplateNames.Contains($nameForLookup))) {
                 Write-Verbose "Skipping '$filterName' - not in this kit's templates (may be from another tool)"
                 continue

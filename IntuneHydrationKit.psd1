@@ -97,7 +97,7 @@
 - **Template-Scoped Deletes:** Delete operations now require both kit tag AND matching template name for safety
 - **Performance:** 61% faster execution (~180s to ~70s) using batch Graph API operations
 - **Bundled Templates:** OpenIntuneBaseline templates now included (no external downloads required)
-- **Batch Operations:** Groups, policies, filters, and apps now use batched API calls (up to 20 per batch)
+- **Batch Operations:** Groups, policies, filters, and apps now use batched API calls (up to 10 per batch)
 
 '@
         }

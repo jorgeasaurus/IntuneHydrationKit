@@ -22,7 +22,7 @@ function New-HydrationDescription {
     )
 
     $tag = 'Imported by Intune Hydration Kit'
-    if ($ExistingText) {
+    if (-not [string]::IsNullOrWhiteSpace($ExistingText)) {
         return "$ExistingText - $tag"
     }
     return $tag

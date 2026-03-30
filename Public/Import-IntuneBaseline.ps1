@@ -67,13 +67,13 @@ function Import-IntuneBaseline {
         if ($script:TemplatesPath -and (Test-Path -Path $script:TemplatesPath)) {
             $BaselinePath = Join-Path -Path $script:TemplatesPath -ChildPath 'OpenIntuneBaseline'
         } elseif ($script:ModuleRoot -and (Test-Path -Path $script:ModuleRoot)) {
-            $BaselinePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Templates\OpenIntuneBaseline'
+            $BaselinePath = Join-Path -Path (Join-Path -Path $script:ModuleRoot -ChildPath 'Templates') -ChildPath 'OpenIntuneBaseline'
         } else {
             # Fallback: Calculate from this function's script file location
             $scriptPath = $MyInvocation.MyCommand.ScriptBlock.File
             if ($scriptPath) {
                 $moduleRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
-                $BaselinePath = Join-Path -Path $moduleRoot -ChildPath 'Templates\OpenIntuneBaseline'
+                $BaselinePath = Join-Path -Path (Join-Path -Path $moduleRoot -ChildPath 'Templates') -ChildPath 'OpenIntuneBaseline'
             } elseif (-not $RemoveExisting) {
                 throw "Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."
             }
@@ -186,7 +186,8 @@ function Import-IntuneBaseline {
                     }
 
                     # Warn if policy name doesn't match current templates (may be from older version)
-                    $baselineNameForLookup = $policyName -replace '^\[IHD\] ', ''
+                    $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+                    $baselineNameForLookup = $policyName -replace "^$escapedPrefix", ''
                     if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
                         Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
                     }

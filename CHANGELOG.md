@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`[IHD]` Name Prefix**: All imported objects are now prefixed with `[IHD]` for easy identification and filtering in the Intune portal
-- **Batch Graph API Operations**: Groups, policies, filters, and apps now use batched API calls (up to 20 per batch) for significantly faster execution (~61% improvement)
+- **Batch Graph API Operations**: Groups, policies, filters, and apps now use batched API calls (up to 10 per batch) for significantly faster execution (~61% improvement)
 - **Bundled OpenIntuneBaseline Templates**: OIB templates are now included in the module — no external download required at runtime
 - **Notification Template Support**: Import and delete notification message templates (`Templates/Notifications/`)
 
@@ -30,8 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Delete mode**: `Get-TemplateDisplayNames` returned empty `HashSet` that PowerShell enumerated to `$null`; fixed with comma operator
 - **Delete mode**: Baseline path resolution was inside create-only conditional block; moved outside
 - **Delete mode**: Notification template prefix-stripping for name matching
+- **Group prefix mismatch**: Existence check now queries both prefixed and unprefixed names, preventing duplicate creation on re-runs
+- **Cross-platform paths**: `Import-IntuneBaseline` uses chained `Join-Path` calls instead of Windows-style backslash separators
+- **Hardcoded prefix regex**: All 9 delete-matching regex patterns now use `[regex]::Escape()` for dynamic prefix support
+- **Description helper consistency**: `Import-IntuneCompliancePolicy` and `Invoke-GroupBatchImport` now use `New-HydrationDescription` instead of manual concatenation
+- **Whitespace handling**: `New-HydrationDescription` uses `[string]::IsNullOrWhiteSpace()` instead of truthy check
 - **Cross-platform tests**: `Get-FilteredTemplates` path splitting now uses `[/\\]` regex instead of OS-native separator
 - **CI pipeline**: Pinned GitHub Actions to specific versions, added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env var
+- **LICENSE file**: Restored to git tracking (was accidentally deleted from feature branch)
 
 ## [0.3.4] - 2026-01-17
 

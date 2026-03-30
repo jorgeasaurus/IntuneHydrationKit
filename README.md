@@ -101,7 +101,7 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 ## Features
 
 - **`[IHD]` Name Prefix** - All imported objects are prefixed with `[IHD]` for easy identification and filtering
-- **Batch API Operations** - Groups, policies, filters, and apps use batched Graph API calls (up to 20 per batch) for ~61% faster execution
+- **Batch API Operations** - Groups, policies, filters, and apps use batched Graph API calls (up to 10 per batch) for ~61% faster execution
 - **Bundled Baselines** - OpenIntuneBaseline templates included in module (no external download required)
 - **Idempotent** - Safe to run multiple times; skips existing configurations
 - **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying

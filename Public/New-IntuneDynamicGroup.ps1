@@ -34,10 +34,13 @@ function New-IntuneDynamicGroup {
     )
 
     try {
-        # Check if group already exists (escape single quotes for OData filter)
-        # Use pagination to handle large result sets
-        $safeDisplayName = $DisplayName -replace "'", "''"
-        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$filter=displayName eq '$safeDisplayName'"
+        # Compute final display name with prefix for both lookup and creation
+        $finalDisplayName = "$($script:ImportPrefix)$DisplayName"
+        $safeFinalName = $finalDisplayName -replace "'", "''"
+        $safeOrigName = $DisplayName -replace "'", "''"
+
+        # Check for both prefixed and unprefixed names (backward compat with pre-prefix groups)
+        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
         $existingGroup = $allMatches | Select-Object -First 1
 
         if ($existingGroup) {
@@ -45,10 +48,10 @@ function New-IntuneDynamicGroup {
         }
 
         # Create new dynamic group
-        if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
+        if ($PSCmdlet.ShouldProcess($finalDisplayName, "Create dynamic group")) {
             $fullDescription = New-HydrationDescription -ExistingText $Description
             $groupBody = @{
-                displayName                   = "$($script:ImportPrefix)$DisplayName"
+                displayName                   = $finalDisplayName
                 description                   = $fullDescription
                 mailEnabled                   = $false
                 mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')

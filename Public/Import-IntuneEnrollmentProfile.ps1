@@ -60,7 +60,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                $autopilotNameForLookup = $enrollmentProfile.displayName -replace '^\[IHD\] ', ''
+                $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+                $autopilotNameForLookup = $enrollmentProfile.displayName -replace "^$escapedPrefix", ''
                 if (-not ($knownTemplateNames.Contains($enrollmentProfile.displayName) -or $knownTemplateNames.Contains($autopilotNameForLookup))) {
                     Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not in this kit's templates (may be from another tool)"
                     continue
@@ -98,7 +99,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                $espNameForLookup = $espProfile.displayName -replace '^\[IHD\] ', ''
+                $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+                $espNameForLookup = $espProfile.displayName -replace "^$escapedPrefix", ''
                 if (-not ($knownTemplateNames.Contains($espProfile.displayName) -or $knownTemplateNames.Contains($espNameForLookup))) {
                     Write-Verbose "Skipping '$($espProfile.displayName)' - not in this kit's templates (may be from another tool)"
                     continue
@@ -132,7 +134,8 @@ function Import-IntuneEnrollmentProfile {
                     continue
                 }
 
-                $prepNameForLookup = $policy.name -replace '^\[IHD\] ', ''
+                $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+                $prepNameForLookup = $policy.name -replace "^$escapedPrefix", ''
                 if (-not ($knownTemplateNames.Contains($policy.name) -or $knownTemplateNames.Contains($prepNameForLookup))) {
                     Write-Verbose "Skipping '$($policy.name)' - not in this kit's templates (may be from another tool)"
                     continue

@@ -59,9 +59,11 @@ function New-IntuneStaticGroup {
             }
         }
 
-        # Check if group already exists (escape single quotes for OData filter)
-        $safeDisplayName = $DisplayName -replace "'", "''"
-        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$filter=displayName eq '$safeDisplayName'"
+        # Check if group already exists — look for both prefixed and unprefixed names (backward compat)
+        $finalDisplayName = "$($script:ImportPrefix)$DisplayName"
+        $safeFinalName = $finalDisplayName -replace "'", "''"
+        $safeOrigName = $DisplayName -replace "'", "''"
+        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
         $existingGroup = $allMatches | Select-Object -First 1
 
         if ($existingGroup) {
@@ -91,7 +93,7 @@ function New-IntuneStaticGroup {
         }
 
         # Create new static group
-        if ($PSCmdlet.ShouldProcess($DisplayName, "Create static group")) {
+        if ($PSCmdlet.ShouldProcess($finalDisplayName, "Create static group")) {
             $fullDescription = New-HydrationDescription -ExistingText $Description
 
             # Generate a safe mailNickname (alphanumeric only, max 64 chars)
@@ -105,7 +107,7 @@ function New-IntuneStaticGroup {
             }
 
             $groupBody = @{
-                displayName     = "$($script:ImportPrefix)$DisplayName"
+                displayName     = $finalDisplayName
                 description     = $fullDescription
                 mailEnabled     = $false
                 mailNickname    = $mailNickname
