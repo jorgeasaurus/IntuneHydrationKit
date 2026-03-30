@@ -1,11 +1,11 @@
 function Get-TemplateDisplayNames {
     <#
     .SYNOPSIS
-        Extracts display names from template JSON files into a lookup hashtable.
+        Extracts display names from template JSON files into a case-insensitive HashSet.
     .DESCRIPTION
         Loads JSON template files from a directory and extracts display names using the
-        appropriate property for each resource type. Returns a case-insensitive hashtable
-        of known template names for use as a safety gate in delete operations.
+        appropriate property for each resource type. Returns a case-insensitive
+        HashSet[string] of known template names for use as a safety gate in delete operations.
     .PARAMETER Path
         The directory path containing template JSON files.
     .PARAMETER NameProperty
@@ -23,7 +23,7 @@ function Get-TemplateDisplayNames {
         Optional prefix to prepend to each name. Used for Conditional Access templates
         that add a prefix to file basenames.
     .OUTPUTS
-        [hashtable] Case-insensitive hashtable where keys are display names and values are $true.
+        [System.Collections.Generic.HashSet[string]] Case-insensitive HashSet of display names.
     .EXAMPLE
         Get-TemplateDisplayNames -Path './Templates/MobileApps' -Recurse
     .EXAMPLE

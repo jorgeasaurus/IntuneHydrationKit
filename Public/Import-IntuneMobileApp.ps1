@@ -57,7 +57,7 @@ function Import-IntuneMobileApp {
             foreach ($app in $existingResponse.value) {
                 $appName = $app.displayName
                 if ($appName) {
-                    $isTagged = Test-HydrationKitObject -Description $app.notes
+                    $isTagged = Test-HydrationKitObject -Notes $app.notes
                     if (-not $existingApps.ContainsKey($appName)) {
                         $existingApps[$appName] = @{
                             Id       = $app.id
@@ -91,7 +91,7 @@ function Import-IntuneMobileApp {
         foreach ($appName in $existingApps.Keys) {
             $appInfo = $existingApps[$appName]
 
-            if (-not (Test-HydrationKitObject -Description $appInfo.Notes -ObjectName $appName)) {
+            if (-not (Test-HydrationKitObject -Notes $appInfo.Notes -ObjectName $appName)) {
                 Write-Verbose "Skipping '$appName' - not created by Intune Hydration Kit"
                 continue
             }

@@ -25,9 +25,10 @@ Describe 'Get-TemplateDisplayNames' {
             $result | Should -Contain 'Policy Beta'
         }
 
-        It 'Should return string values from a HashSet' {
+        It 'Should return a HashSet of strings' {
             $result = Get-TemplateDisplayNames -Path $script:tempDir
-            $result | Should -BeOfType 'string'
+            $result.GetType().Name | Should -Be 'HashSet`1'
+            $result.Count | Should -Be 2
         }
     }
 
