@@ -32,7 +32,7 @@ function Get-GraphPagedResults {
         [scriptblock]$ProcessItems
     )
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $listUri = $Uri
 
     do {
@@ -66,13 +66,18 @@ function Get-GraphPagedResults {
         if ($ProcessItems) {
             & $ProcessItems $responseValue
         } else {
-            $results += $responseValue
+            if ($responseValue) {
+                $asArray = @($responseValue)
+                if ($asArray.Count -gt 0) {
+                    $results.AddRange($asArray)
+                }
+            }
         }
 
         $listUri = $response.'@odata.nextLink'
     } while ($listUri)
 
     if (-not $ProcessItems) {
-        return $results
+        return , @($results)
     }
 }

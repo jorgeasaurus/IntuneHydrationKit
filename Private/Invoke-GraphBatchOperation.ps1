@@ -176,21 +176,35 @@ function Invoke-GraphBatchOperation {
 
             # Process batch response
             if (-not $batchResponse.responses -or $batchResponse.responses.Count -eq 0) {
-                Write-Warning "Batch response has no responses array - assuming success for $($pendingItems.Count) items"
+                Write-Warning "Batch response has no responses array for $($pendingItems.Count) items - marking as Failed"
                 foreach ($item in $pendingItems) {
                     $resultParams = @{ Name = $item.Name; Type = $ResultType }
                     if ($item.Path) { $resultParams.Path = $item.Path }
-                    $action = if ($Operation -eq 'DELETE') { 'Deleted' } else { 'Created' }
-                    Write-HydrationLog -Message "  ${action}: $($item.Name)" -Level Info
-                    $results += New-HydrationResult @resultParams -Action $action -Status 'Success'
+                    $statusMessage = 'Batch response missing responses array'
+                    Write-HydrationLog -Message "  [!] Failed: $($item.Name) - $statusMessage" -Level Warning
+                    $results += New-HydrationResult @resultParams -Action 'Failed' -Status "$Operation failed: $statusMessage"
                 }
                 $pendingItems = @()
                 continue
             }
 
             foreach ($resp in $batchResponse.responses) {
-                $requestIndex = [int]$resp.id - 1
-                $item = $pendingItems[$requestIndex]
+                # Safely map batch response ID to pending item with bounds check
+                $requestIndex = $null
+                $item = $null
+                if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
+                    $requestIndex = $requestIndex - 1
+                    if ($requestIndex -ge 0 -and $requestIndex -lt $pendingItems.Count) {
+                        $item = $pendingItems[$requestIndex]
+                    }
+                }
+
+                if (-not $item) {
+                    $fallbackName = "Unknown item (batch id $($resp.id))"
+                    Write-HydrationLog -Message "  [!] Failed: $fallbackName - Unmatched batch response" -Level Warning
+                    $results += New-HydrationResult -Name $fallbackName -Type $ResultType -Action 'Failed' -Status "$Operation failed: Unmatched batch response id='$($resp.id)'"
+                    continue
+                }
 
                 Write-Verbose "Batch response for '$($item.Name)': status=$($resp.status)"
 

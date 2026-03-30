@@ -349,9 +349,14 @@ function Invoke-IntuneHydration {
             $allGroupDefs = @()
             $templateFiles = Get-ChildItem -Path $TemplatePath -Filter "*.json" -File
             foreach ($templateFile in $templateFiles) {
-                $content = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json
-                $groups = if ($content.groups) { $content.groups } else { @($content) }
-                $allGroupDefs += $groups
+                try {
+                    $content = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                    $groups = if ($content.groups) { $content.groups } else { @($content) }
+                    $allGroupDefs += $groups
+                } catch {
+                    Write-Warning "[Invoke-IntuneHydration] Failed to parse group template '$($templateFile.Name)': $($_.Exception.Message)"
+                    continue
+                }
             }
 
             # Filter by platform
@@ -464,7 +469,9 @@ function Invoke-IntuneHydration {
             Write-HydrationLog -Message "Step 3: $stepAction Dynamic Groups" -Level Info
 
             if ($RemoveExisting) {
-                $deleteResults = Invoke-GroupBatchImport -GroupType 'Dynamic' -Delete -WhatIf:$WhatIfPreference
+                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/DynamicGroups'
+                $knownNames = if (Test-Path $templatePath) { Get-TemplateDisplayNames -Path $templatePath -ArrayProperty 'groups' } else { $null }
+                $deleteResults = Invoke-GroupBatchImport -GroupType 'Dynamic' -Delete -KnownNames $knownNames -WhatIf:$WhatIfPreference
                 $allResults += $deleteResults
                 foreach ($result in $deleteResults) {
                     if ($result.Name) {
@@ -499,7 +506,9 @@ function Invoke-IntuneHydration {
             Write-HydrationLog -Message "Step 3b: $stepAction Static Groups" -Level Info
 
             if ($RemoveExisting) {
-                $deleteResults = Invoke-GroupBatchImport -GroupType 'Static' -Delete -WhatIf:$WhatIfPreference
+                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/StaticGroups'
+                $knownNames = if (Test-Path $templatePath) { Get-TemplateDisplayNames -Path $templatePath -ArrayProperty 'groups' } else { $null }
+                $deleteResults = Invoke-GroupBatchImport -GroupType 'Static' -Delete -KnownNames $knownNames -WhatIf:$WhatIfPreference
                 $allResults += $deleteResults
                 foreach ($result in $deleteResults) {
                     if ($result.Name) {

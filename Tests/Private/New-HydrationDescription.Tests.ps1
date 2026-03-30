@@ -50,4 +50,27 @@ Describe 'New-HydrationDescription' {
             Test-HydrationKitObject -Description $desc | Should -BeTrue
         }
     }
+
+    Context 'When custom separator is provided' {
+        It 'Should use space separator' {
+            $result = New-HydrationDescription -ExistingText 'My profile' -Separator ' '
+            $result | Should -Be 'My profile Imported by Intune Hydration Kit'
+        }
+
+        It 'Should use custom separator string' {
+            $result = New-HydrationDescription -ExistingText 'Test' -Separator ' | '
+            $result | Should -Be 'Test | Imported by Intune Hydration Kit'
+        }
+
+        It 'Should still return just the tag when existing text is empty with custom separator' {
+            $result = New-HydrationDescription -ExistingText '' -Separator ' '
+            $result | Should -Be 'Imported by Intune Hydration Kit'
+        }
+
+        It 'Should be detectable by Test-HydrationKitObject with space separator' {
+            . $PSScriptRoot/../../Private/Test-HydrationKitObject.ps1
+            $desc = New-HydrationDescription -ExistingText 'Profile' -Separator ' '
+            Test-HydrationKitObject -Description $desc | Should -BeTrue
+        }
+    }
 }

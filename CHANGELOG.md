@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Delete mode**: `Get-TemplateDisplayNames` returned empty `HashSet` that PowerShell enumerated to `$null`; fixed with comma operator
 - **Delete mode**: Baseline path resolution was inside create-only conditional block; moved outside
 - **Delete mode**: Notification template prefix-stripping for name matching
+- **Batch operations**: Empty batch responses now correctly marked as Failed instead of assumed success
+- **Batch operations**: Added bounds check and TryParse for batch response ID mapping to prevent null dereference
+- **Batch operations**: `Get-GraphPagedResults` uses `List[object]` instead of O(n²) array reallocation for paging
+- **Group delete safety**: Template-scoped deletes via `-KnownNames` parameter — only groups matching current templates are deleted
+- **Group batch import**: Null-safe prefix resolution defaults to `[IHD] ` when `$script:ImportPrefix` is null (dot-source safety)
+- **Enrollment profiles**: Dashes stripped only from original description text, not from hydration tag; uses space separator via `New-HydrationDescription -Separator ' '`
+- **JSON template parsing**: Malformed group template files no longer crash the entire hydration run (per-file try/catch)
 - **Group prefix mismatch**: Existence check now queries both prefixed and unprefixed names, preventing duplicate creation on re-runs
 - **Cross-platform paths**: `Import-IntuneBaseline` uses chained `Join-Path` calls instead of Windows-style backslash separators
 - **Hardcoded prefix regex**: All 9 delete-matching regex patterns now use `[regex]::Escape()` for dynamic prefix support

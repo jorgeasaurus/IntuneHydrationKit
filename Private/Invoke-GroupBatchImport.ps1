@@ -16,6 +16,9 @@ function Invoke-GroupBatchImport {
     .PARAMETER Delete
         Switch to delete existing groups created by the hydration kit instead of creating new ones.
         Only groups with "Imported by Intune Hydration Kit" in their description will be deleted.
+    .PARAMETER KnownNames
+        Optional HashSet of known template display names (unprefixed). When provided during delete,
+        only groups whose unprefixed name is in this set will be deleted (template-scoped delete).
     .EXAMPLE
         Invoke-GroupBatchImport -GroupDefinitions $dynamicGroups -GroupType 'Dynamic'
     .EXAMPLE
@@ -32,7 +35,10 @@ function Invoke-GroupBatchImport {
         [string]$GroupType,
 
         [Parameter()]
-        [switch]$Delete
+        [switch]$Delete,
+
+        [Parameter()]
+        [System.Collections.Generic.HashSet[string]]$KnownNames
     )
 
     # Helper function to build group request body from definition
@@ -117,11 +123,24 @@ function Invoke-GroupBatchImport {
         # Avoids ProcessItems scriptblock scope issue ($var += inside & {} creates a local copy).
         $groupsToDelete = @()
         $headers = @{ 'ConsistencyLevel' = 'eventual' }
+        $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
 
         try {
             $allGroups = Get-GraphPagedResults -Uri "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true" -Headers $headers
             foreach ($group in $allGroups) {
                 if (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName) {
+                    # If KnownNames provided, only delete groups that match a template name
+                    if ($KnownNames -and $KnownNames.Count -gt 0) {
+                        $unprefixedName = if ($group.displayName -and $group.displayName.StartsWith($importPrefix)) {
+                            $group.displayName.Substring($importPrefix.Length)
+                        } else {
+                            $group.displayName
+                        }
+                        if (-not $KnownNames.Contains($unprefixedName)) {
+                            Write-Verbose "  Skipping '$($group.displayName)' - not in current template set"
+                            continue
+                        }
+                    }
                     $groupsToDelete += $group
                 } else {
                     Write-Verbose "  Skipping '$($group.displayName)' - not created by Intune Hydration Kit"
@@ -210,9 +229,10 @@ function Invoke-GroupBatchImport {
     #endregion
 
     # Apply import prefix to group definition display names
+    $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
     foreach ($gd in $GroupDefinitions) {
-        if ($gd.displayName -and -not $gd.displayName.StartsWith($script:ImportPrefix)) {
-            $gd.displayName = "$($script:ImportPrefix)$($gd.displayName)"
+        if ($gd.displayName -and -not [string]::IsNullOrEmpty($importPrefix) -and -not $gd.displayName.StartsWith($importPrefix)) {
+            $gd.displayName = "$importPrefix$($gd.displayName)"
         }
     }
 
