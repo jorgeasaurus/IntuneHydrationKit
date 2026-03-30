@@ -27,21 +27,50 @@ function Get-GraphErrorMessage {
         $ErrorRecord.Exception.Message
     }
 
-    # Attempt to extract error code from JSON response
+    # Attempt to extract error code and detail message from JSON response
     if ($rawMessage -match '"code"\s*:\s*"([^"]+)"') {
         $errorCode = $matches[1]
     }
+    $detailMessage = $null
+    # Use regex that handles escaped quotes inside the message value
+    if ($rawMessage -match '"message"\s*:\s*"((?:[^"\\]|\\.)*)"') {
+        $rawDetail = $matches[1]
+        # Unescape the JSON string (convert \r\n, \", etc. to actual characters)
+        $rawDetail = $rawDetail -replace '\\r\\n', ' ' -replace '\\n', ' ' -replace '\\r', ' ' -replace '\\"', '"' -replace '\\\\', '\'
+        # If the unescaped message looks like JSON, try to extract the inner "Message" field
+        if ($rawDetail -match '"Message"\s*:\s*"((?:[^"\\]|\\.)*)"') {
+            $detailMessage = $matches[1] -replace '\\r\\n', ' ' -replace '\\n', ' ' -replace '\\"', '"'
+        } elseif ($rawDetail.Length -gt 0 -and $rawDetail -ne $errorCode) {
+            $detailMessage = $rawDetail
+        }
+        # Truncate overly long detail messages
+        if ($detailMessage -and $detailMessage.Length -gt 200) {
+            $detailMessage = $detailMessage.Substring(0, 200) + '...'
+        }
+    }
 
-    # Build a clean error message
+    # Build a clean error message with detail when available
     $cleanMessage = switch ($errorCode) {
         'ResourceNotFound' { 'Resource not found (may have been deleted already)' }
         'InternalServerError' { 'Server error - please retry' }
-        'BadRequest' { 'Invalid request - check template format' }
+        'BadRequest' {
+            if ($detailMessage -and $detailMessage -ne 'BadRequest') {
+                "Invalid request - $detailMessage"
+            } else {
+                'Invalid request - check template format'
+            }
+        }
         'Forbidden' { 'Access denied - check permissions' }
         'Unauthorized' { 'Authentication failed - reconnect to Graph' }
         'TooManyRequests' { 'Rate limited - please wait and retry' }
         'ServiceUnavailable' { 'Service unavailable - please retry later' }
-        default { $errorCode }
+        default {
+            if ($detailMessage) {
+                "$errorCode - $detailMessage"
+            } else {
+                $errorCode
+            }
+        }
     }
 
     # Format: "HTTP 404: Resource not found" or just the clean message

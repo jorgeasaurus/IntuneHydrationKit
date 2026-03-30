@@ -50,16 +50,27 @@ function Import-IntuneMobileApp {
 
     # Prefetch existing mobile apps (paged)
     $existingApps = @{}
-    $listUri = "beta/deviceAppManagement/mobileApps"
+    $listUri = "beta/deviceAppManagement/mobileApps?`$select=id,displayName,notes"
     try {
         do {
             $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
             foreach ($app in $existingResponse.value) {
                 $appName = $app.displayName
-                if ($appName -and -not $existingApps.ContainsKey($appName)) {
-                    $existingApps[$appName] = @{
-                        Id    = $app.id
-                        Notes = $app.notes
+                if ($appName) {
+                    $isTagged = Test-HydrationKitObject -Description $app.notes
+                    if (-not $existingApps.ContainsKey($appName)) {
+                        $existingApps[$appName] = @{
+                            Id       = $app.id
+                            Notes    = $app.notes
+                            IsTagged = $isTagged
+                        }
+                    } elseif ($isTagged -and -not $existingApps[$appName].IsTagged) {
+                        # Prefer the tagged (kit-created) version
+                        $existingApps[$appName] = @{
+                            Id       = $app.id
+                            Notes    = $app.notes
+                            IsTagged = $true
+                        }
                     }
                 }
             }
@@ -73,79 +84,101 @@ function Import-IntuneMobileApp {
 
     # Remove existing apps if requested
     if ($RemoveExisting) {
+        # Load template names to scope deletes to only apps this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+
+        $appsToDelete = @()
         foreach ($appName in $existingApps.Keys) {
             $appInfo = $existingApps[$appName]
 
-            # Safety check: Only delete if created by this kit (has hydration marker in notes)
             if (-not (Test-HydrationKitObject -Description $appInfo.Notes -ObjectName $appName)) {
                 Write-Verbose "Skipping '$appName' - not created by Intune Hydration Kit"
                 continue
             }
 
-            $deleteEndpoint = "beta/deviceAppManagement/mobileApps/$($appInfo.Id)"
+            $nameForLookup = $appName -replace '^\[IHD\] ', ''
+            if (-not ($knownTemplateNames.Contains($appName) -or $knownTemplateNames.Contains($nameForLookup))) {
+                Write-Verbose "Skipping '$appName' - not in this kit's templates (may be from another tool)"
+                continue
+            }
 
-            if ($PSCmdlet.ShouldProcess($appName, "Delete mobile app")) {
-                try {
-                    Invoke-MgGraphRequest -Method DELETE -Uri $deleteEndpoint -ErrorAction Stop
-                    Write-HydrationLog -Message "  Deleted: $appName" -Level Info
-                    $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'Deleted' -Status 'Success'
-                } catch {
-                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                    Write-HydrationLog -Message "  Failed: $appName - $errMessage" -Level Warning
-                    $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'Failed' -Status "Delete failed: $errMessage"
-                }
-            } else {
-                Write-HydrationLog -Message "  WouldDelete: $appName" -Level Info
-                $results += New-HydrationResult -Name $appName -Type 'MobileApp' -Action 'WouldDelete' -Status 'DryRun'
+            $appsToDelete += @{
+                Name = $appName
+                Id   = $appInfo.Id
             }
         }
 
-        return $results
+        if ($appsToDelete.Count -eq 0) {
+            Write-Verbose "No mobile apps found to delete"
+            return $results
+        }
+
+        if ($WhatIfPreference) {
+            foreach ($app in $appsToDelete) {
+                Write-HydrationLog -Message "  WouldDelete: $($app.Name)" -Level Info
+                $results += New-HydrationResult -Name $app.Name -Type 'MobileApp' -Action 'WouldDelete' -Status 'DryRun'
+            }
+            return $results
+        }
+
+        return Invoke-GraphBatchOperation -Items $appsToDelete -Operation 'DELETE' -BaseUrl '/deviceAppManagement/mobileApps' -ResultType 'MobileApp'
     }
 
+    # Collect apps to create
+    $appsToCreate = @()
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = $template.displayName
-            if (-not $displayName) {
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
+            if (-not $template.displayName) {
                 Write-Warning "Template missing displayName: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'MobileApp' -Action 'Failed' -Status 'Missing displayName'
                 continue
             }
 
-            if ($existingApps.ContainsKey($displayName)) {
+            if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
+                $results += New-HydrationResult -Name $displayName -Id $existingApps[$displayName].Id -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
                 continue
             }
 
             $importBody = Copy-DeepObject -InputObject $template
             Remove-ReadOnlyGraphProperties -InputObject $importBody
 
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
+
             # Add hydration kit tag to notes field (mobile apps use notes instead of description for this)
-            $existingNotes = if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { "" }
-            $newNotes = if ($existingNotes) { "$existingNotes - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $newNotes = New-HydrationDescription -ExistingText $(if ($importBody.PSObject.Properties['notes']) { $importBody.notes } else { '' })
             if ($importBody.PSObject.Properties['notes']) {
                 $importBody.notes = $newNotes
             } else {
                 $importBody | Add-Member -NotePropertyName 'notes' -NotePropertyValue $newNotes
             }
 
-            $endpoint = "beta/deviceAppManagement/mobileApps"
-
-            if ($PSCmdlet.ShouldProcess($displayName, "Create mobile app")) {
-                $null = Invoke-MgGraphRequest -Method POST -Uri $endpoint -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
-                Write-HydrationLog -Message "  Created: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'MobileApp' -Action 'Created' -Status 'Success'
-            } else {
-                Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'MobileApp' -Action 'WouldCreate' -Status 'DryRun'
+            # Store as JSON string to avoid serialization issues
+            $appsToCreate += @{
+                Name     = $displayName
+                Path     = $templateFile.FullName
+                BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
             }
         } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'MobileApp' -Action 'Failed' -Status $errMessage
         }
+    }
+
+    if ($WhatIfPreference) {
+        foreach ($app in $appsToCreate) {
+            Write-HydrationLog -Message "  WouldCreate: $($app.Name)" -Level Info
+            $results += New-HydrationResult -Name $app.Name -Path $app.Path -Type 'MobileApp' -Action 'WouldCreate' -Status 'DryRun'
+        }
+        return $results
+    }
+
+    if ($appsToCreate.Count -gt 0) {
+        $results += Invoke-GraphBatchOperation -Items $appsToCreate -Operation 'POST' -BaseUrl '/deviceAppManagement/mobileApps' -ResultType 'MobileApp'
     }
 
     return $results

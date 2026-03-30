@@ -103,8 +103,12 @@ Describe 'Import-IntuneMobileApp' {
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-app-id'; displayName = 'Test App' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-app-id'; displayName = 'Test App' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -127,20 +131,20 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be 'Test WinGet App'
+                $result[0].Name | Should -Be '[IHD] Test WinGet App'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
 
-        It 'Should skip apps that already exist' {
-            # Mock existing app
+        It 'Should skip apps that already exist with hydration kit tag' {
+            # Mock existing app with hydration kit tag
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
-                            @{ id = 'existing-id'; displayName = 'Existing App'; notes = '' }
+                            @{ id = 'existing-id'; displayName = '[IHD] Existing App'; notes = 'Imported by Intune Hydration Kit' }
                         )
                         '@odata.nextLink' = $null
                     }
@@ -162,6 +166,91 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Skipped'
                 $result[0].Status | Should -Be 'Already exists'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should create app when existing app lacks hydration kit tag' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{
+                        value             = @(
+                            @{ id = 'untagged-id'; displayName = 'PowerShell'; notes = '' }
+                        )
+                        '@odata.nextLink' = $null
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-kit-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $templates = @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'PowerShell'
+                    publisher     = 'Microsoft'
+                }
+            )
+            $tempDir = New-TestTemplateDirectory -Templates $templates
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $result[0].Name | Should -Be '[IHD] PowerShell'
+                $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should create app when existing app has null notes' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{
+                        value             = @(
+                            @{ id = 'null-notes-id'; displayName = 'Slack'; notes = $null }
+                        )
+                        '@odata.nextLink' = $null
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-kit-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $templates = @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Slack'
+                    publisher     = 'Slack Technologies'
+                }
+            )
+            $tempDir = New-TestTemplateDirectory -Templates $templates
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $result[0].Name | Should -Be '[IHD] Slack'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -189,15 +278,19 @@ Describe 'Import-IntuneMobileApp' {
         }
 
         It 'Should add hydration kit marker to notes field' {
-            $script:capturedBody = $null
+            $script:capturedBatchBody = $null
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
-                if ($Method -eq 'POST') {
-                    $script:capturedBody = $Body | ConvertFrom-Json
-                    return @{ id = 'new-id' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-id' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -214,22 +307,26 @@ Describe 'Import-IntuneMobileApp' {
                 $result = Import-IntuneMobileApp -TemplatePath $tempDir
 
                 $result[0].Action | Should -Be 'Created'
-                $script:capturedBody.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+                $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
 
         It 'Should preserve existing notes and append marker' {
-            $script:capturedBody = $null
+            $script:capturedBatchBody = $null
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
-                if ($Method -eq 'POST') {
-                    $script:capturedBody = $Body | ConvertFrom-Json
-                    return @{ id = 'new-id' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-id' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -247,8 +344,8 @@ Describe 'Import-IntuneMobileApp' {
                 $result = Import-IntuneMobileApp -TemplatePath $tempDir
 
                 $result[0].Action | Should -Be 'Created'
-                $script:capturedBody.notes | Should -BeLike 'Existing notes here*'
-                $script:capturedBody.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
+                $script:capturedBatchBody.requests[0].body.notes | Should -BeLike 'Existing notes here*'
+                $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -258,6 +355,12 @@ Describe 'Import-IntuneMobileApp' {
     Context 'App Deletion' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test app names
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Hydration Kit App', 'Manually Created App', 'App To Delete', 'Delete Error App') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should delete apps with hydration kit marker in notes' {
@@ -275,8 +378,12 @@ Describe 'Import-IntuneMobileApp' {
                         '@odata.nextLink' = $null
                     }
                 }
-                if ($Method -eq 'DELETE') {
-                    return $null
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 204 }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -425,6 +532,12 @@ Describe 'Import-IntuneMobileApp' {
                 }
             } -ModuleName IntuneHydrationKit
 
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                [void]$names.Add('App To Delete')
+                return $names
+            } -ModuleName IntuneHydrationKit
+
             # Create a template file so the function doesn't exit early
             $templates = @(
                 @{
@@ -451,16 +564,26 @@ Describe 'Import-IntuneMobileApp' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
             Mock Get-GraphErrorMessage { return 'Graph API error' } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test app names for delete tests
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Delete Error App') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should handle Graph API errors during creation' {
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
-                if ($Method -eq 'POST') {
-                    throw 'Graph API error'
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 400; body = @{ error = @{ message = 'Graph API error' } } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -485,7 +608,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should handle Graph API errors during deletion' {
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -498,8 +621,12 @@ Describe 'Import-IntuneMobileApp' {
                         '@odata.nextLink' = $null
                     }
                 }
-                if ($Method -eq 'DELETE') {
-                    throw 'Delete failed'
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 400; body = @{ error = @{ message = 'Delete failed' } } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -518,7 +645,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Failed'
-                $result[0].Status | Should -BeLike 'Delete failed*'
+                $result[0].Status | Should -BeLike '*Delete failed*'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -539,14 +666,14 @@ Describe 'Import-IntuneMobileApp' {
                     if ($script:pageCount -eq 1) {
                         return @{
                             value             = @(
-                                @{ id = 'app1'; displayName = 'App 1'; notes = '' }
+                                @{ id = 'app1'; displayName = '[IHD] App 1'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = 'https://graph.microsoft.com/beta/next-page'
                         }
                     } else {
                         return @{
                             value             = @(
-                                @{ id = 'app2'; displayName = 'App 2'; notes = '' }
+                                @{ id = 'app2'; displayName = '[IHD] App 2'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = $null
                         }
@@ -582,12 +709,16 @@ Describe 'Import-IntuneMobileApp' {
     Context 'Result Object Structure' {
         BeforeEach {
             Mock Invoke-MgGraphRequest {
-                param($Method)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
-                if ($Method -eq 'POST') {
-                    return @{ id = 'new-id' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-id' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit

@@ -4,9 +4,9 @@
     "description": "User Driven Azure AD Join with Standard User",
     "deviceNameTemplate": "%SERIAL%",
     "locale": "os-default",
-    "preprovisioningAllowed": true,
+    "preprovisioningAllowed": false,
     "deviceType": "windowsPc",
-    "hardwareHashExtractionEnabled": true,
+    "hardwareHashExtractionEnabled": false,
     "roleScopeTagIds": [],
     "hybridAzureADJoinSkipConnectivityCheck": false,
     "outOfBoxExperienceSetting": {

@@ -61,16 +61,8 @@ function New-IntuneStaticGroup {
 
         # Check if group already exists (escape single quotes for OData filter)
         $safeDisplayName = $DisplayName -replace "'", "''"
-        $listUri = "v1.0/groups?`$filter=displayName eq '$safeDisplayName'"
-        $existingGroup = $null
-        do {
-            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
-                break
-            }
-            $listUri = $response.'@odata.nextLink'
-        } while ($listUri)
+        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$filter=displayName eq '$safeDisplayName'"
+        $existingGroup = $allMatches | Select-Object -First 1
 
         if ($existingGroup) {
             # If service principal owner is required, ensure it's an owner
@@ -100,7 +92,7 @@ function New-IntuneStaticGroup {
 
         # Create new static group
         if ($PSCmdlet.ShouldProcess($DisplayName, "Create static group")) {
-            $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $fullDescription = New-HydrationDescription -ExistingText $Description
 
             # Generate a safe mailNickname (alphanumeric only, max 64 chars)
             $mailNickname = ($DisplayName -replace '[^a-zA-Z0-9]', '')
@@ -113,7 +105,7 @@ function New-IntuneStaticGroup {
             }
 
             $groupBody = @{
-                displayName     = $DisplayName
+                displayName     = "$($script:ImportPrefix)$DisplayName"
                 description     = $fullDescription
                 mailEnabled     = $false
                 mailNickname    = $mailNickname
