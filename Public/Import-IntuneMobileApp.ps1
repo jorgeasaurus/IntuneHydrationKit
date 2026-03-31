@@ -137,9 +137,14 @@ function Import-IntuneMobileApp {
                 continue
             }
 
-            if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) {
+            # Check both prefixed and unprefixed names (backward compat with pre-prefix apps)
+            $originalName = $template.displayName
+            $hasLegacyMatch = -not [string]::IsNullOrWhiteSpace($originalName) -and $originalName -ne $displayName -and
+                              $existingApps.ContainsKey($originalName) -and $existingApps[$originalName].IsTagged
+            if (($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) -or $hasLegacyMatch) {
+                $matchedName = if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) { $displayName } else { $originalName }
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Id $existingApps[$displayName].Id -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
+                $results += New-HydrationResult -Name $displayName -Id $existingApps[$matchedName].Id -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
                 continue
             }
 

@@ -182,7 +182,8 @@ function Import-IntuneEnrollmentProfile {
             continue
         }
         # Some templates use displayName, others use name (configurationPolicies)
-        $profileName = if ($template.displayName) { "$($script:ImportPrefix)$($template.displayName)" } else { "$($script:ImportPrefix)$($template.name)" }
+        $templateBaseName = if ($template.displayName) { $template.displayName } else { $template.name }
+        $profileName = "$($script:ImportPrefix)$templateBaseName"
         $odataType = $template.'@odata.type'
         if ($template.technologies -eq 'enrollment') { $odataType = '#microsoft.graph.deviceManagementConfigurationPolicy' }
 
@@ -197,16 +198,29 @@ function Import-IntuneEnrollmentProfile {
             '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile' {
                 #region Windows Autopilot Deployment Profile
                 try {
-                    # Check if profile exists (escape single quotes for OData filter)
+                    # Check if profile exists - check both prefixed and unprefixed names (backward compat with pre-prefix profiles)
                     $safeProfileName = $profileName -replace "'", "''"
-                    $existingProfiles = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$filter=displayName eq '$safeProfileName'" -ErrorAction Stop
+                    $filter = "displayName eq '$safeProfileName'"
+                    if (-not [string]::IsNullOrWhiteSpace($templateBaseName) -and $templateBaseName -ne $profileName) {
+                        $safeOriginalName = $templateBaseName -replace "'", "''"
+                        $filter += " or displayName eq '$safeOriginalName'"
+                    }
+                    $existingProfiles = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$filter=$filter" -ErrorAction Stop
 
                     $taggedMatch = $false
                     $existingProfileId = $null
                     if ($existingProfiles.value.Count -gt 0) {
-                        $existingProfile = $existingProfiles.value[0]
-                        $existingProfileId = $existingProfile.id
-                        $taggedMatch = Test-HydrationKitObject -Description $existingProfile.description -ObjectName $profileName
+                        # Prefer a tagged (kit-created) profile over any untagged match
+                        foreach ($candidate in $existingProfiles.value) {
+                            if (Test-HydrationKitObject -Description $candidate.description -ObjectName $candidate.displayName) {
+                                $existingProfileId = $candidate.id
+                                $taggedMatch = $true
+                                break
+                            }
+                        }
+                        if (-not $taggedMatch) {
+                            $existingProfileId = $existingProfiles.value[0].id
+                        }
                     }
 
                     if ($taggedMatch) {
@@ -297,17 +311,32 @@ function Import-IntuneEnrollmentProfile {
             '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration' {
                 #region Enrollment Status Page
                 try {
-                    # Check if ESP exists (escape single quotes for OData filter)
+                    # Check if ESP exists - check both prefixed and unprefixed names (backward compat)
                     $safeEspName = $profileName -replace "'", "''"
-                    $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=displayName eq '$safeEspName'" -ErrorAction Stop
+                    $espFilter = "displayName eq '$safeEspName'"
+                    if (-not [string]::IsNullOrWhiteSpace($templateBaseName) -and $templateBaseName -ne $profileName) {
+                        $safeOrigEspName = $templateBaseName -replace "'", "''"
+                        $espFilter += " or displayName eq '$safeOrigEspName'"
+                    }
+                    $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=$espFilter" -ErrorAction Stop
 
-                    $customESP = $existingESP.value | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration' -and $_.displayName -eq $profileName }
+                    $customESP = $existingESP.value | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration' -and ($_.displayName -eq $profileName -or $_.displayName -eq $template.displayName) }
 
                     $taggedMatch = $false
                     $espId = $null
                     if ($customESP) {
-                        $espId = $customESP.id
-                        $taggedMatch = Test-HydrationKitObject -Description $customESP.description -ObjectName $profileName
+                        # Prefer a tagged (kit-created) ESP over any untagged match
+                        $espCandidates = @($customESP)
+                        foreach ($candidate in $espCandidates) {
+                            if (Test-HydrationKitObject -Description $candidate.description -ObjectName $candidate.displayName) {
+                                $espId = $candidate.id
+                                $taggedMatch = $true
+                                break
+                            }
+                        }
+                        if (-not $taggedMatch) {
+                            $espId = $espCandidates[0].id
+                        }
                     }
 
                     if ($taggedMatch) {
