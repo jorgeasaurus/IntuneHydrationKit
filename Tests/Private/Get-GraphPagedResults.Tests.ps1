@@ -1,3 +1,5 @@
+#Requires -Modules Pester
+
 BeforeAll {
     . $PSScriptRoot/../../Private/Get-GraphPagedResults.ps1
 }

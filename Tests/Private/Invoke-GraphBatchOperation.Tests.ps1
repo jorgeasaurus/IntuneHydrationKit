@@ -1,3 +1,5 @@
+#Requires -Modules Pester
+
 BeforeAll {
     . $PSScriptRoot/../../Private/Invoke-GraphBatchOperation.ps1
     . $PSScriptRoot/../../Private/New-HydrationResult.ps1

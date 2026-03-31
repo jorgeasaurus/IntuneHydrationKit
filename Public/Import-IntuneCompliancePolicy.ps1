@@ -183,11 +183,9 @@ function Import-IntuneCompliancePolicy {
             # Add hydration kit tag to description
             $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
-            # Linux endpoint expects 'name' instead of displayName; ensure it's present
+            # Linux endpoint expects 'name' instead of displayName; ensure it matches the prefixed name
             if ($isLinuxCompliance) {
-                if (-not $importBody.name) {
-                    $importBody | Add-Member -MemberType NoteProperty -Name name -Value $displayName -Force
-                }
+                $importBody | Add-Member -MemberType NoteProperty -Name name -Value $displayName -Force
             }
 
             # Custom compliance policies with scripts need sequential processing

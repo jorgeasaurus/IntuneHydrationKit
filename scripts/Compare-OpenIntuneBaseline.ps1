@@ -99,7 +99,7 @@ try {
     $null = New-Item -Path $tempBase -ItemType Directory -Force
 
     Write-Host "  Downloading upstream baseline..." -ForegroundColor Yellow -NoNewline
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -ErrorAction Stop
     Write-Host " Done" -ForegroundColor Green
 
     Write-Host "  Extracting..." -ForegroundColor Yellow -NoNewline

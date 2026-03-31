@@ -223,8 +223,8 @@ function Invoke-GraphBatchOperation {
                     } elseif ($resp.status -eq 404) {
                         Write-HydrationLog -Message "  Skipped: $($item.Name) (already deleted)" -Level Info
                         $results += New-HydrationResult @resultParams -Action 'Skipped' -Status 'Already deleted'
-                    } elseif ($resp.status -ge 500 -and $retryCount -lt $MaxRetries) {
-                        Write-Verbose "Server error ($($resp.status)) for '$($item.Name)' - will retry"
+                    } elseif (($resp.status -in @(429, 503) -or $resp.status -ge 500) -and $retryCount -lt $MaxRetries) {
+                        Write-Verbose "Retryable error ($($resp.status)) for '$($item.Name)' - will retry"
                         $itemsToRetry += $item
                     } else {
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
@@ -240,8 +240,8 @@ function Invoke-GraphBatchOperation {
                     } elseif ($resp.status -eq 409) {
                         Write-HydrationLog -Message "  Skipped: $($item.Name) (race condition)" -Level Info
                         $results += New-HydrationResult @resultParams -Action 'Skipped' -Status 'Already exists (race condition)'
-                    } elseif ($resp.status -ge 500 -and $retryCount -lt $MaxRetries) {
-                        Write-Verbose "Server error ($($resp.status)) for '$($item.Name)' - will retry"
+                    } elseif (($resp.status -in @(429, 503) -or $resp.status -ge 500) -and $retryCount -lt $MaxRetries) {
+                        Write-Verbose "Retryable error ($($resp.status)) for '$($item.Name)' - will retry"
                         $itemsToRetry += $item
                     } else {
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }

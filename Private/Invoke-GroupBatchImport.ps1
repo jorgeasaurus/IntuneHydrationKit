@@ -190,8 +190,14 @@ function Invoke-GroupBatchImport {
 
                 # Process responses
                 foreach ($resp in $batchResponse.responses) {
-                    $requestIndex = [int]$resp.id - 1
-                    $group = $currentBatch[$requestIndex]
+                    $requestIndex = $null
+                    $group = $null
+                    if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
+                        $requestIndex = $requestIndex - 1
+                        if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
+                            $group = $currentBatch[$requestIndex]
+                        }
+                    }
 
                     # Skip if we can't find the matching group
                     if (-not $group -or -not $group.displayName) {
@@ -280,8 +286,14 @@ function Invoke-GroupBatchImport {
 
             # Process responses
             foreach ($resp in $batchResponse.responses) {
-                $requestIndex = [int]$resp.id - 1
-                $groupDef = $currentBatch[$requestIndex]
+                $requestIndex = $null
+                $groupDef = $null
+                if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
+                    $requestIndex = $requestIndex - 1
+                    if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
+                        $groupDef = $currentBatch[$requestIndex]
+                    }
+                }
 
                 # Skip if we can't find the matching group definition
                 if (-not $groupDef -or -not $groupDef.displayName) {
@@ -377,8 +389,14 @@ function Invoke-GroupBatchImport {
 
             # Process responses
             foreach ($resp in $batchResponse.responses) {
-                $requestIndex = [int]$resp.id - 1
-                $groupDef = $currentBatch[$requestIndex]
+                $requestIndex = $null
+                $groupDef = $null
+                if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
+                    $requestIndex = $requestIndex - 1
+                    if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
+                        $groupDef = $currentBatch[$requestIndex]
+                    }
+                }
 
                 # Skip if we can't find the matching group definition
                 if (-not $groupDef -or -not $groupDef.displayName) {
