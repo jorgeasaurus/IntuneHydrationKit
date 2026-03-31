@@ -152,8 +152,9 @@ Describe 'Import-IntuneDeviceFilter' {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
-                    # Verify description in batch request
-                    $Body.requests[0].body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
+                    # Body may be a JSON string (from batch helper) or a hashtable
+                    $parsed = if ($Body -is [string]) { $Body | ConvertFrom-Json } else { $Body }
+                    $parsed.requests[0].body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
                     return @{
                         responses = @(
                             @{ id = '1'; status = 201; body = @{ id = 'new-filter-id'; displayName = 'Windows 11 Devices' } }
