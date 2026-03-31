@@ -167,10 +167,23 @@ function Import-IntuneDeviceFilter {
                     continue
                 }
 
-                # Check if filter already exists using pre-fetched list - only skip if tagged by kit
-                if ($existingFilters.ContainsKey($filter.displayName) -and $existingFilters[$filter.displayName].IsTagged) {
-                    Write-HydrationLog -Message "  Skipped: $($filter.displayName)" -Level Info
-                    $results += New-HydrationResult -Name $filter.displayName -Id $existingFilters[$filter.displayName].Id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
+                # Compute canonical prefixed name
+                $prefixedName = "$($script:ImportPrefix)$($filter.displayName)"
+
+                # Dual lookup: check both prefixed and unprefixed (legacy) names
+                $existingName = $null
+                $existingEntry = $null
+                if ($existingFilters.ContainsKey($prefixedName) -and $existingFilters[$prefixedName].IsTagged) {
+                    $existingName = $prefixedName
+                    $existingEntry = $existingFilters[$prefixedName]
+                } elseif ($existingFilters.ContainsKey($filter.displayName) -and $existingFilters[$filter.displayName].IsTagged) {
+                    $existingName = $filter.displayName
+                    $existingEntry = $existingFilters[$filter.displayName]
+                }
+
+                if ($existingEntry) {
+                    Write-HydrationLog -Message "  Skipped: $existingName" -Level Info
+                    $results += New-HydrationResult -Name $existingName -Id $existingEntry.Id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
                     continue
                 }
 
@@ -187,8 +200,9 @@ function Import-IntuneDeviceFilter {
     # Handle WhatIf mode for creation
     if ($WhatIfPreference) {
         foreach ($filter in $filtersToCreate) {
-            Write-HydrationLog -Message "  WouldCreate: $($filter.displayName)" -Level Info
-            $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
+            $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
+            Write-HydrationLog -Message "  WouldCreate: $prefixedName" -Level Info
+            $results += New-HydrationResult -Name $prefixedName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
         }
         return $results
     }
@@ -197,15 +211,16 @@ function Import-IntuneDeviceFilter {
     if ($filtersToCreate.Count -gt 0) {
         $batchItems = @()
         foreach ($filter in $filtersToCreate) {
+            $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
             $filterBody = @{
-                displayName   = "$($script:ImportPrefix)$($filter.displayName)"
+                displayName   = $prefixedName
                 description   = New-HydrationDescription -ExistingText $filter.description
                 platform      = $filter.platform
                 rule          = $filter.rule
                 roleScopeTags = @("0")
             }
             $batchItems += @{
-                Name     = "$($script:ImportPrefix)$($filter.displayName)"
+                Name     = $prefixedName
                 Platform = $filter.platform
                 BodyJson = ($filterBody | ConvertTo-Json -Depth 10 -Compress)
             }

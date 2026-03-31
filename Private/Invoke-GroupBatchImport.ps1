@@ -228,32 +228,43 @@ function Invoke-GroupBatchImport {
 
     #endregion
 
-    # Apply import prefix to group definition display names
+    # Apply import prefix — create copies to avoid mutating caller's objects
     $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
+    $prefixedDefinitions = @()
     foreach ($gd in $GroupDefinitions) {
-        if ($gd.displayName -and -not [string]::IsNullOrEmpty($importPrefix) -and -not $gd.displayName.StartsWith($importPrefix)) {
-            $gd.displayName = "$importPrefix$($gd.displayName)"
+        $copy = $gd | Select-Object *
+        $originalName = $gd.displayName
+        if ($copy.displayName -and -not [string]::IsNullOrEmpty($importPrefix) -and -not $copy.displayName.StartsWith($importPrefix)) {
+            $copy.displayName = "$importPrefix$($copy.displayName)"
         }
+        $copy | Add-Member -NotePropertyName '_OriginalDisplayName' -NotePropertyValue $originalName -Force
+        $prefixedDefinitions += $copy
     }
 
     #region Phase 1: Batch Existence Checks
 
-    Write-Verbose "Checking existence of $($GroupDefinitions.Count) groups in batches..."
+    Write-Verbose "Checking existence of $($prefixedDefinitions.Count) groups in batches..."
 
     $existingGroups = @{}  # displayName -> group object
     $groupsToCreate = @()
 
     # Build batch requests for existence checks
-    for ($batchStart = 0; $batchStart -lt $GroupDefinitions.Count; $batchStart += $maxBatchSize) {
-        $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $GroupDefinitions.Count) - 1
-        $currentBatch = $GroupDefinitions[$batchStart..$batchEnd]
+    for ($batchStart = 0; $batchStart -lt $prefixedDefinitions.Count; $batchStart += $maxBatchSize) {
+        $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $prefixedDefinitions.Count) - 1
+        $currentBatch = $prefixedDefinitions[$batchStart..$batchEnd]
 
         $batchRequests = @()
         for ($i = 0; $i -lt $currentBatch.Count; $i++) {
             $groupDef = $currentBatch[$i]
-            # Escape single quotes for OData filter
-            $safeDisplayName = $groupDef.displayName -replace "'", "''"
-            $filterUri = "/groups?`$filter=displayName eq '$safeDisplayName'&`$select=id,displayName,description"
+            # Escape single quotes for OData filter — both prefixed and original (legacy) names
+            $safePrefixedName = $groupDef.displayName -replace "'", "''"
+            $safeOriginalName = $groupDef._OriginalDisplayName -replace "'", "''"
+
+            if ($safePrefixedName -ne $safeOriginalName) {
+                $filterUri = "/groups?`$filter=displayName eq '$safePrefixedName' or displayName eq '$safeOriginalName'&`$select=id,displayName,description"
+            } else {
+                $filterUri = "/groups?`$filter=displayName eq '$safePrefixedName'&`$select=id,displayName,description"
+            }
 
             $batchRequests += @{
                 id     = ($i + 1).ToString()
@@ -279,8 +290,12 @@ function Invoke-GroupBatchImport {
                 }
 
                 if ($resp.status -eq 200 -and $resp.body.value.Count -gt 0) {
-                    # Group exists
-                    $existingGroups[$groupDef.displayName] = $resp.body.value[0]
+                    # Group exists — prefer the prefixed name match when multiple results
+                    $matchingGroup = $resp.body.value | Where-Object { $_.displayName -eq $groupDef.displayName } | Select-Object -First 1
+                    if (-not $matchingGroup) {
+                        $matchingGroup = $resp.body.value[0]
+                    }
+                    $existingGroups[$groupDef.displayName] = $matchingGroup
                 } elseif ($resp.status -eq 200) {
                     # Group does not exist - add to creation list
                     $groupsToCreate += $groupDef

@@ -51,6 +51,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
+# Sanitize inputs
+$UpstreamRepoUrl = $UpstreamRepoUrl.TrimEnd('/')
+if ($Branch -notmatch '^[a-zA-Z0-9._/\-]+$') {
+    Write-Error "Invalid branch name: '$Branch'. Branch names must contain only alphanumeric characters, dots, hyphens, underscores, or forward slashes."
+    return
+}
+
 # Resolve paths
 $repoRoot = Split-Path -Path $PSScriptRoot -Parent
 if (-not $LocalPath) {
@@ -106,6 +113,13 @@ try {
         return
     }
     $upstreamRoot = $extractedFolder.FullName
+
+    # Validate upstream contains JSON files
+    $upstreamJsonCount = (Get-ChildItem -Path $upstreamRoot -Recurse -File -Filter '*.json' -ErrorAction SilentlyContinue | Measure-Object).Count
+    if ($upstreamJsonCount -eq 0) {
+        Write-Error "Upstream repository contains no JSON files. The archive may have an unexpected structure."
+        return
+    }
 
     # --- Collect files ---
 

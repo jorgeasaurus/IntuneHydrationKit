@@ -78,6 +78,6 @@ function Get-GraphPagedResults {
     } while ($listUri)
 
     if (-not $ProcessItems) {
-        return , @($results)
+        return , @($results.ToArray())
     }
 }
