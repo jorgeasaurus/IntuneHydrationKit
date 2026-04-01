@@ -383,19 +383,25 @@ function Import-IntuneEnrollmentProfile {
                     $safeProfileName = $profileName -replace "'", "''"
                     $existingDEP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/depOnboardingSettings" -ErrorAction Stop
 
-                    # Find enrollment profiles for each DEP token
-                    $profileExists = $false
+                    # Find enrollment profiles for each DEP token — prefer tagged match
                     $taggedMatch = $false
                     $existingProfileId = $null
                     foreach ($depToken in $existingDEP.value) {
                         $depProfiles = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/depOnboardingSettings/$($depToken.id)/enrollmentProfiles" -ErrorAction SilentlyContinue
-                        $matchingProfile = $depProfiles.value | Where-Object { $_.displayName -eq $profileName }
-                        if ($matchingProfile) {
-                            $profileExists = $true
-                            $existingProfileId = $matchingProfile.id
-                            $taggedMatch = Test-HydrationKitObject -Description $matchingProfile.description -ObjectName $profileName
-                            break
+                        foreach ($depProfile in $depProfiles.value) {
+                            $isNameMatch = $depProfile.displayName -eq $profileName
+                            $isLegacyMatch = -not [string]::IsNullOrWhiteSpace($templateBaseName) -and $templateBaseName -ne $profileName -and $depProfile.displayName -eq $templateBaseName
+                            if ($isNameMatch -or $isLegacyMatch) {
+                                $checkName = if ($isNameMatch) { $profileName } else { $templateBaseName }
+                                if (Test-HydrationKitObject -Description $depProfile.description -ObjectName $checkName) {
+                                    $taggedMatch = $true
+                                    $existingProfileId = $depProfile.id
+                                    break
+                                }
+                                if (-not $existingProfileId) { $existingProfileId = $depProfile.id }
+                            }
                         }
+                        if ($taggedMatch) { break }
                     }
 
                     if ($taggedMatch) {
@@ -405,7 +411,8 @@ function Import-IntuneEnrollmentProfile {
                         Write-HydrationLog -Message "  Skipped: $profileName - No Apple DEP token configured" -Level Warning
                         $results += New-HydrationResult -Name $profileName -Type 'MacOSDEPEnrollmentProfile' -Action 'Skipped' -Status 'No DEP token configured'
                     } elseif ($PSCmdlet.ShouldProcess($profileName, "Create macOS DEP enrollment profile")) {
-                        # Update description with hydration tag
+                        # Apply prefix and hydration tag
+                        $template.displayName = $profileName
                         $template.description = New-HydrationDescription -ExistingText $template.description
 
                         # Convert to JSON for API call
@@ -436,13 +443,22 @@ function Import-IntuneEnrollmentProfile {
                     # Check if policy exists - filter by technologies (name filter not supported)
                     $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
 
-                    $existingPolicy = $existingPolicies.value | Where-Object { $_.name -eq $profileName }
-
+                    $existingPolicy = $null
                     $taggedMatch = $false
                     $existingPolicyId = $null
-                    if ($existingPolicy) {
-                        $existingPolicyId = $existingPolicy.id
-                        $taggedMatch = Test-HydrationKitObject -Description $existingPolicy.description -ObjectName $profileName
+                    foreach ($pol in $existingPolicies.value) {
+                        $isNameMatch = $pol.name -eq $profileName
+                        $isLegacyMatch = -not [string]::IsNullOrWhiteSpace($templateBaseName) -and $templateBaseName -ne $profileName -and $pol.name -eq $templateBaseName
+                        if ($isNameMatch -or $isLegacyMatch) {
+                            $existingPolicy = $pol
+                            $checkName = if ($isNameMatch) { $profileName } else { $templateBaseName }
+                            if (Test-HydrationKitObject -Description $pol.description -ObjectName $checkName) {
+                                $taggedMatch = $true
+                                $existingPolicyId = $pol.id
+                                break
+                            }
+                            if (-not $existingPolicyId) { $existingPolicyId = $pol.id }
+                        }
                     }
 
                     if ($taggedMatch) {
@@ -454,7 +470,7 @@ function Import-IntuneEnrollmentProfile {
 
                         # Build the policy body
                         $policyBody = @{
-                            name              = $template.name
+                            name              = $profileName
                             description       = $policyDescription
                             platforms         = $template.platforms
                             technologies      = $template.technologies

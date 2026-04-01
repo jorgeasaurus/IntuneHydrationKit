@@ -154,9 +154,12 @@ function Import-IntuneCompliancePolicy {
                 "deviceManagement/deviceCompliancePolicies"
             }
 
-            # For Linux, also consider 'name' when matching
+            # Check both prefixed and unprefixed names to avoid duplicates when upgrading from pre-prefix tenants
             $lookupNames = @($displayName)
-            if ($isLinuxCompliance -and $template.name) {
+            if ($template.displayName -and $template.displayName -ne $displayName) {
+                $lookupNames += $template.displayName
+            }
+            if ($isLinuxCompliance -and $template.name -and $template.name -ne $template.displayName) {
                 $lookupNames += $template.name
             }
 
