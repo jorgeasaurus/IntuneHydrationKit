@@ -21,6 +21,7 @@ Describe 'New-IntuneDynamicGroup' {
 
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([string])
+            ($param.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
         }
 
         It 'Should have mandatory MembershipRule parameter' {
@@ -29,6 +30,7 @@ Describe 'New-IntuneDynamicGroup' {
 
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([string])
+            ($param.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
         }
 
         It 'Should support ShouldProcess (WhatIf)' {

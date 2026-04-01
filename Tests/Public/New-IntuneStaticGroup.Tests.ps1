@@ -21,6 +21,7 @@ Describe 'New-IntuneStaticGroup' {
 
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([string])
+            ($param.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
         }
 
         It 'Should have RequiresServicePrincipalOwner switch parameter' {
