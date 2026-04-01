@@ -127,10 +127,12 @@ function Import-IntuneConditionalAccessPolicy {
             return $results
         }
 
-        if ($WhatIfPreference) {
-            foreach ($policy in $policiesToDelete) {
-                Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
-                $results += New-HydrationResult -Name $policy.Name -Type 'ConditionalAccessPolicy' -Action 'WouldDelete' -Status 'DryRun'
+        if (-not $PSCmdlet.ShouldProcess("$($policiesToDelete.Count) Conditional Access policies", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($policy in $policiesToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
+                    $results += New-HydrationResult -Name $policy.Name -Type 'ConditionalAccessPolicy' -Action 'WouldDelete' -Status 'DryRun'
+                }
             }
             return $results
         }
@@ -203,10 +205,12 @@ function Import-IntuneConditionalAccessPolicy {
         }
     }
 
-    if ($WhatIfPreference) {
-        foreach ($policy in $policiesToCreate) {
-            Write-HydrationLog -Message "  WouldCreate: $($policy.Name)" -Level Info
-            $results += New-HydrationResult -Name $policy.Name -Type 'ConditionalAccessPolicy' -Action 'WouldCreate' -Status 'DryRun' -State 'disabled'
+    if (-not $PSCmdlet.ShouldProcess("$($policiesToCreate.Count) Conditional Access policies", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($policy in $policiesToCreate) {
+                Write-HydrationLog -Message "  WouldCreate: $($policy.Name)" -Level Info
+                $results += New-HydrationResult -Name $policy.Name -Type 'ConditionalAccessPolicy' -Action 'WouldCreate' -Status 'DryRun' -State 'disabled'
+            }
         }
         return $results
     }

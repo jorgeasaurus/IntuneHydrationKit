@@ -224,9 +224,11 @@ function Import-IntuneBaseline {
 
         # Handle WhatIf mode
         if (-not $PSCmdlet.ShouldProcess("$($policiesToDelete.Count) baseline policies", "Delete")) {
-            foreach ($policy in $policiesToDelete) {
-                Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
-                $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'WouldDelete' -Status 'DryRun'
+            if ($WhatIfPreference) {
+                foreach ($policy in $policiesToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
+                    $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'WouldDelete' -Status 'DryRun'
+                }
             }
             return $results
         }

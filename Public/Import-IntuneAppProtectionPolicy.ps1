@@ -125,11 +125,13 @@ function Import-IntuneAppProtectionPolicy {
             return $results
         }
 
-        if ($WhatIfPreference) {
-            foreach ($endpoint in $policiesByEndpoint.Keys) {
-                foreach ($policy in $policiesByEndpoint[$endpoint]) {
-                    Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
-                    $results += New-HydrationResult -Name $policy.Name -Type 'AppProtection' -Action 'WouldDelete' -Status 'DryRun'
+        if (-not $PSCmdlet.ShouldProcess("$totalPolicies app protection policy/policies", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($endpoint in $policiesByEndpoint.Keys) {
+                    foreach ($policy in $policiesByEndpoint[$endpoint]) {
+                        Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
+                        $results += New-HydrationResult -Name $policy.Name -Type 'AppProtection' -Action 'WouldDelete' -Status 'DryRun'
+                    }
                 }
             }
             return $results
@@ -206,10 +208,12 @@ function Import-IntuneAppProtectionPolicy {
         }
     }
 
-    if ($WhatIfPreference) {
-        foreach ($policy in $policiesToCreate) {
-            Write-HydrationLog -Message "  WouldCreate: $($policy.Name)" -Level Info
-            $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'AppProtection' -Action 'WouldCreate' -Status 'DryRun'
+    if (-not $PSCmdlet.ShouldProcess("$($policiesToCreate.Count) app protection policy/policies", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($policy in $policiesToCreate) {
+                Write-HydrationLog -Message "  WouldCreate: $($policy.Name)" -Level Info
+                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'AppProtection' -Action 'WouldCreate' -Status 'DryRun'
+            }
         }
         return $results
     }

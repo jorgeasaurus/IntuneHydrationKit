@@ -83,12 +83,6 @@ function Import-IntuneDeviceFilter {
         $existingFilters = @{}
     }
 
-    # Build a simple name->id lookup for backwards compatibility in the import section
-    $existingFilterNames = @{}
-    foreach ($key in $existingFilters.Keys) {
-        $existingFilterNames[$key] = $existingFilters[$key].Id
-    }
-
     # Remove existing filters if requested
     # SAFETY: Only delete filters that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
@@ -124,11 +118,13 @@ function Import-IntuneDeviceFilter {
             return $results
         }
 
-        # Handle WhatIf mode
-        if ($WhatIfPreference) {
-            foreach ($filter in $filtersToDelete) {
-                Write-HydrationLog -Message "  WouldDelete: $($filter.Name)" -Level Info
-                $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'WouldDelete' -Status 'DryRun'
+        # Handle WhatIf/Confirm mode
+        if (-not $PSCmdlet.ShouldProcess("$($filtersToDelete.Count) device filter(s)", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($filter in $filtersToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($filter.Name)" -Level Info
+                    $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'WouldDelete' -Status 'DryRun'
+                }
             }
             return $results
         }
@@ -197,12 +193,14 @@ function Import-IntuneDeviceFilter {
         }
     }
 
-    # Handle WhatIf mode for creation
-    if ($WhatIfPreference) {
-        foreach ($filter in $filtersToCreate) {
-            $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
-            Write-HydrationLog -Message "  WouldCreate: $prefixedName" -Level Info
-            $results += New-HydrationResult -Name $prefixedName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
+    # Handle WhatIf/Confirm mode for creation
+    if (-not $PSCmdlet.ShouldProcess("$($filtersToCreate.Count) device filter(s)", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($filter in $filtersToCreate) {
+                $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
+                Write-HydrationLog -Message "  WouldCreate: $prefixedName" -Level Info
+                $results += New-HydrationResult -Name $prefixedName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
+            }
         }
         return $results
     }

@@ -114,10 +114,12 @@ function Import-IntuneMobileApp {
             return $results
         }
 
-        if ($WhatIfPreference) {
-            foreach ($app in $appsToDelete) {
-                Write-HydrationLog -Message "  WouldDelete: $($app.Name)" -Level Info
-                $results += New-HydrationResult -Name $app.Name -Type 'MobileApp' -Action 'WouldDelete' -Status 'DryRun'
+        if (-not $PSCmdlet.ShouldProcess("$($appsToDelete.Count) mobile app(s)", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($app in $appsToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($app.Name)" -Level Info
+                    $results += New-HydrationResult -Name $app.Name -Type 'MobileApp' -Action 'WouldDelete' -Status 'DryRun'
+                }
             }
             return $results
         }
@@ -175,10 +177,12 @@ function Import-IntuneMobileApp {
         }
     }
 
-    if ($WhatIfPreference) {
-        foreach ($app in $appsToCreate) {
-            Write-HydrationLog -Message "  WouldCreate: $($app.Name)" -Level Info
-            $results += New-HydrationResult -Name $app.Name -Path $app.Path -Type 'MobileApp' -Action 'WouldCreate' -Status 'DryRun'
+    if (-not $PSCmdlet.ShouldProcess("$($appsToCreate.Count) mobile app(s)", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($app in $appsToCreate) {
+                Write-HydrationLog -Message "  WouldCreate: $($app.Name)" -Level Info
+                $results += New-HydrationResult -Name $app.Name -Path $app.Path -Type 'MobileApp' -Action 'WouldCreate' -Status 'DryRun'
+            }
         }
         return $results
     }

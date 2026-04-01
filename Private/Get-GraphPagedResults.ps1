@@ -67,10 +67,7 @@ function Get-GraphPagedResults {
             & $ProcessItems $responseValue
         } else {
             if ($responseValue) {
-                $asArray = @($responseValue)
-                if ($asArray.Count -gt 0) {
-                    $results.AddRange($asArray)
-                }
+                $results.AddRange(@($responseValue))
             }
         }
 
@@ -78,6 +75,6 @@ function Get-GraphPagedResults {
     } while ($listUri)
 
     if (-not $ProcessItems) {
-        return , @($results.ToArray())
+        return , $results.ToArray()
     }
 }
