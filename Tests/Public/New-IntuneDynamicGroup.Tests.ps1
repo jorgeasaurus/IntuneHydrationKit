@@ -78,7 +78,7 @@ Describe 'New-IntuneDynamicGroup' {
     Context 'When group already exists with unprefixed legacy name' {
         BeforeEach {
             Mock Get-GraphPagedResults {
-                @(@{ id = 'legacy-group-id'; displayName = 'Windows 11 Devices' })
+                @(@{ id = 'legacy-group-id'; displayName = 'Windows 11 Devices'; description = 'Imported by Intune Hydration Kit' })
             } -ModuleName IntuneHydrationKit
 
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit

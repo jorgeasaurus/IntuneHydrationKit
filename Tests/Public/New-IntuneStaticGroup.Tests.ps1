@@ -71,7 +71,7 @@ Describe 'New-IntuneStaticGroup' {
     Context 'When group already exists with unprefixed legacy name' {
         BeforeEach {
             Mock Get-GraphPagedResults {
-                @(@{ id = 'legacy-group-id'; displayName = 'Update Ring Pilot' })
+                @(@{ id = 'legacy-group-id'; displayName = 'Update Ring Pilot'; description = 'Imported by Intune Hydration Kit' })
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest { } -ModuleName IntuneHydrationKit

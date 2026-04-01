@@ -137,7 +137,8 @@ function Import-IntuneConditionalAccessPolicy {
             return $results
         }
 
-        return Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -BaseUrl '/identity/conditionalAccess/policies' -ResultType 'ConditionalAccessPolicy'
+        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -BaseUrl '/identity/conditionalAccess/policies' -ResultType 'ConditionalAccessPolicy'
+        return $results
     }
 
     # Collect policies to create

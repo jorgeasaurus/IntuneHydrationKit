@@ -40,8 +40,26 @@ function New-IntuneDynamicGroup {
         $safeOrigName = $DisplayName -replace "'", "''"
 
         # Check for both prefixed and unprefixed names (backward compat with pre-prefix groups)
-        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
-        $existingGroup = $allMatches | Select-Object -First 1
+        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$select=id,displayName,description&`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
+
+        # Prefer prefixed+tagged match, then any tagged match, then exact prefixed name (to avoid duplicates)
+        $existingGroup = $null
+        if ($allMatches) {
+            foreach ($match in $allMatches) {
+                $isTagged = Test-HydrationKitObject -Description $match.description -ObjectName $match.displayName
+                if ($match.displayName -eq $finalDisplayName -and $isTagged) {
+                    $existingGroup = $match
+                    break
+                }
+                if ($isTagged -and -not $existingGroup) {
+                    $existingGroup = $match
+                }
+            }
+            # Fallback: if no tagged match, still skip exact prefixed name to avoid duplicates
+            if (-not $existingGroup) {
+                $existingGroup = $allMatches | Where-Object { $_.displayName -eq $finalDisplayName } | Select-Object -First 1
+            }
+        }
 
         if ($existingGroup) {
             return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'DynamicGroup' -Action 'Skipped' -Status 'Group already exists'

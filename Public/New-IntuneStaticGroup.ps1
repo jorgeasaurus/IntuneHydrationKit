@@ -63,8 +63,26 @@ function New-IntuneStaticGroup {
         $finalDisplayName = "$($script:ImportPrefix)$DisplayName"
         $safeFinalName = $finalDisplayName -replace "'", "''"
         $safeOrigName = $DisplayName -replace "'", "''"
-        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
-        $existingGroup = $allMatches | Select-Object -First 1
+        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$select=id,displayName,description&`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
+
+        # Prefer prefixed+tagged match, then any tagged match, then exact prefixed name (to avoid duplicates)
+        $existingGroup = $null
+        if ($allMatches) {
+            foreach ($match in $allMatches) {
+                $isTagged = Test-HydrationKitObject -Description $match.description -ObjectName $match.displayName
+                if ($match.displayName -eq $finalDisplayName -and $isTagged) {
+                    $existingGroup = $match
+                    break
+                }
+                if ($isTagged -and -not $existingGroup) {
+                    $existingGroup = $match
+                }
+            }
+            # Fallback: if no tagged match, still skip exact prefixed name to avoid duplicates
+            if (-not $existingGroup) {
+                $existingGroup = $allMatches | Where-Object { $_.displayName -eq $finalDisplayName } | Select-Object -First 1
+            }
+        }
 
         if ($existingGroup) {
             # If service principal owner is required, ensure it's an owner
