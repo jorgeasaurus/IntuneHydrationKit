@@ -89,7 +89,7 @@ function Import-IntuneBaseline {
     # - OS/NativeImport/ - Settings Catalog policies that can be imported via Graph API
     # - BYOD/AppProtection/ - App protection policies
 
-    # Map folder names to Graph API endpoints (normalized names only, no duplicates)
+    # Map folder names to Graph API endpoints (includes aliases for different baseline versions)
     $endpointMap = @{
         'NativeImport'                     = 'deviceManagement/configurationPolicies'
         'AppProtection'                    = 'deviceAppManagement/managedAppPolicies'
@@ -142,10 +142,13 @@ function Import-IntuneBaseline {
         '#microsoft.graph.deviceManagementConfigurationPolicy'          = 'deviceManagement/configurationPolicies'
         # Windows Update for Business - Driver Updates
         '#microsoft.graph.windowsDriverUpdateProfile'                   = 'deviceManagement/windowsDriverUpdateProfiles'
+        # App Protection Policies (BYOD baseline)
+        '#microsoft.graph.androidManagedAppProtection'                  = 'deviceAppManagement/androidManagedAppProtections'
+        '#microsoft.graph.iosManagedAppProtection'                      = 'deviceAppManagement/iosManagedAppProtections'
     }
 
-    # Folders that previously required IntuneManagement tool - now we try to import via Graph API
-    $intuneManagementFolders = @('IntuneManagement')
+    # Folders routed via @odata.type lookup instead of $endpointMap
+    $intuneManagementFolders = @('IntuneManagement', 'AppProtection')
 
     # Folders to skip - NativeImport duplicates policies from IntuneManagement with fewer options
     $skipFolders = @('NativeImport')
@@ -161,18 +164,30 @@ function Import-IntuneBaseline {
         # Load template names to scope deletes to only policies this kit would create
         $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -Recurse
 
-        # Delete from main endpoints used by baselines
-        # Note: App protection policies are handled separately by Import-IntuneAppProtectionPolicy
+        # Delete from all endpoints used by baselines
+        # Shared endpoints always included; platform-specific endpoints scoped by -Platform
         $deleteEndpoints = @(
             'beta/deviceManagement/configurationPolicies',
             'beta/deviceManagement/deviceConfigurations',
             'beta/deviceManagement/deviceCompliancePolicies'
         )
 
+        # Add platform-specific endpoints only when that platform is in scope
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'Windows') {
+            $deleteEndpoints += 'beta/deviceManagement/windowsDriverUpdateProfiles'
+        }
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'Android') {
+            $deleteEndpoints += 'beta/deviceAppManagement/androidManagedAppProtections'
+        }
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'iOS') {
+            $deleteEndpoints += 'beta/deviceAppManagement/iosManagedAppProtections'
+        }
+
         # Collect all policies to delete across all endpoints.
         # Uses accumulation pattern instead of ProcessItems scriptblock to avoid
         # scope issue ($var += inside & {} creates a local copy that is discarded).
         $policiesToDelete = @()
+        $escapedPrefix = [regex]::Escape($script:ImportPrefix)
         foreach ($endpoint in $deleteEndpoints) {
             try {
                 $allPolicies = Get-GraphPagedResults -Uri $endpoint
@@ -186,7 +201,6 @@ function Import-IntuneBaseline {
                     }
 
                     # Warn if policy name doesn't match current templates (may be from older version)
-                    $escapedPrefix = [regex]::Escape($script:ImportPrefix)
                     $baselineNameForLookup = $policyName -replace "^$escapedPrefix", ''
                     if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
                         Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
