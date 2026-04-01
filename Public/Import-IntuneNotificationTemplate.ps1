@@ -53,29 +53,23 @@ function Import-IntuneNotificationTemplate {
         $existingTemplates = @{}
     }
 
-    # Build a simple name->id lookup for backwards compatibility in the import section
-    $existingByName = @{}
-    foreach ($key in $existingTemplates.Keys) {
-        $existingByName[$key] = $existingTemplates[$key].Id
-    }
-
-    # Build list of template names from our JSON files for name-based matching
-    $templateNames = @{}
-    foreach ($templateFile in $templateFiles) {
-        try {
-            $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            if ($templateContent.displayName) {
-                $templateNames[$templateContent.displayName] = $true
-            }
-        } catch {
-            Write-Verbose "Could not read template file: $($templateFile.FullName)"
-        }
-    }
-
     # Remove existing notification templates if requested
     # SAFETY: Only delete templates whose names match our template files
     # Note: Notification templates don't support description field, so we match by name
     if ($RemoveExisting) {
+        # Build list of template names from our JSON files for name-based matching
+        $templateNames = @{}
+        foreach ($templateFile in $templateFiles) {
+            try {
+                $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+                if ($templateContent.displayName) {
+                    $templateNames[$templateContent.displayName] = $true
+                }
+            } catch {
+                Write-Verbose "Could not read template file: $($templateFile.FullName)"
+            }
+        }
+
         foreach ($templateName in $existingTemplates.Keys) {
             $templateInfo = $existingTemplates[$templateName]
 
@@ -117,9 +111,16 @@ function Import-IntuneNotificationTemplate {
                 continue
             }
 
-            if ($existingByName.ContainsKey($displayName)) {
+            if ($existingTemplates.ContainsKey($displayName)) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
+                continue
+            }
+
+            # Check for legacy unprefixed template to prevent duplicates on upgrade
+            if ($existingTemplates.ContainsKey($template.displayName)) {
+                Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists (legacy name)'
                 continue
             }
 
