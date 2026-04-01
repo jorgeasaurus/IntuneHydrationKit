@@ -59,10 +59,20 @@ function Import-IntuneDeviceFilter {
         do {
             $existingFiltersResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
             foreach ($existingFilter in $existingFiltersResponse.value) {
-                if (-not $existingFilters.ContainsKey($existingFilter.displayName)) {
-                    $existingFilters[$existingFilter.displayName] = @{
-                        Id          = $existingFilter.id
-                        Description = $existingFilter.description
+                if ($existingFilter.displayName) {
+                    $isTagged = Test-HydrationKitObject -Description $existingFilter.description
+                    if (-not $existingFilters.ContainsKey($existingFilter.displayName)) {
+                        $existingFilters[$existingFilter.displayName] = @{
+                            Id          = $existingFilter.id
+                            Description = $existingFilter.description
+                            IsTagged    = $isTagged
+                        }
+                    } elseif ($isTagged -and -not $existingFilters[$existingFilter.displayName].IsTagged) {
+                        $existingFilters[$existingFilter.displayName] = @{
+                            Id          = $existingFilter.id
+                            Description = $existingFilter.description
+                            IsTagged    = $true
+                        }
                     }
                 }
             }
@@ -73,15 +83,14 @@ function Import-IntuneDeviceFilter {
         $existingFilters = @{}
     }
 
-    # Build a simple name->id lookup for backwards compatibility in the import section
-    $existingFilterNames = @{}
-    foreach ($key in $existingFilters.Keys) {
-        $existingFilterNames[$key] = $existingFilters[$key].Id
-    }
-
     # Remove existing filters if requested
     # SAFETY: Only delete filters that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
+        # Load template names to scope deletes to only filters this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -ArrayProperty 'filters' -Recurse
+
+        # Collect filters to delete (only those with hydration marker AND matching a template name)
+        $filtersToDelete = @()
         foreach ($filterName in $existingFilters.Keys) {
             $filterInfo = $existingFilters[$filterName]
 
@@ -91,44 +100,43 @@ function Import-IntuneDeviceFilter {
                 continue
             }
 
-            if ($PSCmdlet.ShouldProcess($filterName, "Delete device filter")) {
-                $maxRetries = 3
-                $retryCount = 0
-                $success = $false
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $filterName -replace "^$escapedPrefix", ''
+            if (-not ($knownTemplateNames.Contains($filterName) -or $knownTemplateNames.Contains($nameForLookup))) {
+                Write-Verbose "Skipping '$filterName' - not in this kit's templates (may be from another tool)"
+                continue
+            }
 
-                while (-not $success -and $retryCount -lt $maxRetries) {
-                    try {
-                        Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/assignmentFilters/$($filterInfo.Id)" -ErrorAction Stop
-                        Write-HydrationLog -Message "  Deleted: $filterName" -Level Info
-                        $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Deleted' -Status 'Success'
-                        $success = $true
-                    } catch {
-                        $statusCode = $_.Exception.Response.StatusCode.value__
-
-                        # Only retry on server errors (500+), not client errors (400-499)
-                        if ($statusCode -ge 500 -and $retryCount -lt ($maxRetries - 1)) {
-                            $retryCount++
-                            $waitSeconds = [math]::Pow(2, $retryCount)
-                            Write-HydrationLog -Message "  Retry $retryCount/$maxRetries for '$filterName' after ${waitSeconds}s (HTTP $statusCode)" -Level Info
-                            Start-Sleep -Seconds $waitSeconds
-                        } else {
-                            $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                            Write-HydrationLog -Message "  [!] Failed: $filterName - $errMessage" -Level Warning
-                            $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'Failed' -Status "Delete failed: $errMessage"
-                            break
-                        }
-                    }
-                }
-            } else {
-                Write-HydrationLog -Message "  WouldDelete: $filterName" -Level Info
-                $results += New-HydrationResult -Name $filterName -Type 'DeviceFilter' -Action 'WouldDelete' -Status 'DryRun'
+            $filtersToDelete += @{
+                Name = $filterName
+                Id   = $filterInfo.Id
             }
         }
+
+        if ($filtersToDelete.Count -eq 0) {
+            Write-Verbose "No device filters found to delete"
+            return $results
+        }
+
+        # Handle WhatIf/Confirm mode
+        if (-not $PSCmdlet.ShouldProcess("$($filtersToDelete.Count) device filter(s)", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($filter in $filtersToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($filter.Name)" -Level Info
+                    $results += New-HydrationResult -Name $filter.Name -Type 'DeviceFilter' -Action 'WouldDelete' -Status 'DryRun'
+                }
+            }
+            return $results
+        }
+
+        # Batch delete filters using centralized helper
+        $results += Invoke-GraphBatchOperation -Items $filtersToDelete -Operation 'DELETE' -BaseUrl '/deviceManagement/assignmentFilters' -ResultType 'DeviceFilter'
 
         return $results
     }
 
-    # Process each template file
+    # Collect all filters from templates
+    $filtersToCreate = @()
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
@@ -155,72 +163,67 @@ function Import-IntuneDeviceFilter {
                     continue
                 }
 
-                try {
-                    # Check if filter already exists using pre-fetched list
-                    if ($existingFilterNames.ContainsKey($filter.displayName)) {
-                        Write-HydrationLog -Message "  Skipped: $($filter.displayName)" -Level Info
-                        $results += New-HydrationResult -Name $filter.displayName -Id $existingFilterNames[$filter.displayName] -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
-                        continue
-                    }
+                # Compute canonical prefixed name
+                $prefixedName = "$($script:ImportPrefix)$($filter.displayName)"
 
-                    if ($PSCmdlet.ShouldProcess($filter.displayName, "Create device filter")) {
-                        # Build description with hydration kit marker
-                        $description = if ($filter.description) {
-                            "$($filter.description) - Imported by Intune Hydration Kit"
-                        } else {
-                            "Imported by Intune Hydration Kit"
-                        }
-
-                        $filterBody = @{
-                            displayName   = $filter.displayName
-                            description   = $description
-                            platform      = $filter.platform
-                            rule          = $filter.rule
-                            roleScopeTags = @("0")
-                        }
-
-                        $maxRetries = 3
-                        $retryCount = 0
-                        $success = $false
-
-                        while (-not $success -and $retryCount -lt $maxRetries) {
-                            try {
-                                $newFilter = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/assignmentFilters" -Body $filterBody -ErrorAction Stop
-                                Write-HydrationLog -Message "  Created: $($filter.displayName)" -Level Info
-                                $results += New-HydrationResult -Name $filter.displayName -Id $newFilter.id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Created' -Status 'Success'
-                                $success = $true
-                            } catch {
-                                $statusCode = $_.Exception.Response.StatusCode.value__
-
-                                # Only retry on server errors (500+), not client errors (400-499)
-                                if ($statusCode -ge 500 -and $retryCount -lt ($maxRetries - 1)) {
-                                    $retryCount++
-                                    $waitSeconds = [math]::Pow(2, $retryCount)
-                                    Write-HydrationLog -Message "  Retry $retryCount/$maxRetries for '$($filter.displayName)' after ${waitSeconds}s (HTTP $statusCode)" -Level Info
-                                    Start-Sleep -Seconds $waitSeconds
-                                } else {
-                                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                                    Write-HydrationLog -Message "  [!] Failed: $($filter.displayName) - $errMessage" -Level Warning
-                                    $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errMessage
-                                    break
-                                }
-                            }
-                        }
-                    } else {
-                        Write-HydrationLog -Message "  WouldCreate: $($filter.displayName)" -Level Info
-                        $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
-                    }
-                } catch {
-                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                    Write-HydrationLog -Message "  Failed: $($filter.displayName) - $errMessage" -Level Warning
-                    $results += New-HydrationResult -Name $filter.displayName -Platform $filter.platform -Type 'DeviceFilter' -Action 'Failed' -Status $errMessage
+                # Dual lookup: check both prefixed and unprefixed (legacy) names
+                $existingName = $null
+                $existingEntry = $null
+                if ($existingFilters.ContainsKey($prefixedName) -and $existingFilters[$prefixedName].IsTagged) {
+                    $existingName = $prefixedName
+                    $existingEntry = $existingFilters[$prefixedName]
+                } elseif ($existingFilters.ContainsKey($filter.displayName) -and $existingFilters[$filter.displayName].IsTagged) {
+                    $existingName = $filter.displayName
+                    $existingEntry = $existingFilters[$filter.displayName]
                 }
+
+                if ($existingEntry) {
+                    Write-HydrationLog -Message "  Skipped: $existingName" -Level Info
+                    $results += New-HydrationResult -Name $existingName -Id $existingEntry.Id -Platform $filter.platform -Type 'DeviceFilter' -Action 'Skipped' -Status 'Already exists'
+                    continue
+                }
+
+                # Add to list of filters to create
+                $filtersToCreate += $filter
             }
         } catch {
             $errMessage = Get-GraphErrorMessage -ErrorRecord $_
             Write-HydrationLog -Message "  Failed to parse: $($templateFile.Name) - $errMessage" -Level Warning
             $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'DeviceFilter' -Action 'Failed' -Status "Parse error: $errMessage"
         }
+    }
+
+    # Handle WhatIf/Confirm mode for creation
+    if (-not $PSCmdlet.ShouldProcess("$($filtersToCreate.Count) device filter(s)", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($filter in $filtersToCreate) {
+                $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
+                Write-HydrationLog -Message "  WouldCreate: $prefixedName" -Level Info
+                $results += New-HydrationResult -Name $prefixedName -Platform $filter.platform -Type 'DeviceFilter' -Action 'WouldCreate' -Status 'DryRun'
+            }
+        }
+        return $results
+    }
+
+    # Batch create filters using centralized helper
+    if ($filtersToCreate.Count -gt 0) {
+        $batchItems = @()
+        foreach ($filter in $filtersToCreate) {
+            $prefixedName = if ($filter.displayName.StartsWith($script:ImportPrefix)) { $filter.displayName } else { "$($script:ImportPrefix)$($filter.displayName)" }
+            $filterBody = @{
+                displayName   = $prefixedName
+                description   = New-HydrationDescription -ExistingText $filter.description
+                platform      = $filter.platform
+                rule          = $filter.rule
+                roleScopeTags = @("0")
+            }
+            $batchItems += @{
+                Name     = $prefixedName
+                Platform = $filter.platform
+                BodyJson = ($filterBody | ConvertTo-Json -Depth 10 -Compress)
+            }
+        }
+        $results += Invoke-GraphBatchOperation -Items $batchItems -Operation 'POST' -BaseUrl '/deviceManagement/assignmentFilters' -ResultType 'DeviceFilter'
     }
 
     return $results

@@ -17,9 +17,18 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/jorgeasaurus/IntuneHydrationKit/actions/workflows/ci.yml"><img src="https://github.com/jorgeasaurus/IntuneHydrationKit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/v/IntuneHydrationKit?label=PSGallery&color=blue" alt="PowerShell Gallery Version"></a>
   <a href="https://www.powershellgallery.com/packages/IntuneHydrationKit"><img src="https://img.shields.io/powershellgallery/dt/IntuneHydrationKit?label=Downloads&color=green" alt="PowerShell Gallery Downloads"></a>
-  <a href="https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jorgeasaurus/Intune-Hydration-Kit" alt="License"></a>
+  <a href="https://github.com/jorgeasaurus/IntuneHydrationKit/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jorgeasaurus/IntuneHydrationKit" alt="License"></a>
+  <img src="https://img.shields.io/badge/PowerShell-7.0%2B-blue?logo=powershell&logoColor=white" alt="PowerShell 7.0+">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
+</p>
+
+<p align="center">
+  <a href="https://github.com/jorgeasaurus/IntuneHydrationKit/stargazers"><img src="https://img.shields.io/github/stars/jorgeasaurus/IntuneHydrationKit?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/jorgeasaurus/IntuneHydrationKit/commits/main"><img src="https://img.shields.io/github/last-commit/jorgeasaurus/IntuneHydrationKit" alt="Last Commit"></a>
+  <a href="https://github.com/jorgeasaurus/IntuneHydrationKit/releases/latest"><img src="https://img.shields.io/github/v/release/jorgeasaurus/IntuneHydrationKit?label=Latest%20Release" alt="Latest Release"></a>
 </p>
 
 <p align="center">
@@ -51,10 +60,11 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 | Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
-| Security Baselines | 91 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) |
+| Security Baselines | 94 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) — bundled, no download required |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
 | Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
+| Notification Templates | 1 | Notification message templates for compliance and enrollment |
 | Enrollment Profiles | 4 | Autopilot deployment profiles, Enrollment Status Page, and Autopilot device preparation |
 | Conditional Access | 21 | [Starter pack policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) (created disabled) |
 
@@ -82,7 +92,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
 
-- Objects must have `"Imported by Intune-Hydration-Kit"` or `"Imported by Intune Hydration Kit"` in their description
+- Objects are identified by the `[IHD]` name prefix and `"Imported by Intune Hydration Kit"` description marker
 - Conditional Access policies must also be in `disabled` state to be deleted
 - Manually created objects with the same names will NOT be deleted
 
@@ -90,11 +100,14 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 
 ## Features
 
+- **`[IHD]` Name Prefix** - All imported objects are prefixed with `[IHD]` for easy identification and filtering
+- **Batch API Operations** - Groups, policies, filters, and apps use batched Graph API calls (up to 10 per batch) for ~61% faster execution
+- **Bundled Baselines** - OpenIntuneBaseline templates included in module (no external download required)
 - **Idempotent** - Safe to run multiple times; skips existing configurations
 - **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
-- **Safe Deletion** - Only removes objects created by this kit
+- **Safe Deletion** - Only removes objects created by this kit (identified by `[IHD]` prefix and description marker)
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
-- **OpenIntuneBaseline Integration** - Automatically downloads latest community baselines
+- **Platform Filtering** - Import resources for specific platforms only (e.g., `-Platform Windows,macOS`)
 - **Detailed Logging** - Full audit trail of all operations
 - **Summary Reports** - Markdown and JSON reports of all changes
 
@@ -154,8 +167,8 @@ Update-Module -Name IntuneHydrationKit
 For development or to use the latest unreleased changes:
 
 ```powershell
-git clone https://github.com/jorgeasaurus/Intune-Hydration-Kit.git
-cd Intune-Hydration-Kit
+git clone https://github.com/jorgeasaurus/IntuneHydrationKit.git
+cd IntuneHydrationKit
 Import-Module ./IntuneHydrationKit.psd1
 ```
 
@@ -541,15 +554,18 @@ Affects: OpenIntuneBaseline, ComplianceTemplates, AppProtection, DeviceFilters, 
 
 ### Hydration Marker
 
-All objects created by this kit include a marker in their description:
+All objects created by this kit are identified by two markers:
+
+1. **Name prefix:** `[IHD]` prepended to the display name (e.g., `[IHD] Windows - Default Compliance`)
+2. **Description marker:**
 
 ```plaintext
 Imported by Intune Hydration Kit
 ```
 
-This marker is used to:
+These markers are used to:
 
-- Identify objects created by this tool
+- Identify objects created by this tool at a glance
 - Prevent deletion of manually-created objects
 - Enable safe cleanup operations
 
@@ -641,7 +657,7 @@ Install-Module Microsoft.Graph.Authentication -Force
 
 #### Objects not being deleted
 
-- Verify the object has "Imported by Intune Hydration Kit" in its description
+- Verify the object has the `[IHD]` name prefix and "Imported by Intune Hydration Kit" in its description
 - For CA policies, ensure the policy is in `disabled` state
 
 ### Debug Mode
@@ -666,7 +682,7 @@ $VerbosePreference = "Continue"
 ## Project Structure
 
 ```plaintext
-Intune-Hydration-Kit/
+IntuneHydrationKit/
 ├── Invoke-IntuneHydration.ps1    # Wrapper script (backward compatibility)
 ├── IntuneHydrationKit.psd1       # Module manifest
 ├── IntuneHydrationKit.psm1       # Module loader
@@ -681,17 +697,23 @@ Intune-Hydration-Kit/
 │   ├── Import-IntuneMobileApp.ps1
 │   └── ...
 ├── Private/                       # Internal helper functions
+│   ├── Invoke-GroupBatchImport.ps1 # Batch Graph API operations
+│   ├── Get-GraphPagedResults.ps1   # Paginated Graph queries
+│   ├── Get-TemplateDisplayNames.ps1
+│   └── ...
 ├── Scripts/                       # Helper scripts
 │   └── New-MobileAppTemplate.ps1  # Generate mobile app JSON templates
 ├── Templates/                     # Configuration templates
+│   ├── OpenIntuneBaseline/        # Bundled OIB policies (94 templates)
 │   ├── Compliance/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
 │   ├── Filters/
 │   ├── StaticGroups/
 │   ├── MobileApps/
+│   ├── Notifications/
 │   └── ...
-├── Tests/                         # Pester tests
+├── Tests/                         # Pester tests (393+)
 ├── Logs/                          # Execution logs
 └── Reports/                       # Generated reports
 ```

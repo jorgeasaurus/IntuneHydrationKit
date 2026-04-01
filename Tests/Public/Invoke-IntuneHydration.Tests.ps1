@@ -218,6 +218,7 @@ Describe 'Invoke-IntuneHydration' {
             Mock Write-HydrationLog -ModuleName IntuneHydrationKit
             Mock Get-ObfuscatedTenantId { return '12345678-****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
             Mock Get-ResultSummary { return @{ Created = 0; Updated = 0; Skipped = 0; Failed = 0; WouldCreate = 0; WouldUpdate = 0; WouldDelete = 0; Deleted = 0 } } -ModuleName IntuneHydrationKit
+            Mock Invoke-GroupBatchImport { @() } -ModuleName IntuneHydrationKit
         }
 
         It 'Should reject non-existent settings file path' {
@@ -423,7 +424,9 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneAppProtectionPolicy { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneEnrollmentProfile { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup { @{ Action = 'Created'; Id = 'test-id' } } -ModuleName IntuneHydrationKit
+            Mock Invoke-GroupBatchImport { @() } -ModuleName IntuneHydrationKit
         }
 
         It 'Should call Import-IntuneDeviceFilter when DeviceFilters is enabled' {

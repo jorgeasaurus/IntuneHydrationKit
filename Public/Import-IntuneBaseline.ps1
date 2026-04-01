@@ -1,12 +1,12 @@
 function Import-IntuneBaseline {
     <#
     .SYNOPSIS
-        Imports OpenIntuneBaseline policies using IntuneManagement module
+        Imports OpenIntuneBaseline policies from bundled templates
     .DESCRIPTION
-        Downloads OpenIntuneBaseline from GitHub and imports all policies using the IntuneManagement module.
-        Uses IntuneManagement's silent batch mode for automated imports.
+        Imports OpenIntuneBaseline policies from the Templates/OpenIntuneBaseline directory.
+        Supports Settings Catalog, Device Configuration, Compliance, and Update policies.
     .PARAMETER BaselinePath
-        Path to the OpenIntuneBaseline directory (will download if not specified)
+        Path to the OpenIntuneBaseline directory (defaults to Templates/OpenIntuneBaseline)
     .PARAMETER IntuneManagementPath
         Path to IntuneManagement module (will download if not specified)
     .PARAMETER TenantId
@@ -57,9 +57,31 @@ function Import-IntuneBaseline {
         throw "TenantId is required. Either connect using Connect-IntuneHydration or specify -TenantId parameter."
     }
 
-    # Download OpenIntuneBaseline if not provided
-    if (-not $BaselinePath -or -not (Test-Path -Path $BaselinePath)) {
-        $BaselinePath = Get-OpenIntuneBaseline
+    # Resolve BaselinePath to bundled templates if not provided
+    if ($BaselinePath -and -not (Test-Path -Path $BaselinePath)) {
+        Write-Verbose "Specified BaselinePath '$BaselinePath' not found, using bundled templates"
+        $BaselinePath = $null
+    }
+
+    if (-not $BaselinePath) {
+        if ($script:TemplatesPath -and (Test-Path -Path $script:TemplatesPath)) {
+            $BaselinePath = Join-Path -Path $script:TemplatesPath -ChildPath 'OpenIntuneBaseline'
+        } elseif ($script:ModuleRoot -and (Test-Path -Path $script:ModuleRoot)) {
+            $BaselinePath = Join-Path -Path (Join-Path -Path $script:ModuleRoot -ChildPath 'Templates') -ChildPath 'OpenIntuneBaseline'
+        } else {
+            # Fallback: Calculate from this function's script file location
+            $scriptPath = $MyInvocation.MyCommand.ScriptBlock.File
+            if ($scriptPath) {
+                $moduleRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
+                $BaselinePath = Join-Path -Path (Join-Path -Path $moduleRoot -ChildPath 'Templates') -ChildPath 'OpenIntuneBaseline'
+            } elseif (-not $RemoveExisting) {
+                throw "Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."
+            }
+        }
+    }
+
+    if (-not $RemoveExisting -and (-not $BaselinePath -or -not (Test-Path -Path $BaselinePath))) {
+        throw "OpenIntuneBaseline templates not found at: $BaselinePath"
     }
 
     # OpenIntuneBaseline uses OS-based folder structure:
@@ -67,7 +89,7 @@ function Import-IntuneBaseline {
     # - OS/NativeImport/ - Settings Catalog policies that can be imported via Graph API
     # - BYOD/AppProtection/ - App protection policies
 
-    # Map folder names to Graph API endpoints (normalized names only, no duplicates)
+    # Map folder names to Graph API endpoints (includes aliases for different baseline versions)
     $endpointMap = @{
         'NativeImport'                     = 'deviceManagement/configurationPolicies'
         'AppProtection'                    = 'deviceAppManagement/managedAppPolicies'
@@ -120,10 +142,16 @@ function Import-IntuneBaseline {
         '#microsoft.graph.deviceManagementConfigurationPolicy'          = 'deviceManagement/configurationPolicies'
         # Windows Update for Business - Driver Updates
         '#microsoft.graph.windowsDriverUpdateProfile'                   = 'deviceManagement/windowsDriverUpdateProfiles'
+        # App Protection Policies (BYOD baseline)
+        '#microsoft.graph.androidManagedAppProtection'                  = 'deviceAppManagement/androidManagedAppProtections'
+        '#microsoft.graph.iosManagedAppProtection'                      = 'deviceAppManagement/iosManagedAppProtections'
     }
 
-    # Folders that previously required IntuneManagement tool - now we try to import via Graph API
-    $intuneManagementFolders = @('IntuneManagement')
+    # Folders routed via @odata.type lookup instead of $endpointMap
+    $intuneManagementFolders = @('IntuneManagement', 'AppProtection')
+
+    # Folders to skip - NativeImport duplicates policies from IntuneManagement with fewer options
+    $skipFolders = @('NativeImport')
 
     $results = @()
 
@@ -133,51 +161,80 @@ function Import-IntuneBaseline {
     # Remove existing baseline policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
-        # Delete from main endpoints used by baselines
+        # Load template names to scope deletes to only policies this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -Recurse
+
+        # Delete from all endpoints used by baselines
+        # Shared endpoints always included; platform-specific endpoints scoped by -Platform
         $deleteEndpoints = @(
             'beta/deviceManagement/configurationPolicies',
             'beta/deviceManagement/deviceConfigurations',
-            'beta/deviceManagement/deviceCompliancePolicies',
-            'beta/deviceAppManagement/androidManagedAppProtections',
-            'beta/deviceAppManagement/iosManagedAppProtections'
+            'beta/deviceManagement/deviceCompliancePolicies'
         )
 
+        # Add platform-specific endpoints only when that platform is in scope
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'Windows') {
+            $deleteEndpoints += 'beta/deviceManagement/windowsDriverUpdateProfiles'
+        }
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'Android') {
+            $deleteEndpoints += 'beta/deviceAppManagement/androidManagedAppProtections'
+        }
+        if (-not $Platform -or $Platform -contains 'All' -or $Platform -contains 'iOS') {
+            $deleteEndpoints += 'beta/deviceAppManagement/iosManagedAppProtections'
+        }
+
+        # Collect all policies to delete across all endpoints.
+        # Uses accumulation pattern instead of ProcessItems scriptblock to avoid
+        # scope issue ($var += inside & {} creates a local copy that is discarded).
+        $policiesToDelete = @()
+        $escapedPrefix = [regex]::Escape($script:ImportPrefix)
         foreach ($endpoint in $deleteEndpoints) {
             try {
-                $listUri = $endpoint
-                do {
-                    $existing = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $existing.value) {
-                        $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
-                        $policyId = $policy.id
+                $allPolicies = Get-GraphPagedResults -Uri $endpoint
+                foreach ($policy in $allPolicies) {
+                    $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
 
-                        # Safety check: Only delete if created by this kit (has hydration marker in description)
-                        if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                            Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
-                            continue
-                        }
-
-                        if ($PSCmdlet.ShouldProcess($policyName, "Delete baseline policy")) {
-                            try {
-                                Invoke-MgGraphRequest -Method DELETE -Uri "$endpoint/$policyId" -ErrorAction Stop
-                                Write-HydrationLog -Message "  Deleted: $policyName" -Level Info
-                                $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'Deleted' -Status 'Success'
-                            } catch {
-                                $errMessage = Get-GraphErrorMessage -ErrorRecord $_
-                                Write-HydrationLog -Message "  Failed: $policyName - $errMessage" -Level Warning
-                                $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'Failed' -Status "Delete failed: $errMessage"
-                            }
-                        } else {
-                            Write-HydrationLog -Message "  WouldDelete: $policyName" -Level Info
-                            $results += New-HydrationResult -Name $policyName -Type 'BaselinePolicy' -Action 'WouldDelete' -Status 'DryRun'
-                        }
+                    # Safety check: Only delete if created by this kit (has hydration marker in description)
+                    if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
+                        Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
+                        continue
                     }
-                    $listUri = $existing.'@odata.nextLink'
-                } while ($listUri)
+
+                    # Warn if policy name doesn't match current templates (may be from older version)
+                    $baselineNameForLookup = $policyName -replace "^$escapedPrefix", ''
+                    if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
+                        Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
+                    }
+
+                    $policiesToDelete += @{
+                        Name = $policyName
+                        Id   = $policy.id
+                        Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
+                    }
+                }
             } catch {
-                Write-Warning "Failed to process endpoint $endpoint : $_"
+                Write-Warning "Failed to list policies from $endpoint : $_"
             }
         }
+
+        if ($policiesToDelete.Count -eq 0) {
+            Write-Verbose "No baseline policies found to delete"
+            return $results
+        }
+
+        # Handle WhatIf mode
+        if (-not $PSCmdlet.ShouldProcess("$($policiesToDelete.Count) baseline policies", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($policy in $policiesToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
+                    $results += New-HydrationResult -Name $policy.Name -Type 'BaselinePolicy' -Action 'WouldDelete' -Status 'DryRun'
+                }
+            }
+            return $results
+        }
+
+        # Batch delete policies using centralized helper
+        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -ResultType 'BaselinePolicy'
 
         return $results
     }
@@ -236,17 +293,15 @@ function Import-IntuneBaseline {
     }
 
     if ($PSCmdlet.ShouldProcess("$totalPolicies policies from OpenIntuneBaseline", "Import to Intune")) {
-
         # Pre-fetch existing policies from all unique endpoints to avoid repeated API calls
         $endpointPolicyCache = @{}
         $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
         foreach ($cacheEndpoint in $uniqueEndpoints) {
             $endpointPolicyCache[$cacheEndpoint] = @{}
             try {
-                $listUri = "beta/$cacheEndpoint"
-                do {
-                    $cacheResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $cacheResponse.value) {
+                Get-GraphPagedResults -Uri "beta/$cacheEndpoint" -ProcessItems {
+                    param($items)
+                    foreach ($policy in $items) {
                         # Use 'name' for configurationPolicies, 'displayName' for others
                         $policyDisplayName = if ($cacheEndpoint -eq 'deviceManagement/configurationPolicies') {
                             $policy.name
@@ -257,18 +312,27 @@ function Import-IntuneBaseline {
                             $endpointPolicyCache[$cacheEndpoint][$policyDisplayName] = $policy.id
                         }
                     }
-                    $listUri = $cacheResponse.'@odata.nextLink'
-                } while ($listUri)
+                }
             } catch {
                 # Endpoint might not support listing, continue without cache for this endpoint
                 Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
             }
         }
 
+        # Collect all policies to create with their prepared bodies
+        $policiesToCreate = @()
+
         foreach ($policyFolder in $policyTypefolders) {
             $folder = $policyFolder.Folder
             $folderName = $policyFolder.PolicyType
             $osName = $policyFolder.OsFolder
+
+            # Skip folders that duplicate content from other folders (e.g., NativeImport duplicates IntuneManagement)
+            if ($folderName -in $skipFolders) {
+                Write-Verbose "Skipping $osName/$folderName - duplicates content from IntuneManagement folder"
+                continue
+            }
+
             $jsonFiles = Get-ChildItem -Path $folder.FullName -Filter "*.json" -File -Recurse
 
             # For IntuneManagement folders, try to import using @odata.type routing
@@ -312,10 +376,11 @@ function Import-IntuneBaseline {
                             }
                         }
 
-                        # Get display name
-                        $displayName = $policyContent.displayName
-                        if (-not $displayName) {
-                            $displayName = $policyName
+                        # Get display name with import prefix
+                        $displayName = if ($policyContent.displayName) {
+                            "$($script:ImportPrefix)$($policyContent.displayName)"
+                        } else {
+                            "$($script:ImportPrefix)$policyName"
                         }
 
                         # Check if policy exists using pre-fetched cache
@@ -339,8 +404,11 @@ function Import-IntuneBaseline {
                         )
 
                         # Add hydration kit tag to description
-                        $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                        $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+                        $importBody.description = New-HydrationDescription -ExistingText $importBody.description
+
+                        # Apply import prefix to body properties
+                        if ($importBody.displayName) { $importBody.displayName = $displayName }
+                        if ($importBody.name) { $importBody.name = $displayName }
 
                         # Remove properties with @odata annotations (metadata) except @odata.type
                         # Also remove #microsoft.graph.* action properties
@@ -428,18 +496,20 @@ function Import-IntuneBaseline {
                             $importBody.scheduledActionsForRule = $cleanedActions
                         }
 
-                        # Create the policy
-                        $null = Invoke-MgGraphRequest -Method POST -Uri "beta/$typeEndpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
-
-                        Write-HydrationLog -Message "  Created: $displayName" -Level Info
-                        $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Created' -Status 'Success'
+                        # Add to collection for batch creation
+                        # Store body as JSON string to avoid PowerShell serialization issues with circular references
+                        $policiesToCreate += @{
+                            Name     = $displayName
+                            Path     = $jsonFile.FullName
+                            Type     = "$osName/$folderName"
+                            Url      = "/$typeEndpoint"
+                            BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
+                        }
                     } catch {
                         $errorMsg = Get-GraphErrorMessage -ErrorRecord $_
-                        Write-HydrationLog -Message "  Failed: $policyName - $errorMsg" -Level Warning
-                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Failed' -Status $errorMsg
+                        Write-HydrationLog -Message "  Failed to prepare: $policyName - $errorMsg" -Level Warning
+                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Failed' -Status "Prepare error: $errorMsg"
                     }
-
-                    Start-Sleep -Milliseconds 100
                 }
                 continue
             }
@@ -455,33 +525,24 @@ function Import-IntuneBaseline {
                 continue
             }
 
-            # Progress tracking for this folder
-            $folderTotal = $jsonFiles.Count
-            $folderCurrent = 0
-
             # Pre-fetch existing policies for this endpoint to avoid repeated API calls (page through all results)
             $existingPolicies = @{}
             try {
-                $listUri = "beta/$endpoint"
-                do {
-                    $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $existingResponse.value) {
+                Get-GraphPagedResults -Uri "beta/$endpoint" -ProcessItems {
+                    param($items)
+                    foreach ($policy in $items) {
                         $policyDisplayName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
                         if ($policyDisplayName -and -not $existingPolicies.ContainsKey($policyDisplayName)) {
                             $existingPolicies[$policyDisplayName] = $policy.id
                         }
                     }
-                    $listUri = $existingResponse.'@odata.nextLink'
-                } while ($listUri)
+                }
             } catch {
                 # Endpoint might not support listing, continue without cache
                 Write-Verbose "Could not cache policies from $endpoint - will check individually"
             }
 
             foreach ($jsonFile in $jsonFiles) {
-                $folderCurrent++
-                Write-Progress -Activity "Importing $osName/$folderName" -Status "$folderCurrent of $folderTotal" -PercentComplete (($folderCurrent / $folderTotal) * 100)
-
                 $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
                 try {
@@ -493,13 +554,13 @@ function Import-IntuneBaseline {
                     }
                     $policyContent = $jsonContent | ConvertFrom-Json
 
-                    # Get display name from policy
-                    $displayName = $policyContent.displayName
-                    if (-not $displayName) {
-                        $displayName = $policyContent.name
-                    }
-                    if (-not $displayName) {
-                        $displayName = $policyName
+                    # Get display name from policy with import prefix
+                    $displayName = if ($policyContent.displayName) {
+                        "$($script:ImportPrefix)$($policyContent.displayName)"
+                    } elseif ($policyContent.name) {
+                        "$($script:ImportPrefix)$($policyContent.name)"
+                    } else {
+                        "$($script:ImportPrefix)$policyName"
                     }
 
                     # Check if policy exists using cached list
@@ -523,26 +584,32 @@ function Import-IntuneBaseline {
                     )
 
                     # Add hydration kit tag to description
-                    $existingDesc = if ($importBody.description) { $importBody.description } else { "" }
-                    $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+                    $importBody.description = New-HydrationDescription -ExistingText $importBody.description
 
-                    # Create the policy
-                    $null = Invoke-MgGraphRequest -Method POST -Uri "beta/$endpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
+                    # Apply import prefix to body properties
+                    if ($importBody.displayName) { $importBody.displayName = $displayName }
+                    if ($importBody.name) { $importBody.name = $displayName }
 
-                    Write-HydrationLog -Message "  Created: $displayName" -Level Info
-
-                    $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Created' -Status 'Success'
+                    # Add to collection for batch creation
+                    # Store body as JSON string to avoid PowerShell serialization issues with circular references
+                    $policiesToCreate += @{
+                        Name     = $displayName
+                        Path     = $jsonFile.FullName
+                        Type     = "$osName/$folderName"
+                        Url      = "/$endpoint"
+                        BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
+                    }
                 } catch {
                     $errorMsg = Get-GraphErrorMessage -ErrorRecord $_
-                    Write-HydrationLog -Message "  Failed: $policyName - $errorMsg" -Level Warning
-
-                    $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Failed' -Status $errorMsg
+                    Write-HydrationLog -Message "  Failed to prepare: $policyName - $errorMsg" -Level Warning
+                    $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Failed' -Status "Prepare error: $errorMsg"
                 }
-
-                # Small delay to avoid rate limiting
-                Start-Sleep -Milliseconds 100
             }
-            Write-Progress -Activity "Importing $osName/$folderName" -Completed
+        }
+
+        # Batch create all collected policies using centralized helper
+        if ($policiesToCreate.Count -gt 0) {
+            $results += Invoke-GraphBatchOperation -Items $policiesToCreate -Operation 'POST' -ResultType 'BaselinePolicy'
         }
 
     } else {
@@ -551,12 +618,18 @@ function Import-IntuneBaseline {
             $folder = $policyFolder.Folder
             $osName = $policyFolder.OsFolder
             $folderName = $policyFolder.PolicyType
+
+            # Skip folders that duplicate content from other folders
+            if ($folderName -in $skipFolders) {
+                continue
+            }
+
             $jsonFiles = Get-ChildItem -Path $folder.FullName -Filter "*.json" -File -Recurse
 
             foreach ($jsonFile in $jsonFiles) {
                 $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
-                $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'WouldCreate' -Status 'DryRun'
+                $results += New-HydrationResult -Name "$($script:ImportPrefix)$policyName" -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'WouldCreate' -Status 'DryRun'
             }
         }
     }

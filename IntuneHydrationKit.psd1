@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.3.4'
+    ModuleVersion     = '0.5.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,15 +89,15 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.3.4
+## v0.5.0
 
-- **Added:**
-  - **Windows Autopilot device preparation** support:
-    - New enrollment profile template: Windows Autopilot device preparation - User Driven
-    - New static group: Windows Autopilot device preparation (with Intune Provisioning Client as owner)
-    - Automatic group assignment for device preparation policy
-  - Platform filtering for template imports - filter baselines, compliance policies, and other imports by platform (Windows, macOS, iOS, Android, Linux)
-  - `settings.schema.json` for JSON schema validation of settings files
+- **[IHD] Prefix:** All imported resources now prefixed with `[IHD] ` for instant identification in Intune portal
+- **Delete Bug Fixes:** Fixed Graph API dictionary deserialization, null response handling, scriptblock scope bugs, and HashSet enumeration issues
+- **Tag-Aware Skips:** Import functions only skip objects with the hydration kit marker, not untagged duplicates
+- **Template-Scoped Deletes:** Delete operations now require both kit tag AND matching template name for safety
+- **Performance:** 61% faster execution (~180s to ~70s) using batch Graph API operations
+- **Bundled Templates:** OpenIntuneBaseline templates now included (no external downloads required)
+- **Batch Operations:** Groups, policies, filters, and apps now use batched API calls (up to 10 per batch)
 
 '@
         }

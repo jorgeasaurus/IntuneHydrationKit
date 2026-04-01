@@ -73,7 +73,7 @@ function Get-FilteredTemplates {
                 }
                 'Folder' {
                     # OpenIntuneBaseline uses uppercase folder names: WINDOWS, WINDOWS365, MACOS, BYOD
-                    $pathParts = $template.DirectoryName -split [regex]::Escape([System.IO.Path]::DirectorySeparatorChar)
+                    $pathParts = $template.DirectoryName -split '[/\\]'
                     $matched = switch ($plat) {
                         'Windows' { ($pathParts -match '^WINDOWS(365)?$').Count -gt 0 }
                         'macOS' { ($pathParts -match '^MACOS$').Count -gt 0 }

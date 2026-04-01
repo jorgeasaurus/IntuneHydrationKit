@@ -59,18 +59,30 @@ function New-IntuneStaticGroup {
             }
         }
 
-        # Check if group already exists (escape single quotes for OData filter)
-        $safeDisplayName = $DisplayName -replace "'", "''"
-        $listUri = "v1.0/groups?`$filter=displayName eq '$safeDisplayName'"
+        # Check if group already exists — look for both prefixed and unprefixed names (backward compat)
+        $finalDisplayName = "$($script:ImportPrefix)$DisplayName"
+        $safeFinalName = $finalDisplayName -replace "'", "''"
+        $safeOrigName = $DisplayName -replace "'", "''"
+        $allMatches = Get-GraphPagedResults -Uri "v1.0/groups?`$select=id,displayName,description&`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
+
+        # Prefer prefixed+tagged match, then any tagged match, then exact prefixed name (to avoid duplicates)
         $existingGroup = $null
-        do {
-            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
-                break
+        if ($allMatches) {
+            foreach ($match in $allMatches) {
+                $isTagged = Test-HydrationKitObject -Description $match.description -ObjectName $match.displayName
+                if ($match.displayName -eq $finalDisplayName -and $isTagged) {
+                    $existingGroup = $match
+                    break
+                }
+                if ($isTagged -and -not $existingGroup) {
+                    $existingGroup = $match
+                }
             }
-            $listUri = $response.'@odata.nextLink'
-        } while ($listUri)
+            # Fallback: if no tagged match, still skip exact prefixed name to avoid duplicates
+            if (-not $existingGroup) {
+                $existingGroup = $allMatches | Where-Object { $_.displayName -eq $finalDisplayName } | Select-Object -First 1
+            }
+        }
 
         if ($existingGroup) {
             # If service principal owner is required, ensure it's an owner
@@ -99,8 +111,8 @@ function New-IntuneStaticGroup {
         }
 
         # Create new static group
-        if ($PSCmdlet.ShouldProcess($DisplayName, "Create static group")) {
-            $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+        if ($PSCmdlet.ShouldProcess($finalDisplayName, "Create static group")) {
+            $fullDescription = New-HydrationDescription -ExistingText $Description
 
             # Generate a safe mailNickname (alphanumeric only, max 64 chars)
             $mailNickname = ($DisplayName -replace '[^a-zA-Z0-9]', '')
@@ -113,7 +125,7 @@ function New-IntuneStaticGroup {
             }
 
             $groupBody = @{
-                displayName     = $DisplayName
+                displayName     = $finalDisplayName
                 description     = $fullDescription
                 mailEnabled     = $false
                 mailNickname    = $mailNickname

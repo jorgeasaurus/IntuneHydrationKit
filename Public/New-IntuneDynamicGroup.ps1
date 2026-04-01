@@ -34,29 +34,42 @@ function New-IntuneDynamicGroup {
     )
 
     try {
-        # Check if group already exists (escape single quotes for OData filter)
-        # Use pagination to handle large result sets
-        $safeDisplayName = $DisplayName -replace "'", "''"
-        $listUri = "beta/groups?`$filter=displayName eq '$safeDisplayName'"
+        # Compute final display name with prefix for both lookup and creation
+        $finalDisplayName = "$($script:ImportPrefix)$DisplayName"
+        $safeFinalName = $finalDisplayName -replace "'", "''"
+        $safeOrigName = $DisplayName -replace "'", "''"
+
+        # Check for both prefixed and unprefixed names (backward compat with pre-prefix groups)
+        $allMatches = Get-GraphPagedResults -Uri "beta/groups?`$select=id,displayName,description&`$filter=displayName eq '$safeFinalName' or displayName eq '$safeOrigName'"
+
+        # Prefer prefixed+tagged match, then any tagged match, then exact prefixed name (to avoid duplicates)
         $existingGroup = $null
-        do {
-            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
-                break
+        if ($allMatches) {
+            foreach ($match in $allMatches) {
+                $isTagged = Test-HydrationKitObject -Description $match.description -ObjectName $match.displayName
+                if ($match.displayName -eq $finalDisplayName -and $isTagged) {
+                    $existingGroup = $match
+                    break
+                }
+                if ($isTagged -and -not $existingGroup) {
+                    $existingGroup = $match
+                }
             }
-            $listUri = $response.'@odata.nextLink'
-        } while ($listUri)
+            # Fallback: if no tagged match, still skip exact prefixed name to avoid duplicates
+            if (-not $existingGroup) {
+                $existingGroup = $allMatches | Where-Object { $_.displayName -eq $finalDisplayName } | Select-Object -First 1
+            }
+        }
 
         if ($existingGroup) {
             return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'DynamicGroup' -Action 'Skipped' -Status 'Group already exists'
         }
 
         # Create new dynamic group
-        if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
-            $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+        if ($PSCmdlet.ShouldProcess($finalDisplayName, "Create dynamic group")) {
+            $fullDescription = New-HydrationDescription -ExistingText $Description
             $groupBody = @{
-                displayName                   = $DisplayName
+                displayName                   = $finalDisplayName
                 description                   = $fullDescription
                 mailEnabled                   = $false
                 mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')

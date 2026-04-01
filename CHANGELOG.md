@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-29
+
+### Added
+
+- **`[IHD]` Name Prefix**: All imported objects are now prefixed with `[IHD]` for easy identification and filtering in the Intune portal
+- **Batch Graph API Operations**: Groups, policies, filters, and apps now use batched API calls (up to 10 per batch) for significantly faster execution (~61% improvement)
+- **Bundled OpenIntuneBaseline Templates**: OIB templates are now included in the module — no external download required at runtime
+- **Notification Template Support**: Import and delete notification message templates (`Templates/Notifications/`)
+
+### Changed
+
+- **Performance**: Full hydration runs reduced from ~180s to ~70s via batch operations
+- Delete mode now identifies objects by both `[IHD]` name prefix and description marker for more reliable matching
+- `Get-TemplateDisplayNames` returns `HashSet[string]` (case-insensitive) instead of plain collection — help text updated to match
+- `Import-IntuneMobileApp` now uses `-Notes` parameter (instead of `-Description`) for mobile app notes field
+- Security Baselines count corrected from 91 to 94
+
+### Fixed
+
+- **Delete mode**: Graph API duplicate key error when listing groups (`displayName` dictionary collision)
+- **Delete mode**: Null-valued expression errors when `$response.value` is null or empty
+- **Delete mode**: Scriptblock scope bug where `$results += $item` created a new local variable instead of accumulating
+- **Delete mode**: `Get-TemplateDisplayNames` returned empty `HashSet` that PowerShell enumerated to `$null`; fixed with comma operator
+- **Delete mode**: Baseline path resolution was inside create-only conditional block; moved outside
+- **Delete mode**: Notification template prefix-stripping for name matching
+- **Batch operations**: Empty batch responses now correctly marked as Failed instead of assumed success
+- **Batch operations**: Added bounds check and TryParse for batch response ID mapping to prevent null dereference
+- **Batch operations**: `Get-GraphPagedResults` uses `List[object]` instead of O(n²) array reallocation for paging
+- **Group delete safety**: Template-scoped deletes via `-KnownNames` parameter — only groups matching current templates are deleted
+- **Group batch import**: Null-safe prefix resolution defaults to `[IHD] ` when `$script:ImportPrefix` is null (dot-source safety)
+- **Enrollment profiles**: Dashes stripped only from original description text, not from hydration tag; uses space separator via `New-HydrationDescription -Separator ' '`
+- **JSON template parsing**: Malformed group template files no longer crash the entire hydration run (per-file try/catch)
+- **Group prefix mismatch**: Existence check now queries both prefixed and unprefixed names, preventing duplicate creation on re-runs
+- **Cross-platform paths**: `Import-IntuneBaseline` uses chained `Join-Path` calls instead of Windows-style backslash separators
+- **Hardcoded prefix regex**: All 9 delete-matching regex patterns now use `[regex]::Escape()` for dynamic prefix support
+- **Description helper consistency**: `Import-IntuneCompliancePolicy` and `Invoke-GroupBatchImport` now use `New-HydrationDescription` instead of manual concatenation
+- **Whitespace handling**: `New-HydrationDescription` uses `[string]::IsNullOrWhiteSpace()` instead of truthy check
+- **Cross-platform tests**: `Get-FilteredTemplates` path splitting now uses `[/\\]` regex instead of OS-native separator
+- **CI pipeline**: Pinned GitHub Actions to specific versions, added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env var
+- **LICENSE file**: Restored to git tracking (was accidentally deleted from feature branch)
+
 ## [0.3.4] - 2026-01-17
 
 ### Added

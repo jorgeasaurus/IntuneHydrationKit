@@ -117,6 +117,22 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $result[0].Action | Should -Be 'Skipped'
         }
 
+        It 'Should create profile when existing object with same name is not tagged by kit' {
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Default Autopilot Profile'; description = 'Manually created profile' }) }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows -WhatIf
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'WouldCreate'
+        }
+
         It 'Should create profile if it does not exist' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
@@ -351,6 +367,12 @@ Describe 'Import-IntuneEnrollmentProfile' {
     Context 'Delete Mode' {
         BeforeAll {
             Mock Get-FilteredTemplates { @() } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test profile names
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Profile 1', 'Hydration Profile', 'Manual Profile', 'ESP 1', 'Policy 1') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should list existing Autopilot profiles when RemoveExisting is specified' {
@@ -516,7 +538,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $result = Import-IntuneEnrollmentProfile -Platform Windows
 
             $result | Should -Not -BeNullOrEmpty
-            $result[0].Name | Should -Be 'Test Profile'
+            $result[0].Name | Should -Be '[IHD] Test Profile'
             $result[0].Type | Should -Be 'AutopilotDeploymentProfile'
             $result[0].Id | Should -Be 'profile-123'
             $result[0].Action | Should -Be 'Created'

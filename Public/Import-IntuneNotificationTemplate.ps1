@@ -36,54 +36,47 @@ function Import-IntuneNotificationTemplate {
 
     $results = @()
 
-    # Prefetch existing templates with descriptions for safety checks
+    # Prefetch existing templates for duplicate detection
     $existingTemplates = @{}
     try {
-        $listUri = "beta/deviceManagement/notificationMessageTemplates"
-        do {
-            $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            foreach ($tmpl in $existingResponse.value) {
+        Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates" -ProcessItems {
+            param($items)
+            foreach ($tmpl in $items) {
                 if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
                     $existingTemplates[$tmpl.displayName] = @{
-                        Id          = $tmpl.id
-                        Description = $tmpl.description
+                        Id = $tmpl.id
                     }
                 }
             }
-            $listUri = $existingResponse.'@odata.nextLink'
-        } while ($listUri)
+        }
     } catch {
         $existingTemplates = @{}
-    }
-
-    # Build a simple name->id lookup for backwards compatibility in the import section
-    $existingByName = @{}
-    foreach ($key in $existingTemplates.Keys) {
-        $existingByName[$key] = $existingTemplates[$key].Id
-    }
-
-    # Build list of template names from our JSON files for name-based matching
-    $templateNames = @{}
-    foreach ($templateFile in $templateFiles) {
-        try {
-            $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            if ($templateContent.displayName) {
-                $templateNames[$templateContent.displayName] = $true
-            }
-        } catch {
-            Write-Verbose "Could not read template file: $($templateFile.FullName)"
-        }
     }
 
     # Remove existing notification templates if requested
     # SAFETY: Only delete templates whose names match our template files
     # Note: Notification templates don't support description field, so we match by name
     if ($RemoveExisting) {
+        # Build list of template names from our JSON files for name-based matching
+        $templateNames = @{}
+        foreach ($templateFile in $templateFiles) {
+            try {
+                $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+                if ($templateContent.displayName) {
+                    $templateNames[$templateContent.displayName] = $true
+                }
+            } catch {
+                Write-Verbose "Could not read template file: $($templateFile.FullName)"
+            }
+        }
+
         foreach ($templateName in $existingTemplates.Keys) {
             $templateInfo = $existingTemplates[$templateName]
 
             # Safety check: Only delete if the name matches one of our template files
-            if (-not $templateNames.ContainsKey($templateName)) {
+            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+            $nameForLookup = $templateName -replace "^$escapedPrefix", ''
+            if (-not ($templateNames.ContainsKey($templateName) -or $templateNames.ContainsKey($nameForLookup))) {
                 Write-Verbose "Skipping '$templateName' - not in hydration kit templates"
                 continue
             }
@@ -110,17 +103,24 @@ function Import-IntuneNotificationTemplate {
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = $template.displayName
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
 
-            if (-not $displayName) {
+            if (-not $template.displayName) {
                 Write-Warning "Template missing displayName: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Failed' -Status 'Missing displayName'
                 continue
             }
 
-            if ($existingByName.ContainsKey($displayName)) {
+            if ($existingTemplates.ContainsKey($displayName)) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
+                continue
+            }
+
+            # Check for legacy unprefixed template to prevent duplicates on upgrade
+            if ($existingTemplates.ContainsKey($template.displayName)) {
+                Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists (legacy name)'
                 continue
             }
 
@@ -132,6 +132,9 @@ function Import-IntuneNotificationTemplate {
             }
 
             $importBody = Copy-DeepObject -InputObject $template
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
 
             if ($PSCmdlet.ShouldProcess($displayName, "Create notification template")) {
                 $newTemplate = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates" -Body ($importBody | ConvertTo-Json -Depth 50) -ContentType "application/json" -ErrorAction Stop
