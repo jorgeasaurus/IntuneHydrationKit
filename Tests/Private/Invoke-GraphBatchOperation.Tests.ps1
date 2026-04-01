@@ -221,7 +221,12 @@ Describe 'Invoke-GraphBatchOperation' {
         It 'Should return a Failed result for unmatched response' {
             $failed = $script:result | Where-Object { $_.Action -eq 'Failed' }
             $failed | Should -Not -BeNullOrEmpty
-            $failed.Status | Should -BeLike '*Unmatched batch response*'
+            # Out-of-bounds response ID generates an unmatched error
+            $unmatched = $failed | Where-Object { $_.Status -like '*Unmatched batch response*' }
+            $unmatched | Should -Not -BeNullOrEmpty
+            # The actual item with no matching response is marked as missing
+            $missing = $failed | Where-Object { $_.Status -like '*No response received*' }
+            $missing | Should -Not -BeNullOrEmpty
         }
     }
 

@@ -36,7 +36,7 @@ function Import-IntuneNotificationTemplate {
 
     $results = @()
 
-    # Prefetch existing templates with descriptions for safety checks
+    # Prefetch existing templates for duplicate detection
     $existingTemplates = @{}
     try {
         Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates" -ProcessItems {
@@ -44,8 +44,7 @@ function Import-IntuneNotificationTemplate {
             foreach ($tmpl in $items) {
                 if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
                     $existingTemplates[$tmpl.displayName] = @{
-                        Id          = $tmpl.id
-                        Description = $tmpl.description
+                        Id = $tmpl.id
                     }
                 }
             }

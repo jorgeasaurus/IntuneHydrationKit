@@ -188,6 +188,8 @@ function Invoke-GraphBatchOperation {
                 continue
             }
 
+            $seenIndices = @{}
+
             foreach ($resp in $batchResponse.responses) {
                 # Safely map batch response ID to pending item with bounds check
                 $requestIndex = $null
@@ -196,6 +198,7 @@ function Invoke-GraphBatchOperation {
                     $requestIndex = $requestIndex - 1
                     if ($requestIndex -ge 0 -and $requestIndex -lt $pendingItems.Count) {
                         $item = $pendingItems[$requestIndex]
+                        $seenIndices[$requestIndex] = $true
                     }
                 }
 
@@ -247,6 +250,22 @@ function Invoke-GraphBatchOperation {
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
                         Write-HydrationLog -Message "  [!] Failed: $($item.Name) - $errorMessage" -Level Warning
                         $results += New-HydrationResult @resultParams -Action 'Failed' -Status $errorMessage
+                    }
+                }
+            }
+
+            # Retry or fail any pending items missing from the batch response
+            for ($i = 0; $i -lt $pendingItems.Count; $i++) {
+                if (-not $seenIndices.ContainsKey($i)) {
+                    $missingItem = $pendingItems[$i]
+                    if ($retryCount -lt $MaxRetries) {
+                        Write-Verbose "Missing response for '$($missingItem.Name)' - will retry"
+                        $itemsToRetry += $missingItem
+                    } else {
+                        $resultParams = @{ Name = $missingItem.Name; Type = if ($missingItem.Type) { $missingItem.Type } else { $ResultType } }
+                        if ($missingItem.Path) { $resultParams.Path = $missingItem.Path }
+                        Write-HydrationLog -Message "  [!] Failed: $($missingItem.Name) - Missing from batch response" -Level Warning
+                        $results += New-HydrationResult @resultParams -Action 'Failed' -Status "$Operation failed: No response received from Graph API"
                     }
                 }
             }
