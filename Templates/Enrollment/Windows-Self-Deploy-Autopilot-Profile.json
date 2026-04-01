@@ -6,7 +6,7 @@
     "locale": "os-default",
     "preprovisioningAllowed": false,
     "deviceType": "windowsPc",
-    "hardwareHashExtractionEnabled": false,
+    "hardwareHashExtractionEnabled": true,
     "roleScopeTagIds": [],
     "hybridAzureADJoinSkipConnectivityCheck": false,
     "outOfBoxExperienceSetting": {
