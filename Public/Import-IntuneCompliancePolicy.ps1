@@ -46,12 +46,13 @@ function Import-IntuneCompliancePolicy {
     # Prefetch existing compliance policies (paged) from both classic and linux endpoints
     # Store full policy objects so we can check descriptions later
     $existingPolicies = @{}
+    # Each endpoint has different property names — use endpoint-specific $select
     $endpointsToList = @(
-        "beta/deviceManagement/deviceCompliancePolicies",
-        "beta/deviceManagement/compliancePolicies"
+        @{ Uri = "beta/deviceManagement/deviceCompliancePolicies"; Select = "id,displayName,description" },
+        @{ Uri = "beta/deviceManagement/compliancePolicies"; Select = "id,name,description" }
     )
-    foreach ($listUriStart in $endpointsToList) {
-        $listUri = "$listUriStart`?`$select=id,displayName,name,description"
+    foreach ($ep in $endpointsToList) {
+        $listUri = "$($ep.Uri)`?`$select=$($ep.Select)"
         try {
             do {
                 $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
@@ -63,14 +64,14 @@ function Import-IntuneCompliancePolicy {
                             $existingPolicies[$policyName] = @{
                                 Id          = $policy.id
                                 Description = $policy.description
-                                Endpoint    = $listUriStart
+                                Endpoint    = $ep.Uri
                                 IsTagged    = $isTagged
                             }
                         } elseif ($isTagged -and -not $existingPolicies[$policyName].IsTagged) {
                             $existingPolicies[$policyName] = @{
                                 Id          = $policy.id
                                 Description = $policy.description
-                                Endpoint    = $listUriStart
+                                Endpoint    = $ep.Uri
                                 IsTagged    = $true
                             }
                         }
