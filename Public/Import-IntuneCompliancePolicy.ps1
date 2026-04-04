@@ -80,6 +80,7 @@ function Import-IntuneCompliancePolicy {
                 $listUri = $existingResponse.'@odata.nextLink'
             } while ($listUri)
         } catch {
+            Write-Warning "Failed to list compliance policies from $($ep.Uri): $_"
             continue
         }
     }
@@ -169,6 +170,21 @@ function Import-IntuneCompliancePolicy {
                 if ($existingPolicies.ContainsKey($ln) -and $existingPolicies[$ln].IsTagged) {
                     $alreadyExists = $true
                     break
+                }
+            }
+
+            # Verify via targeted GET to guard against stale prefetch data after deletes
+            if ($alreadyExists) {
+                $matchedName = $lookupNames | Where-Object { $existingPolicies.ContainsKey($_) -and $existingPolicies[$_].IsTagged } | Select-Object -First 1
+                $matchedPolicy = $existingPolicies[$matchedName]
+                $verifyUri = "beta/$($matchedPolicy.Endpoint)/$($matchedPolicy.Id)"
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
+                } catch {
+                    if ($_.Exception.Message -match '404|NotFound') {
+                        Write-Verbose "Policy '$matchedName' returned 404 on verify — stale data, will create"
+                        $alreadyExists = $false
+                    }
                 }
             }
 
