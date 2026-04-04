@@ -102,6 +102,7 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 
 - **`[IHD]` Name Prefix** - All imported objects are prefixed with `[IHD]` for easy identification and filtering
 - **Batch API Operations** - Groups, policies, filters, and apps use batched Graph API calls (up to 10 per batch) for ~61% faster execution
+- **Retry-After Throttle Handling** - Automatic retry with `Retry-After` header support on 429/503 Graph API responses
 - **Bundled Baselines** - OpenIntuneBaseline templates included in module (no external download required)
 - **Idempotent** - Safe to run multiple times; skips existing configurations
 - **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
@@ -713,7 +714,7 @@ IntuneHydrationKit/
 │   ├── MobileApps/
 │   ├── Notifications/
 │   └── ...
-├── Tests/                         # Pester tests (393+)
+├── Tests/                         # Pester tests (648+)
 ├── Logs/                          # Execution logs
 └── Reports/                       # Generated reports
 ```

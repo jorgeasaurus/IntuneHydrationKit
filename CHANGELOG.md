@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-04
+
+### Added
+
+- **Retry-After Header Support**: `Invoke-GraphBatchOperation` now captures `Retry-After` headers from individual 429/503 batch responses and honors the longest delay before retrying, falling back to exponential backoff when the header is absent
+- **Paginated Query Retry Logic**: `Get-GraphPagedResults` now retries on 429/5xx transient errors with Retry-After support and exponential backoff (max 3 retries per page)
+- **`[OutputType()]` Annotations**: Added to 8 private helpers: `Get-FilteredTemplates`, `Get-GraphErrorMessage`, `Get-HydrationTemplates`, `Get-ResultSummary`, `New-HydrationDescription`, `New-HydrationResult`, `Remove-ReadOnlyGraphProperties`, `Test-HydrationKitObject`
+- **Comment-Based Help**: Completed `.DESCRIPTION` and `.EXAMPLE` sections for `Write-HydrationLog`, `Initialize-HydrationLogging`, and `Import-HydrationSettings`
+- **Test Coverage**: Expanded from 458 to 648 tests (+190) with 13 new test files:
+  - 9 private function tests: `Get-GraphErrorMessage`, `Get-HydrationTemplates`, `Get-ObfuscatedTenantId`, `Get-PremiumP2ServicePlans`, `Get-ResultSummary`, `New-HydrationResult`, `Remove-ReadOnlyGraphProperties`, `Test-ConditionalAccessPolicyRequiresP2`, `Test-ConditionalAccessPolicyRequiresPreview`
+  - 4 public function tests: `Import-IntuneBaseline`, `Import-IntuneAppProtectionPolicy`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneNotificationTemplate`
+  - 429 throttle with Retry-After header test for `Invoke-GraphBatchOperation`
+
+### Changed
+
+- **Error Handling**: Replaced bare `throw` and `Write-Error` with `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` in 9 public functions (`Connect-IntuneHydration`, `Get-OpenIntuneBaseline`, `Import-HydrationSettings`, `Import-IntuneBaseline`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Invoke-IntuneHydration`, `New-IntuneDynamicGroup`, `Test-IntunePrerequisites`) — all errors now include structured ErrorRecord objects with error IDs, categories, and target objects
+- **Graph API Performance**: Added `$select` query parameter to 8+ GET requests across `Import-IntuneCompliancePolicy`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Test-IntunePrerequisites`, and `Test-WindowsDriverUpdateLicense` to reduce response payload size
+- **Centralized Hydration Marker**: Marker strings (`"Imported by Intune Hydration Kit"` and hyphenated variant) consolidated into `$script:HydrationMarker` and `$script:HydrationMarkerAlt` module-scoped variables in `IntuneHydrationKit.psm1`, used by `Test-HydrationKitObject` and `New-HydrationDescription`
+
 ## [0.5.0] - 2026-03-29
 
 ### Added
