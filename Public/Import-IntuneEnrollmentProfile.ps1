@@ -94,7 +94,7 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching ESP profiles
         try {
-            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$select=id,displayName,description,@odata.type" -ErrorAction Stop
+            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$select=id,displayName,description" -ErrorAction Stop
             $espProfiles = $existingESP.value | Where-Object {
                 $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
             }
