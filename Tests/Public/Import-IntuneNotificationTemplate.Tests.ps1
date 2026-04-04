@@ -119,7 +119,7 @@ Describe 'Import-IntuneNotificationTemplate' {
             }
         }
 
-        It 'Should skip template that already exists' {
+        It 'Should skip template that already exists (verified by targeted GET)' {
             Mock Get-GraphPagedResults {
                 param($Uri, $ProcessItems)
                 if ($ProcessItems) {
@@ -129,13 +129,21 @@ Describe 'Import-IntuneNotificationTemplate' {
                 }
             } -ModuleName IntuneHydrationKit
 
+            # Targeted GET succeeds → template genuinely exists
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*notificationMessageTemplates/existing-id*') {
+                    return @{ id = 'existing-id'; displayName = '[IHD] Compliance Reminder' }
+                }
+            } -ModuleName IntuneHydrationKit
+
             $result = Import-IntuneNotificationTemplate -TemplatePath (Join-Path 'TestDrive:' 'NotifTemplates')
 
             $skipped = @($result | Where-Object { $_.Action -eq 'Skipped' -and $_.Status -eq 'Already exists' })
             $skipped.Count | Should -Be 1
         }
 
-        It 'Should skip template matching legacy unprefixed name' {
+        It 'Should skip template matching legacy unprefixed name (verified by targeted GET)' {
             Mock Get-GraphPagedResults {
                 param($Uri, $ProcessItems)
                 if ($ProcessItems) {
@@ -145,10 +153,49 @@ Describe 'Import-IntuneNotificationTemplate' {
                 }
             } -ModuleName IntuneHydrationKit
 
+            # Targeted GET succeeds → legacy template genuinely exists
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*notificationMessageTemplates/legacy-id*') {
+                    return @{ id = 'legacy-id'; displayName = 'Compliance Reminder' }
+                }
+            } -ModuleName IntuneHydrationKit
+
             $result = Import-IntuneNotificationTemplate -TemplatePath (Join-Path 'TestDrive:' 'NotifTemplates')
 
             $skipped = @($result | Where-Object { $_.Action -eq 'Skipped' -and $_.Status -like '*legacy*' })
             $skipped.Count | Should -Be 1
+        }
+
+        It 'Should create template when prefetch returns stale data (targeted GET returns 404)' {
+            Mock Get-GraphPagedResults {
+                param($Uri, $ProcessItems)
+                if ($ProcessItems) {
+                    & $ProcessItems @(
+                        @{ id = 'stale-id'; displayName = '[IHD] Compliance Reminder' }
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                # Targeted GET fails → template was deleted (stale listing)
+                if ($Method -eq 'GET' -and $Uri -like '*notificationMessageTemplates/stale-id*') {
+                    throw [System.Net.Http.HttpRequestException]::new("Response status code does not indicate success: 404 (Not Found).")
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*notificationMessageTemplates') {
+                    return @{ id = 'new-id'; displayName = '[IHD] Compliance Reminder' }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*localizedNotificationMessages*') {
+                    return @{ id = 'locale-id' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneNotificationTemplate -TemplatePath (Join-Path 'TestDrive:' 'NotifTemplates')
+
+            $created = @($result | Where-Object { $_.Action -eq 'Created' })
+            $created.Count | Should -Be 1
+            $created[0].Name | Should -Be '[IHD] Compliance Reminder'
         }
     }
 
