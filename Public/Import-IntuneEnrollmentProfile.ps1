@@ -236,6 +236,18 @@ function Import-IntuneEnrollmentProfile {
                     }
 
                     if ($taggedMatch) {
+                        # Verify the profile still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$existingProfileId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            Write-Verbose "Autopilot profile '$profileName' (ID: $existingProfileId) no longer exists - proceeding to create"
+                            $taggedMatch = $false
+                        }
+                    }
+
+                    if ($taggedMatch) {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
                         $results += New-HydrationResult -Name $profileName -Type 'AutopilotDeploymentProfile' -Id $existingProfileId -Action 'Skipped' -Status 'Already exists'
                     } elseif ($PSCmdlet.ShouldProcess($profileName, "Create Autopilot deployment profile")) {
@@ -348,6 +360,18 @@ function Import-IntuneEnrollmentProfile {
                         }
                         if (-not $taggedMatch) {
                             $espId = $espCandidates[0].id
+                        }
+                    }
+
+                    if ($taggedMatch) {
+                        # Verify the ESP still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$espId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            Write-Verbose "ESP '$profileName' (ID: $espId) no longer exists - proceeding to create"
+                            $taggedMatch = $false
                         }
                     }
 
@@ -470,6 +494,18 @@ function Import-IntuneEnrollmentProfile {
                                 break
                             }
                             if (-not $existingPolicyId) { $existingPolicyId = $pol.id }
+                        }
+                    }
+
+                    if ($taggedMatch) {
+                        # Verify the policy still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies/$existingPolicyId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            Write-Verbose "Device preparation policy '$profileName' (ID: $existingPolicyId) no longer exists - proceeding to create"
+                            $taggedMatch = $false
                         }
                     }
 
