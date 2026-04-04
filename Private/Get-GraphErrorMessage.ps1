@@ -6,6 +6,7 @@ function Get-GraphErrorMessage {
         Internal helper function for parsing Graph API error details into a clean, readable format
     #>
     [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
         [System.Management.Automation.ErrorRecord]$ErrorRecord

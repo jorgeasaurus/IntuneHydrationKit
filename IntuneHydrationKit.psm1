@@ -39,6 +39,10 @@ $script:MaxBatchSize = 10  # Graph API batch limit (max 20, using 10 for safety)
 # Prefix prepended to every imported resource's displayName/name for easy identification
 $script:ImportPrefix = '[IHD] '
 
+# Hydration kit marker embedded in descriptions/notes to identify objects created by this kit
+$script:HydrationMarker = 'Imported by Intune Hydration Kit'
+$script:HydrationMarkerAlt = 'Imported by Intune-Hydration-Kit'
+
 # Import private functions
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'
 if (Test-Path -Path $privatePath) {

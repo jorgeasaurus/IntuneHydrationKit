@@ -53,7 +53,7 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching Autopilot profiles
         try {
-            $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -ErrorAction Stop
+            $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$select=id,displayName,description" -ErrorAction Stop
             foreach ($enrollmentProfile in $existingAutopilot.value) {
                 if (-not (Test-HydrationKitObject -Description $enrollmentProfile.description -ObjectName $enrollmentProfile.displayName)) {
                     Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune Hydration Kit"
@@ -88,7 +88,7 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching ESP profiles
         try {
-            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations" -ErrorAction Stop
+            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$select=id,displayName,description,@odata.type" -ErrorAction Stop
             $espProfiles = $existingESP.value | Where-Object {
                 $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
             }

@@ -51,7 +51,7 @@ function Import-IntuneCompliancePolicy {
         "beta/deviceManagement/compliancePolicies"
     )
     foreach ($listUriStart in $endpointsToList) {
-        $listUri = $listUriStart
+        $listUri = "$listUriStart`?`$select=id,displayName,name,description"
         try {
             do {
                 $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
@@ -253,7 +253,7 @@ function Import-IntuneCompliancePolicy {
 
             # Step 1: Check if compliance script already exists or create it
             $scriptId = $null
-            $existingScripts = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceComplianceScripts" -ErrorAction Stop
+            $existingScripts = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceComplianceScripts?`$select=id,displayName" -ErrorAction Stop
             $existingScript = $existingScripts.value | Where-Object { $_.displayName -eq $scriptDisplayName }
 
             if ($existingScript) {

@@ -2,6 +2,9 @@ function Initialize-HydrationLogging {
     <#
     .SYNOPSIS
         Initializes logging for the hydration session
+    .DESCRIPTION
+        Sets up the logging infrastructure for a hydration run, creating the log directory
+        and session log file. Configures both console and file logging with timestamps.
     .PARAMETER LogPath
         Path to write log files. Defaults to OS temp directory under IntuneHydrationKit/Logs
     .PARAMETER EnableVerbose

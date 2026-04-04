@@ -36,14 +36,13 @@ function Test-IntunePrerequisites {
 
     try {
         # Check organization info and licenses
-        $org = Invoke-MgGraphRequest -Method GET -Uri "beta/organization" -ErrorAction Stop
+        $org = Invoke-MgGraphRequest -Method GET -Uri "beta/organization?`$select=id,displayName" -ErrorAction Stop
         $orgDetails = $org.value[0]
 
         Write-Host "Connected to: $($orgDetails.displayName)"
 
         # Check for Intune service plan
-        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
-
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,skuPartNumber,capabilityStatus,servicePlans" -ErrorAction Stop
         $intuneServicePlans = @(
             'INTUNE_A',           # Intune Plan 1
             'INTUNE_EDU',         # Intune for Education

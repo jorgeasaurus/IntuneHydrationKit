@@ -22,6 +22,7 @@ function New-HydrationDescription {
         # Returns: "My profile Imported by Intune Hydration Kit"
     #>
     [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter()]
         [string]$ExistingText,
@@ -30,7 +31,7 @@ function New-HydrationDescription {
         [string]$Separator = ' - '
     )
 
-    $tag = 'Imported by Intune Hydration Kit'
+    $tag = if ($script:HydrationMarker) { $script:HydrationMarker } else { 'Imported by Intune Hydration Kit' }
     if (-not [string]::IsNullOrWhiteSpace($ExistingText)) {
         return "$ExistingText$Separator$tag"
     }

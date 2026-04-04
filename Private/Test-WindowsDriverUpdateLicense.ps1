@@ -66,7 +66,7 @@ function Test-WindowsDriverUpdateLicense {
     )
 
     try {
-        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,skuPartNumber,capabilityStatus,servicePlans" -ErrorAction Stop
 
         foreach ($sku in $subscribedSkus.value) {
             # Skip disabled SKUs

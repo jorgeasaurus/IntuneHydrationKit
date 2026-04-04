@@ -6,6 +6,11 @@ function Import-HydrationSettings {
         Loads settings from a JSON file.
     .PARAMETER Path
         Path to the settings file
+    .EXAMPLE
+        Import-HydrationSettings -Path './settings.json'
+    .EXAMPLE
+        $settings = Import-HydrationSettings -Path './settings.json'
+        $settings.tenant.tenantId  # Access tenant ID from loaded settings
     #>
     [CmdletBinding()]
     param(

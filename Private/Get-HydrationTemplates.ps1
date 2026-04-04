@@ -12,6 +12,7 @@ function Get-HydrationTemplates {
         The type of resource being loaded (for logging purposes)
     #>
     [CmdletBinding()]
+    [OutputType([System.IO.FileInfo[]])]
     param(
         [Parameter(Mandatory)]
         [string]$Path,

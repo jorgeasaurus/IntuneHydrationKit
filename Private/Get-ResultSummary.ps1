@@ -6,6 +6,7 @@ function Get-ResultSummary {
         Internal helper function for aggregating result counts by action type
     #>
     [CmdletBinding()]
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $false)]
         [array]$Results = @()

@@ -48,7 +48,7 @@ function Import-IntuneConditionalAccessPolicy {
 
     $hasPremiumP2 = $false
     try {
-        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,capabilityStatus,servicePlans" -ErrorAction Stop
         foreach ($sku in $subscribedSkus.value) {
             if ($sku.capabilityStatus -ne 'Enabled') { continue }
             foreach ($plan in $sku.servicePlans) {
