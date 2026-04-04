@@ -25,13 +25,27 @@ function Import-HydrationSettings {
 
         # Validate required fields only when loading from file
         if (-not $settings.tenant.tenantId) {
-            throw "Missing required field: tenant.tenantId"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Missing required field: tenant.tenantId"),
+                'MissingTenantId',
+                [System.Management.Automation.ErrorCategory]::InvalidData,
+                $Path
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
         Write-HydrationLog -Message "Settings loaded from: $Path" -Level Info
         return $settings
+    } catch [System.Management.Automation.PipelineStoppedException] {
+        throw
     } catch {
         Write-HydrationLog -Message "Failed to load settings: $_" -Level Error
-        throw
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Failed to load settings from '$Path': $($_.Exception.Message)", $_.Exception),
+            'SettingsLoadFailed',
+            [System.Management.Automation.ErrorCategory]::ReadError,
+            $Path
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }

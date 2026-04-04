@@ -86,7 +86,13 @@ function New-IntuneDynamicGroup {
             return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'WouldCreate' -Status 'DryRun'
         }
     } catch {
-        Write-Error "Failed to create group '$DisplayName': $_"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Failed to create group '$DisplayName': $($_.Exception.Message)", $_.Exception),
+            'GroupCreationFailed',
+            [System.Management.Automation.ErrorCategory]::WriteError,
+            $DisplayName
+        )
+        $PSCmdlet.WriteError($errorRecord)
         return New-HydrationResult -Name $DisplayName -Type 'DynamicGroup' -Action 'Failed' -Status $_.Exception.Message
     }
 }

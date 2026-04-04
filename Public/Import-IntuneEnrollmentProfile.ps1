@@ -40,7 +40,13 @@ function Import-IntuneEnrollmentProfile {
     }
 
     if (-not (Test-Path -Path $TemplatePath)) {
-        throw "Enrollment template directory not found: $TemplatePath"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Enrollment template directory not found: $TemplatePath"),
+            'EnrollmentTemplateNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $TemplatePath
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     $results = @()
@@ -176,7 +182,13 @@ function Import-IntuneEnrollmentProfile {
             $template = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop |
                 ConvertFrom-Json -ErrorAction Stop
         } catch {
-            Write-Error "Failed to load or parse enrollment template file '$($templateFile.FullName)': $_"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Failed to load or parse enrollment template file '$($templateFile.FullName)': $($_.Exception.Message)", $_.Exception),
+                'TemplateParseError',
+                [System.Management.Automation.ErrorCategory]::ParserError,
+                $templateFile.FullName
+            )
+            $PSCmdlet.WriteError($errorRecord)
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $($_.Exception.Message)" -Level Error
             $results += New-HydrationResult -Name $templateFile.Name -Type 'EnrollmentTemplate' -Action 'Failed' -Status $_.Exception.Message
             continue

@@ -95,7 +95,12 @@ function Connect-IntuneHydration {
 
         Write-Host "Successfully connected to tenant: $(Get-ObfuscatedTenantId -TenantId $TenantId) ($Environment)"
     } catch {
-        Write-Error "Failed to connect to Microsoft Graph: $_"
-        throw
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception),
+            'GraphConnectionFailed',
+            [System.Management.Automation.ErrorCategory]::ConnectionError,
+            $TenantId
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }

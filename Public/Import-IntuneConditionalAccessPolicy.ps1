@@ -32,7 +32,13 @@ function Import-IntuneConditionalAccessPolicy {
     }
 
     if (-not (Test-Path -Path $TemplatePath)) {
-        throw "Conditional Access template directory not found: $TemplatePath"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Conditional Access template directory not found: $TemplatePath"),
+            'CATemplateNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $TemplatePath
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # Get all CA policy templates (non-recursive for CA policies)

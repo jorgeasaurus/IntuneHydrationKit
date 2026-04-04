@@ -124,7 +124,13 @@ function Test-IntunePrerequisites {
 
             # Surface specific issues in the exception message so callers/tests can pattern match
             $issueMessage = $issues -join ' | '
-            throw "Prerequisite checks failed: $issueMessage"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Prerequisite checks failed: $issueMessage"),
+                'PrerequisiteCheckFailed',
+                [System.Management.Automation.ErrorCategory]::NotEnabled,
+                $null
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
         Write-Host "All prerequisite checks passed"
@@ -133,7 +139,12 @@ function Test-IntunePrerequisites {
         if ($_.Exception.Message -match "Prerequisite checks failed") {
             throw
         }
-        Write-Error "Failed to validate prerequisites: $_"
-        throw
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Failed to validate prerequisites: $($_.Exception.Message)", $_.Exception),
+            'PrerequisiteValidationFailed',
+            [System.Management.Automation.ErrorCategory]::NotSpecified,
+            $null
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
