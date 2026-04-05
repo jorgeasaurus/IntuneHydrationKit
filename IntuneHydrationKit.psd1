@@ -89,6 +89,19 @@
 
             # Release notes for this module
             ReleaseNotes = @'
+
+Install directly from the PowerShell Gallery:
+
+```powershell
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+```
+
+To update to the latest version:
+
+```powershell
+Update-Module -Name IntuneHydrationKit
+```
+
 ## v0.6.0
 
 - **Retry-After Support:** Graph API batch operations and paginated queries now honor `Retry-After` headers on 429/503 responses with exponential backoff fallback
