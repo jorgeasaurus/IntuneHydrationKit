@@ -16,8 +16,9 @@ Describe 'Get-PremiumP2ServicePlans' {
             $plans.Count | Should -BeGreaterThan 0
         }
 
-        It 'Should return an array type' {
-            $plans | Should -BeOfType [string]
+        It 'Should return string elements' {
+            $plans | Should -HaveCount $plans.Count
+            $plans[0] | Should -BeOfType [string]
         }
     }
 

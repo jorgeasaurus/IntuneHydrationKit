@@ -242,8 +242,20 @@ function Import-IntuneEnrollmentProfile {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$existingProfileId" -ErrorAction Stop
                             $verified = $true
                         } catch {
-                            Write-Verbose "Autopilot profile '$profileName' (ID: $existingProfileId) no longer exists - proceeding to create"
-                            $taggedMatch = $false
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "Autopilot profile '$profileName' (ID: $existingProfileId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 
@@ -370,8 +382,20 @@ function Import-IntuneEnrollmentProfile {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$espId" -ErrorAction Stop
                             $verified = $true
                         } catch {
-                            Write-Verbose "ESP '$profileName' (ID: $espId) no longer exists - proceeding to create"
-                            $taggedMatch = $false
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "ESP '$profileName' (ID: $espId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 
@@ -504,8 +528,20 @@ function Import-IntuneEnrollmentProfile {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies/$existingPolicyId" -ErrorAction Stop
                             $verified = $true
                         } catch {
-                            Write-Verbose "Device preparation policy '$profileName' (ID: $existingPolicyId) no longer exists - proceeding to create"
-                            $taggedMatch = $false
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "Device preparation policy '$profileName' (ID: $existingPolicyId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 

@@ -177,7 +177,12 @@ function Import-IntuneCompliancePolicy {
             if ($alreadyExists) {
                 $matchedName = $lookupNames | Where-Object { $existingPolicies.ContainsKey($_) -and $existingPolicies[$_].IsTagged } | Select-Object -First 1
                 $matchedPolicy = $existingPolicies[$matchedName]
-                $verifyUri = "beta/$($matchedPolicy.Endpoint)/$($matchedPolicy.Id)"
+                $verifyEndpoint = if ($matchedPolicy.Endpoint -match '^beta/') {
+                    $matchedPolicy.Endpoint
+                } else {
+                    "beta/$($matchedPolicy.Endpoint)"
+                }
+                $verifyUri = "$verifyEndpoint/$($matchedPolicy.Id)"
                 try {
                     $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
                 } catch {

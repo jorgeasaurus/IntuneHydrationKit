@@ -181,7 +181,11 @@ Describe 'Import-IntuneNotificationTemplate' {
                 param($Method, $Uri)
                 # Targeted GET fails → template was deleted (stale listing)
                 if ($Method -eq 'GET' -and $Uri -like '*notificationMessageTemplates/stale-id*') {
-                    throw [System.Net.Http.HttpRequestException]::new("Response status code does not indicate success: 404 (Not Found).")
+                    throw [System.Net.Http.HttpRequestException]::new(
+                        "Response status code does not indicate success: 404 (Not Found).",
+                        $null,
+                        [System.Net.HttpStatusCode]::NotFound
+                    )
                 }
                 if ($Method -eq 'POST' -and $Uri -like '*notificationMessageTemplates') {
                     return @{ id = 'new-id'; displayName = '[IHD] Compliance Reminder' }

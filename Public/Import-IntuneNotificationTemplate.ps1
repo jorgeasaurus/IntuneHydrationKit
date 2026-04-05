@@ -121,7 +121,19 @@ function Import-IntuneNotificationTemplate {
                     $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
                     $verified = $true
                 } catch {
-                    Write-Verbose "Template '$displayName' (ID: $existId) no longer exists - proceeding to create"
+                    $statusCode = $null
+                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                        $statusCode = [int]$_.Exception.ResponseStatusCode
+                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                        $statusCode = [int]$_.Exception.StatusCode
+                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                        $statusCode = [int]$_.Exception.Response.StatusCode
+                    }
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Template '$displayName' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
                 }
                 if ($verified) {
                     Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
@@ -138,7 +150,19 @@ function Import-IntuneNotificationTemplate {
                     $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
                     $verified = $true
                 } catch {
-                    Write-Verbose "Legacy template '$($template.displayName)' (ID: $existId) no longer exists - proceeding to create"
+                    $statusCode = $null
+                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                        $statusCode = [int]$_.Exception.ResponseStatusCode
+                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                        $statusCode = [int]$_.Exception.StatusCode
+                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                        $statusCode = [int]$_.Exception.Response.StatusCode
+                    }
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Legacy template '$($template.displayName)' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
                 }
                 if ($verified) {
                     Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
