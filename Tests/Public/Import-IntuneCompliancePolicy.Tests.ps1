@@ -147,11 +147,15 @@ Describe 'Import-IntuneCompliancePolicy' {
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
-                if ($Method -eq 'POST') {
-                    # Verify the body contains the hydration marker
-                    $bodyObj = $Body | ConvertFrom-Json
-                    $bodyObj.description | Should -BeLike '*Imported by Intune Hydration Kit*'
-                    return @{ id = 'new-policy-id'; displayName = 'Windows 10 Compliance Policy' }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    # Body is a JSON batch envelope; verify the nested policy description
+                    $batchObj = $Body | ConvertFrom-Json
+                    $batchObj.requests[0].body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-policy-id'; displayName = '[IHD] Windows 10 Compliance Policy' } }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 

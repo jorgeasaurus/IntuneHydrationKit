@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.5.0'
+    ModuleVersion     = '0.6.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -89,15 +89,28 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.5.0
 
-- **[IHD] Prefix:** All imported resources now prefixed with `[IHD] ` for instant identification in Intune portal
-- **Delete Bug Fixes:** Fixed Graph API dictionary deserialization, null response handling, scriptblock scope bugs, and HashSet enumeration issues
-- **Tag-Aware Skips:** Import functions only skip objects with the hydration kit marker, not untagged duplicates
-- **Template-Scoped Deletes:** Delete operations now require both kit tag AND matching template name for safety
-- **Performance:** 61% faster execution (~180s to ~70s) using batch Graph API operations
-- **Bundled Templates:** OpenIntuneBaseline templates now included (no external downloads required)
-- **Batch Operations:** Groups, policies, filters, and apps now use batched API calls (up to 10 per batch)
+Install directly from the PowerShell Gallery:
+
+```powershell
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+```
+
+To update to the latest version:
+
+```powershell
+Update-Module -Name IntuneHydrationKit
+```
+
+## v0.6.0
+
+- **Retry-After Support:** Graph API batch operations and paginated queries now honor `Retry-After` headers on 429/503 responses with exponential backoff fallback
+- **Error Handling:** Public functions use proper `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` with structured ErrorRecord objects
+- **Graph API Performance:** Added `$select` query parameter to 8+ GET requests to reduce payload size
+- **OutputType Annotations:** Added `[OutputType()]` attributes to 8 private helper functions
+- **Centralized Hydration Marker:** Marker strings consolidated into module-scoped variables for consistency
+- **Test Coverage:** Expanded from 458 to 648 tests with 13 new test files covering private helpers and public import functions
+- **Documentation:** Completed comment-based help for `Write-HydrationLog`, `Initialize-HydrationLogging`, and `Import-HydrationSettings`
 
 '@
         }

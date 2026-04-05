@@ -278,7 +278,13 @@ function Invoke-IntuneHydration {
 
             # Validate that at least one target is enabled
             if (-not ($importsEnabled.Values -contains $true)) {
-                throw "At least one target must be enabled. Use -All or specify a target switch (e.g., -DynamicGroups, -DeviceFilters, etc.)."
+                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                    [System.Exception]::new("At least one target must be enabled. Use -All or specify a target switch (e.g., -DynamicGroups, -DeviceFilters, etc.)."),
+                    'NoTargetsEnabled',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $null
+                )
+                $PSCmdlet.ThrowTerminatingError($errorRecord)
             }
 
             # Build settings object from parameters
@@ -389,11 +395,23 @@ function Invoke-IntuneHydration {
 
         # Validate options - create and delete are mutually exclusive
         if ($createEnabled -and $deleteEnabled) {
-            throw "Only one of 'create' or 'delete' options can be true. Current settings: create=$createEnabled, delete=$deleteEnabled"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Only one of 'create' or 'delete' options can be true. Current settings: create=$createEnabled, delete=$deleteEnabled"),
+                'MutuallyExclusiveOptions',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
         if (-not $createEnabled -and -not $deleteEnabled) {
-            throw "At least one of 'create' or 'delete' options must be true. Current settings: create=$createEnabled, delete=$deleteEnabled"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("At least one of 'create' or 'delete' options must be true. Current settings: create=$createEnabled, delete=$deleteEnabled"),
+                'NoOperationSelected',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
         if ($deleteEnabled -and -not $forceDelete -and -not $WhatIfPreference) {

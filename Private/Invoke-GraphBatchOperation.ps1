@@ -71,8 +71,20 @@ function Invoke-GraphBatchOperation {
 
         while ($pendingItems.Count -gt 0 -and $retryCount -le $MaxRetries) {
             if ($retryCount -gt 0) {
-                $delay = $RetryDelaySeconds * [Math]::Pow(2, $retryCount - 1)
-                Write-Verbose "Retrying $($pendingItems.Count) failed $($Operation.ToLower())(s) after ${delay}s delay (attempt $retryCount of $MaxRetries)..."
+                # Honor Retry-After from previous throttled responses; fall back to exponential backoff
+                $maxRetryAfter = 0
+                foreach ($item in $pendingItems) {
+                    if ($item.RetryAfter) {
+                        $parsedRetryAfter = 0
+                        if ([int]::TryParse([string]$item.RetryAfter, [ref]$parsedRetryAfter) -and $parsedRetryAfter -gt $maxRetryAfter) {
+                            $maxRetryAfter = $parsedRetryAfter
+                        }
+                        $item.Remove('RetryAfter')
+                    }
+                }
+                $delay = if ($maxRetryAfter -gt 0) { $maxRetryAfter } else { $RetryDelaySeconds * [Math]::Pow(2, $retryCount - 1) }
+                $delaySource = if ($maxRetryAfter -gt 0) { 'Retry-After header' } else { 'exponential backoff' }
+                Write-Verbose "Retrying $($pendingItems.Count) failed $($Operation.ToLower())(s) after ${delay}s delay ($delaySource, attempt $retryCount of $MaxRetries)..."
                 Start-Sleep -Seconds $delay
             }
 
@@ -228,6 +240,7 @@ function Invoke-GraphBatchOperation {
                         $results += New-HydrationResult @resultParams -Action 'Skipped' -Status 'Already deleted'
                     } elseif (($resp.status -in @(429, 503) -or $resp.status -ge 500) -and $retryCount -lt $MaxRetries) {
                         Write-Verbose "Retryable error ($($resp.status)) for '$($item.Name)' - will retry"
+                        if ($resp.headers -and $resp.headers.'Retry-After') { $item.RetryAfter = $resp.headers.'Retry-After' }
                         $itemsToRetry += $item
                     } else {
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
@@ -245,6 +258,7 @@ function Invoke-GraphBatchOperation {
                         $results += New-HydrationResult @resultParams -Action 'Skipped' -Status 'Already exists (race condition)'
                     } elseif (($resp.status -in @(429, 503) -or $resp.status -ge 500) -and $retryCount -lt $MaxRetries) {
                         Write-Verbose "Retryable error ($($resp.status)) for '$($item.Name)' - will retry"
+                        if ($resp.headers -and $resp.headers.'Retry-After') { $item.RetryAfter = $resp.headers.'Retry-After' }
                         $itemsToRetry += $item
                     } else {
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }

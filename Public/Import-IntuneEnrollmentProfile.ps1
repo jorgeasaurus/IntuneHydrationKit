@@ -40,7 +40,13 @@ function Import-IntuneEnrollmentProfile {
     }
 
     if (-not (Test-Path -Path $TemplatePath)) {
-        throw "Enrollment template directory not found: $TemplatePath"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Enrollment template directory not found: $TemplatePath"),
+            'EnrollmentTemplateNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $TemplatePath
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     $results = @()
@@ -53,7 +59,7 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching Autopilot profiles
         try {
-            $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -ErrorAction Stop
+            $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles?`$select=id,displayName,description" -ErrorAction Stop
             foreach ($enrollmentProfile in $existingAutopilot.value) {
                 if (-not (Test-HydrationKitObject -Description $enrollmentProfile.description -ObjectName $enrollmentProfile.displayName)) {
                     Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune Hydration Kit"
@@ -88,7 +94,7 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching ESP profiles
         try {
-            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations" -ErrorAction Stop
+            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations?`$select=id,displayName,description" -ErrorAction Stop
             $espProfiles = $existingESP.value | Where-Object {
                 $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
             }
@@ -176,7 +182,13 @@ function Import-IntuneEnrollmentProfile {
             $template = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop |
                 ConvertFrom-Json -ErrorAction Stop
         } catch {
-            Write-Error "Failed to load or parse enrollment template file '$($templateFile.FullName)': $_"
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Failed to load or parse enrollment template file '$($templateFile.FullName)': $($_.Exception.Message)", $_.Exception),
+                'TemplateParseError',
+                [System.Management.Automation.ErrorCategory]::ParserError,
+                $templateFile.FullName
+            )
+            $PSCmdlet.WriteError($errorRecord)
             Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $($_.Exception.Message)" -Level Error
             $results += New-HydrationResult -Name $templateFile.Name -Type 'EnrollmentTemplate' -Action 'Failed' -Status $_.Exception.Message
             continue
@@ -220,6 +232,30 @@ function Import-IntuneEnrollmentProfile {
                         }
                         if (-not $taggedMatch) {
                             $existingProfileId = $existingProfiles.value[0].id
+                        }
+                    }
+
+                    if ($taggedMatch) {
+                        # Verify the profile still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$existingProfileId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "Autopilot profile '$profileName' (ID: $existingProfileId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 
@@ -336,6 +372,30 @@ function Import-IntuneEnrollmentProfile {
                         }
                         if (-not $taggedMatch) {
                             $espId = $espCandidates[0].id
+                        }
+                    }
+
+                    if ($taggedMatch) {
+                        # Verify the ESP still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$espId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "ESP '$profileName' (ID: $espId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 
@@ -458,6 +518,30 @@ function Import-IntuneEnrollmentProfile {
                                 break
                             }
                             if (-not $existingPolicyId) { $existingPolicyId = $pol.id }
+                        }
+                    }
+
+                    if ($taggedMatch) {
+                        # Verify the policy still exists (handles eventual consistency after deletes)
+                        $verified = $false
+                        try {
+                            $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies/$existingPolicyId" -ErrorAction Stop
+                            $verified = $true
+                        } catch {
+                            $statusCode = $null
+                            if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                                $statusCode = [int]$_.Exception.ResponseStatusCode
+                            } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                                $statusCode = [int]$_.Exception.StatusCode
+                            } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                                $statusCode = [int]$_.Exception.Response.StatusCode
+                            }
+                            if ($statusCode -eq 404) {
+                                Write-Verbose "Device preparation policy '$profileName' (ID: $existingPolicyId) no longer exists - proceeding to create"
+                                $taggedMatch = $false
+                            } else {
+                                throw
+                            }
                         }
                     }
 

@@ -62,7 +62,12 @@ function Get-OpenIntuneBaseline {
 
         return $DestinationPath
     } catch {
-        Write-Error "Failed to download OpenIntuneBaseline: $_"
-        throw
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Failed to download OpenIntuneBaseline: $($_.Exception.Message)", $_.Exception),
+            'BaselineDownloadFailed',
+            [System.Management.Automation.ErrorCategory]::ConnectionError,
+            $null
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }

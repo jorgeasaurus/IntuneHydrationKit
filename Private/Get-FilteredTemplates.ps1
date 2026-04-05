@@ -22,6 +22,7 @@ function Get-FilteredTemplates {
         The type of resource being loaded (for logging purposes)
     #>
     [CmdletBinding()]
+    [OutputType([System.IO.FileInfo[]])]
     param(
         [string]$Path,
 

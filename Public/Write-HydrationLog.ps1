@@ -1,13 +1,21 @@
 function Write-HydrationLog {
     <#
     .SYNOPSIS
-        Writes a log entry
+        Writes a log entry to the console and log file
+    .DESCRIPTION
+        Writes a timestamped, level-tagged log entry to both the console (with color-coded
+        icons) and the current session log file. Used throughout the module to provide
+        consistent diagnostic output during hydration operations.
     .PARAMETER Message
         The message to log
     .PARAMETER Level
         Log level (Info, Warning, Error, Debug)
     .PARAMETER Data
         Additional data to include
+    .EXAMPLE
+        Write-HydrationLog -Message "Importing compliance policies" -Level Info
+    .EXAMPLE
+        Write-HydrationLog -Message "Rate limited by Graph API" -Level Warning
     #>
     [CmdletBinding()]
     param(

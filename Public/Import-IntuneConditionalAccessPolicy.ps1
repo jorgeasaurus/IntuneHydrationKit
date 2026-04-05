@@ -32,7 +32,13 @@ function Import-IntuneConditionalAccessPolicy {
     }
 
     if (-not (Test-Path -Path $TemplatePath)) {
-        throw "Conditional Access template directory not found: $TemplatePath"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("Conditional Access template directory not found: $TemplatePath"),
+            'CATemplateNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $TemplatePath
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # Get all CA policy templates (non-recursive for CA policies)
@@ -48,7 +54,7 @@ function Import-IntuneConditionalAccessPolicy {
 
     $hasPremiumP2 = $false
     try {
-        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus" -ErrorAction Stop
+        $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,capabilityStatus,servicePlans" -ErrorAction Stop
         foreach ($sku in $subscribedSkus.value) {
             if ($sku.capabilityStatus -ne 'Enabled') { continue }
             foreach ($plan in $sku.servicePlans) {

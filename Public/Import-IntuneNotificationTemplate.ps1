@@ -39,7 +39,7 @@ function Import-IntuneNotificationTemplate {
     # Prefetch existing templates for duplicate detection
     $existingTemplates = @{}
     try {
-        Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates" -ProcessItems {
+        Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates?`$select=id,displayName" -ProcessItems {
             param($items)
             foreach ($tmpl in $items) {
                 if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
@@ -112,16 +112,63 @@ function Import-IntuneNotificationTemplate {
             }
 
             if ($existingTemplates.ContainsKey($displayName)) {
-                Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
-                continue
+                # Notification templates lack a description field for hydration markers,
+                # so verify the template still exists via targeted GET (handles eventual
+                # consistency after recent deletes returning stale list data)
+                $existId = $existingTemplates[$displayName].Id
+                $verified = $false
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
+                    $verified = $true
+                } catch {
+                    $statusCode = $null
+                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                        $statusCode = [int]$_.Exception.ResponseStatusCode
+                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                        $statusCode = [int]$_.Exception.StatusCode
+                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                        $statusCode = [int]$_.Exception.Response.StatusCode
+                    }
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Template '$displayName' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
+                }
+                if ($verified) {
+                    Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
+                    $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
+                    continue
+                }
             }
 
             # Check for legacy unprefixed template to prevent duplicates on upgrade
             if ($existingTemplates.ContainsKey($template.displayName)) {
-                Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists (legacy name)'
-                continue
+                $existId = $existingTemplates[$template.displayName].Id
+                $verified = $false
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
+                    $verified = $true
+                } catch {
+                    $statusCode = $null
+                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
+                        $statusCode = [int]$_.Exception.ResponseStatusCode
+                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
+                        $statusCode = [int]$_.Exception.StatusCode
+                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
+                        $statusCode = [int]$_.Exception.Response.StatusCode
+                    }
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Legacy template '$($template.displayName)' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
+                }
+                if ($verified) {
+                    Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
+                    $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists (legacy name)'
+                    continue
+                }
             }
 
             # Split template into main body and localized messages

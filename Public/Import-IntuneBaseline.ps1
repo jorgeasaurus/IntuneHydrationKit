@@ -54,7 +54,13 @@ function Import-IntuneBaseline {
     }
 
     if (-not $TenantId) {
-        throw "TenantId is required. Either connect using Connect-IntuneHydration or specify -TenantId parameter."
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("TenantId is required. Either connect using Connect-IntuneHydration or specify -TenantId parameter."),
+            'MissingTenantId',
+            [System.Management.Automation.ErrorCategory]::InvalidArgument,
+            $null
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # Resolve BaselinePath to bundled templates if not provided
@@ -75,13 +81,25 @@ function Import-IntuneBaseline {
                 $moduleRoot = Split-Path -Parent (Split-Path -Parent $scriptPath)
                 $BaselinePath = Join-Path -Path (Join-Path -Path $moduleRoot -ChildPath 'Templates') -ChildPath 'OpenIntuneBaseline'
             } elseif (-not $RemoveExisting) {
-                throw "Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."
+                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                    [System.Exception]::new("Cannot determine OpenIntuneBaseline path. Please specify -BaselinePath parameter."),
+                    'BaselinePathNotFound',
+                    [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                    $null
+                )
+                $PSCmdlet.ThrowTerminatingError($errorRecord)
             }
         }
     }
 
     if (-not $RemoveExisting -and (-not $BaselinePath -or -not (Test-Path -Path $BaselinePath))) {
-        throw "OpenIntuneBaseline templates not found at: $BaselinePath"
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.Exception]::new("OpenIntuneBaseline templates not found at: $BaselinePath"),
+            'BaselineTemplatesNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $BaselinePath
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # OpenIntuneBaseline uses OS-based folder structure:

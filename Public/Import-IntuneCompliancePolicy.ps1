@@ -46,12 +46,13 @@ function Import-IntuneCompliancePolicy {
     # Prefetch existing compliance policies (paged) from both classic and linux endpoints
     # Store full policy objects so we can check descriptions later
     $existingPolicies = @{}
+    # Each endpoint has different property names — use endpoint-specific $select
     $endpointsToList = @(
-        "beta/deviceManagement/deviceCompliancePolicies",
-        "beta/deviceManagement/compliancePolicies"
+        @{ Uri = "beta/deviceManagement/deviceCompliancePolicies"; Select = "id,displayName,description" },
+        @{ Uri = "beta/deviceManagement/compliancePolicies"; Select = "id,name,description" }
     )
-    foreach ($listUriStart in $endpointsToList) {
-        $listUri = $listUriStart
+    foreach ($ep in $endpointsToList) {
+        $listUri = "$($ep.Uri)`?`$select=$($ep.Select)"
         try {
             do {
                 $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
@@ -63,14 +64,14 @@ function Import-IntuneCompliancePolicy {
                             $existingPolicies[$policyName] = @{
                                 Id          = $policy.id
                                 Description = $policy.description
-                                Endpoint    = $listUriStart
+                                Endpoint    = $ep.Uri
                                 IsTagged    = $isTagged
                             }
                         } elseif ($isTagged -and -not $existingPolicies[$policyName].IsTagged) {
                             $existingPolicies[$policyName] = @{
                                 Id          = $policy.id
                                 Description = $policy.description
-                                Endpoint    = $listUriStart
+                                Endpoint    = $ep.Uri
                                 IsTagged    = $true
                             }
                         }
@@ -79,6 +80,7 @@ function Import-IntuneCompliancePolicy {
                 $listUri = $existingResponse.'@odata.nextLink'
             } while ($listUri)
         } catch {
+            Write-Warning "Failed to list compliance policies from $($ep.Uri): $_"
             continue
         }
     }
@@ -171,6 +173,26 @@ function Import-IntuneCompliancePolicy {
                 }
             }
 
+            # Verify via targeted GET to guard against stale prefetch data after deletes
+            if ($alreadyExists) {
+                $matchedName = $lookupNames | Where-Object { $existingPolicies.ContainsKey($_) -and $existingPolicies[$_].IsTagged } | Select-Object -First 1
+                $matchedPolicy = $existingPolicies[$matchedName]
+                $verifyEndpoint = if ($matchedPolicy.Endpoint -match '^beta/') {
+                    $matchedPolicy.Endpoint
+                } else {
+                    "beta/$($matchedPolicy.Endpoint)"
+                }
+                $verifyUri = "$verifyEndpoint/$($matchedPolicy.Id)"
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
+                } catch {
+                    if ($_.Exception.Message -match '404|NotFound') {
+                        Write-Verbose "Policy '$matchedName' returned 404 on verify — stale data, will create"
+                        $alreadyExists = $false
+                    }
+                }
+            }
+
             if ($alreadyExists) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Skipped' -Status 'Already exists'
@@ -253,7 +275,7 @@ function Import-IntuneCompliancePolicy {
 
             # Step 1: Check if compliance script already exists or create it
             $scriptId = $null
-            $existingScripts = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceComplianceScripts" -ErrorAction Stop
+            $existingScripts = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceComplianceScripts?`$select=id,displayName" -ErrorAction Stop
             $existingScript = $existingScripts.value | Where-Object { $_.displayName -eq $scriptDisplayName }
 
             if ($existingScript) {

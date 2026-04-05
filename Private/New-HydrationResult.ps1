@@ -6,6 +6,7 @@ function New-HydrationResult {
         Internal helper function for creating consistent result objects across all hydration operations
     #>
     [CmdletBinding()]
+    [OutputType([PSCustomObject])]
     param(
         [Parameter()]
         [string]$Name,

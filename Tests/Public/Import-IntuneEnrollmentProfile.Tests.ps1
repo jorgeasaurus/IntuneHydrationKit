@@ -160,7 +160,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST') {
-                    $Body.deviceNameTemplate | Should -Be 'CORP-%SERIAL%'
+                    ($Body | ConvertFrom-Json).deviceNameTemplate | Should -Be 'CORP-%SERIAL%'
                     return @{ id = 'new-profile-id'; displayName = 'Default Autopilot Profile' }
                 }
             } -ModuleName IntuneHydrationKit
@@ -175,7 +175,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST') {
-                    $Body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
+                    ($Body | ConvertFrom-Json).description | Should -BeLike '*Imported by Intune Hydration Kit*'
                     return @{ id = 'new-profile-id'; displayName = 'Default Autopilot Profile' }
                 }
             } -ModuleName IntuneHydrationKit

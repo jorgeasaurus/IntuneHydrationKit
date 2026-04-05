@@ -173,6 +173,48 @@ Describe 'Invoke-GraphBatchOperation' {
         }
     }
 
+    Context 'Retry on 429 throttle with Retry-After header' {
+        BeforeAll {
+            $script:callCount = 0
+            Mock Invoke-MgGraphRequest {
+                $script:callCount++
+                if ($script:callCount -eq 1) {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 429; headers = @{ 'Retry-After' = '5' }; body = @{ error = @{ message = 'Too Many Requests' } } }
+                        )
+                    }
+                } else {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'throttle-guid'; displayName = 'ThrottledItem' } }
+                        )
+                    }
+                }
+            }
+
+            $items = @(
+                @{ Name = 'ThrottledItem'; BodyJson = '{"displayName":"ThrottledItem"}' }
+            )
+
+            $script:result = Invoke-GraphBatchOperation -Items $items -Operation 'POST' -BaseUrl '/test/endpoint' -ResultType 'TestType' -MaxRetries 3 -RetryDelaySeconds 1
+        }
+
+        It 'Should eventually succeed after 429 throttle' {
+            $created = $script:result | Where-Object { $_.Action -eq 'Created' }
+            $created | Should -Not -BeNullOrEmpty
+            $created.Id | Should -Be 'throttle-guid'
+        }
+
+        It 'Should have called Graph API twice' {
+            $script:callCount | Should -Be 2
+        }
+
+        It 'Should honor Retry-After delay value' {
+            Should -Invoke Start-Sleep -Times 1 -Scope Context -ParameterFilter { $Seconds -eq 5 }
+        }
+    }
+
     Context 'DELETE retry exhaustion maps to Failed' {
         BeforeAll {
             Mock Invoke-MgGraphRequest {
