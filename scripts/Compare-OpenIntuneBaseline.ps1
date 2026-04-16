@@ -36,7 +36,7 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$UpstreamRepoUrl = "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+    [string]$UpstreamRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
 
     [Parameter()]
     [string]$Branch = "main",

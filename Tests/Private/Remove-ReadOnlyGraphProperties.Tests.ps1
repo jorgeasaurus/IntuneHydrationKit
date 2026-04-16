@@ -70,8 +70,8 @@ Describe 'Remove-ReadOnlyGraphProperties' {
 
         It 'Should preserve custom properties' {
             $obj = [PSCustomObject]@{
-                id         = 'abc-123'
-                customProp = 'value'
+                id            = 'abc-123'
+                customProp    = 'value'
                 '@odata.type' = '#microsoft.graph.policy'
             }
             Remove-ReadOnlyGraphProperties -InputObject $obj
@@ -83,10 +83,10 @@ Describe 'Remove-ReadOnlyGraphProperties' {
     Context 'AdditionalProperties parameter' {
         It 'Should remove additional specified properties' {
             $obj = [PSCustomObject]@{
-                id               = 'abc-123'
-                displayName      = 'Test'
-                roleScopeTagIds  = @('0')
-                settingCount     = 5
+                id              = 'abc-123'
+                displayName     = 'Test'
+                roleScopeTagIds = @('0')
+                settingCount    = 5
             }
             Remove-ReadOnlyGraphProperties -InputObject $obj -AdditionalProperties @('roleScopeTagIds', 'settingCount')
             $obj.PSObject.Properties['roleScopeTagIds'] | Should -BeNullOrEmpty

@@ -106,7 +106,8 @@ Describe 'Import-IntuneAppProtectionPolicy' {
                                 id          = 'existing-id'
                                 displayName = '[IHD] Android MAM Policy'
                                 description = 'Imported by Intune Hydration Kit'
-                            }) }
+                            }) 
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-04-16
+
+### Changed
+
+- **Bundled Baselines by Default**: OpenIntuneBaseline policies now always import from the bundled `Templates/OpenIntuneBaseline/` directory instead of downloading from GitHub. Removed `BaselineRepoUrl`, `BaselineBranch`, and `BaselineDownloadPath` parameters from `Invoke-IntuneHydration` and the wrapper script. The `openIntuneBaseline` configuration section has been removed from the settings schema and example files. `Get-OpenIntuneBaseline` remains available as a standalone utility for manual downloads, and `Import-IntuneBaseline -BaselinePath` still accepts a custom path override.
+
 ## [0.6.0] - 2026-04-04
 
 ### Added

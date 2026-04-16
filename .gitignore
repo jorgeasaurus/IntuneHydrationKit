@@ -33,3 +33,10 @@ Test-Adhoc.ps1
 Templates/MobileApps/*.png
 scripts/Export-ConditionalAccessTemplates.ps1
 video/
+conference_talk/generate_presentation.js
+conference_talk/README.md
+conference_talk/demo/1-ModuleWalkthrough.ps1
+conference_talk/demo/2-TemplatesAndBatching.ps1
+conference_talk/demo/3-SafetyPatterns.ps1
+conference_talk/demo/4-LiveHydration.ps1
+conference_talk/slides/IntuneHydrationKit-TechTalk.pptx

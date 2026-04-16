@@ -149,26 +149,6 @@
                 ["iOS", "Android"]
             ]
         },
-        "openIntuneBaseline": {
-            "type": "object",
-            "description": "OpenIntuneBaseline configuration",
-            "properties": {
-                "repoUrl": {
-                    "type": "string",
-                    "default": "https://github.com/jorgeasaurus/OpenIntuneBaseline",
-                    "description": "GitHub repository URL for OpenIntuneBaseline"
-                },
-                "branch": {
-                    "type": "string",
-                    "default": "main",
-                    "description": "Git branch to use"
-                },
-                "downloadPath": {
-                    "type": ["string", "null"],
-                    "description": "Local path for OpenIntuneBaseline download"
-                }
-            }
-        },
         "reporting": {
             "type": "object",
             "description": "Reporting configuration",

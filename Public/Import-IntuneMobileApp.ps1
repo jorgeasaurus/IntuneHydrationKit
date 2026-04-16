@@ -142,7 +142,7 @@ function Import-IntuneMobileApp {
             # Check both prefixed and unprefixed names (backward compat with pre-prefix apps)
             $originalName = $template.displayName
             $hasLegacyMatch = -not [string]::IsNullOrWhiteSpace($originalName) -and $originalName -ne $displayName -and
-                              $existingApps.ContainsKey($originalName) -and $existingApps[$originalName].IsTagged
+            $existingApps.ContainsKey($originalName) -and $existingApps[$originalName].IsTagged
             if (($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) -or $hasLegacyMatch) {
                 $matchedName = if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) { $displayName } else { $originalName }
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info

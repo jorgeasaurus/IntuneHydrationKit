@@ -66,12 +66,6 @@ function Invoke-IntuneHydration {
         Defaults to 'All' which imports resources for all platforms.
         This affects: ComplianceTemplates, DeviceFilters, AppProtection, MobileApps, EnrollmentProfiles, OpenIntuneBaseline.
         Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
-    .PARAMETER BaselineRepoUrl
-        GitHub repository URL for OpenIntuneBaseline
-    .PARAMETER BaselineBranch
-        Git branch to use for OpenIntuneBaseline
-    .PARAMETER BaselineDownloadPath
-        Local path for OpenIntuneBaseline download
     .PARAMETER ReportOutputPath
         Output directory for reports
     .PARAMETER ReportFormats
@@ -202,19 +196,6 @@ function Invoke-IntuneHydration {
         [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'Linux', 'All')]
         [string[]]$Platform = @('All'),
 
-        # OpenIntuneBaseline parameters - available for parameter-based modes only
-        [Parameter(ParameterSetName = 'Interactive')]
-        [Parameter(ParameterSetName = 'ServicePrincipal')]
-        [string]$BaselineRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
-
-        [Parameter(ParameterSetName = 'Interactive')]
-        [Parameter(ParameterSetName = 'ServicePrincipal')]
-        [string]$BaselineBranch = 'main',
-
-        [Parameter(ParameterSetName = 'Interactive')]
-        [Parameter(ParameterSetName = 'ServicePrincipal')]
-        [string]$BaselineDownloadPath,
-
         # Reporting parameters - available for parameter-based modes only
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
@@ -289,34 +270,29 @@ function Invoke-IntuneHydration {
 
             # Build settings object from parameters
             $settings = @{
-                tenant             = @{
+                tenant         = @{
                     tenantId   = $TenantId
                     tenantName = $TenantName
                 }
-                authentication     = @{
+                authentication = @{
                     mode         = if ($Interactive) { 'interactive' } else { 'clientSecret' }
                     clientId     = $ClientId
                     clientSecret = if ($ClientSecret) { [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)) } else { $null }
                     environment  = $Environment
                 }
-                options            = @{
+                options        = @{
                     create  = $Create.IsPresent
                     delete  = $Delete.IsPresent
                     force   = $Force.IsPresent
                     dryRun  = [bool]$WhatIfPreference
                     verbose = $VerboseOutput.IsPresent
                 }
-                imports            = $importsEnabled
-                openIntuneBaseline = @{
-                    repoUrl      = $BaselineRepoUrl
-                    branch       = $BaselineBranch
-                    downloadPath = if ($BaselineDownloadPath) { $BaselineDownloadPath } else { './OpenIntuneBaseline' }
-                }
-                reporting          = @{
+                imports        = $importsEnabled
+                reporting      = @{
                     outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { $null }
                     formats    = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
                 }
-                platforms          = if ($Platform) { $Platform } else { @('All') }
+                platforms      = if ($Platform) { $Platform } else { @('All') }
             }
         }
 
@@ -570,10 +546,6 @@ function Invoke-IntuneHydration {
             Write-HydrationLog -Message "Step 5: $stepAction OpenIntuneBaseline policies" -Level Info
 
             $baselineParams = @{}
-
-            if ($settings.openIntuneBaseline.downloadPath) {
-                $baselineParams['BaselinePath'] = $settings.openIntuneBaseline.downloadPath
-            }
 
             # Import function handles ShouldProcess internally for each policy
             $baselineParams['RemoveExisting'] = $RemoveExisting

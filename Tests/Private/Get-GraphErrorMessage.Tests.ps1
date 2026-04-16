@@ -13,8 +13,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception | Add-Member -NotePropertyName 'Response' -NotePropertyValue $response -Force
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"ResourceNotFound","message":"Resource not found"}}'
-            }) -Force
+                    Message = '{"error":{"code":"ResourceNotFound","message":"Resource not found"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -BeLike 'HTTP 404*'
@@ -24,8 +24,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('Some error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"Invalid"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"Invalid"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Not -BeLike 'HTTP*'
@@ -37,8 +37,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"Forbidden","message":"Insufficient privileges"}}'
-            }) -Force
+                    Message = '{"error":{"code":"Forbidden","message":"Insufficient privileges"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'Access denied - check permissions'
@@ -50,8 +50,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"The property displayName is required"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"The property displayName is required"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'Invalid request - The property displayName is required'
@@ -62,8 +62,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = "{`"error`":{`"code`":`"BadRequest`",`"message`":`"$longMessage`"}}"
-            }) -Force
+                    Message = "{`"error`":{`"code`":`"BadRequest`",`"message`":`"$longMessage`"}}"
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -BeLike '*...'
@@ -75,8 +75,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"Line1\\r\\nLine2"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"Line1\\r\\nLine2"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Not -Match '\\r\\n'
@@ -87,8 +87,8 @@ Describe 'Get-GraphErrorMessage' {
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $jsonMsg = '{"error":{"code":"BadRequest","message":"Field \"name\" is invalid"}}'
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = $jsonMsg
-            }) -Force
+                    Message = $jsonMsg
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -BeLike '*"name"*'
@@ -100,8 +100,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"{\"Message\":\"The actual inner error detail\"}"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"{\"Message\":\"The actual inner error detail\"}"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -BeLike '*actual inner error*'
@@ -120,8 +120,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = "{`"error`":{`"code`":`"$Code`",`"message`":`"$Code`"}}"
-            }) -Force
+                    Message = "{`"error`":{`"code`":`"$Code`",`"message`":`"$Code`"}}"
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be $Expected
@@ -133,8 +133,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"Missing required field"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"Missing required field"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'Invalid request - Missing required field'
@@ -144,8 +144,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"BadRequest","message":"BadRequest"}}'
-            }) -Force
+                    Message = '{"error":{"code":"BadRequest","message":"BadRequest"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'Invalid request - check template format'
@@ -157,8 +157,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"CustomError","message":"Something went wrong"}}'
-            }) -Force
+                    Message = '{"error":{"code":"CustomError","message":"Something went wrong"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'CustomError - Something went wrong'
@@ -168,8 +168,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('error')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"CustomError","message":"CustomError"}}'
-            }) -Force
+                    Message = '{"error":{"code":"CustomError","message":"CustomError"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'CustomError'
@@ -201,8 +201,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception | Add-Member -NotePropertyName 'Response' -NotePropertyValue $response -Force
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"Forbidden","message":"Insufficient privileges"}}'
-            }) -Force
+                    Message = '{"error":{"code":"Forbidden","message":"Insufficient privileges"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'HTTP 403 - Access denied - check permissions'
@@ -214,8 +214,8 @@ Describe 'Get-GraphErrorMessage' {
             $exception = [System.Exception]::new('Exception message with no JSON')
             $errorRecord = [System.Management.Automation.ErrorRecord]::new($exception, 'TestError', 'NotSpecified', $null)
             $errorRecord | Add-Member -NotePropertyName 'ErrorDetails' -NotePropertyValue ([PSCustomObject]@{
-                Message = '{"error":{"code":"ResourceNotFound","message":"Not found"}}'
-            }) -Force
+                    Message = '{"error":{"code":"ResourceNotFound","message":"Not found"}}'
+                }) -Force
 
             $result = Get-GraphErrorMessage -ErrorRecord $errorRecord
             $result | Should -Be 'Resource not found (may have been deleted already)'

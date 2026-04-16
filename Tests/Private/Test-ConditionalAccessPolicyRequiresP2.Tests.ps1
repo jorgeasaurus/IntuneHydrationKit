@@ -164,13 +164,13 @@ Describe 'Test-ConditionalAccessPolicyRequiresP2' {
     Context 'Return type' {
         It 'Should return a boolean' -TestCases @(
             @{
-                Policy = [PSCustomObject]@{
+                Policy   = [PSCustomObject]@{
                     conditions = [PSCustomObject]@{ signInRiskLevels = @('high') }
                 }
                 Expected = $true
             }
             @{
-                Policy = [PSCustomObject]@{
+                Policy   = [PSCustomObject]@{
                     conditions = [PSCustomObject]@{ signInRiskLevels = @() }
                 }
                 Expected = $false

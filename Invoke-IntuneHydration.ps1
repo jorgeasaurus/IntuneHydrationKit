@@ -52,12 +52,6 @@
     Process Conditional Access starter pack policies
 .PARAMETER All
     Enable all targets
-.PARAMETER BaselineRepoUrl
-    GitHub repository URL for OpenIntuneBaseline
-.PARAMETER BaselineBranch
-    Git branch to use for OpenIntuneBaseline
-.PARAMETER BaselineDownloadPath
-    Local path for OpenIntuneBaseline download
 .PARAMETER ReportOutputPath
     Output directory for reports
 .PARAMETER ReportFormats
@@ -155,18 +149,6 @@ param(
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$All,
-
-    [Parameter(ParameterSetName = 'Interactive')]
-    [Parameter(ParameterSetName = 'ServicePrincipal')]
-    [string]$BaselineRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
-
-    [Parameter(ParameterSetName = 'Interactive')]
-    [Parameter(ParameterSetName = 'ServicePrincipal')]
-    [string]$BaselineBranch = 'main',
-
-    [Parameter(ParameterSetName = 'Interactive')]
-    [Parameter(ParameterSetName = 'ServicePrincipal')]
-    [string]$BaselineDownloadPath,
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
