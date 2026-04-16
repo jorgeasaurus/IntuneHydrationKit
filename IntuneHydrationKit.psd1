@@ -102,15 +102,9 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.6.0
+## v0.6.1
 
-- **Retry-After Support:** Graph API batch operations and paginated queries now honor `Retry-After` headers on 429/503 responses with exponential backoff fallback
-- **Error Handling:** Public functions use proper `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` with structured ErrorRecord objects
-- **Graph API Performance:** Added `$select` query parameter to 8+ GET requests to reduce payload size
-- **OutputType Annotations:** Added `[OutputType()]` attributes to 8 private helper functions
-- **Centralized Hydration Marker:** Marker strings consolidated into module-scoped variables for consistency
-- **Test Coverage:** Expanded from 458 to 648 tests with 13 new test files covering private helpers and public import functions
-- **Documentation:** Completed comment-based help for `Write-HydrationLog`, `Initialize-HydrationLogging`, and `Import-HydrationSettings`
+- **Bundled Baselines by Default:** OpenIntuneBaseline policies now always import from the bundled `Templates/OpenIntuneBaseline/` directory instead of downloading from GitHub. Removed `BaselineRepoUrl`, `BaselineBranch`, and `BaselineDownloadPath` parameters. `Get-OpenIntuneBaseline` remains available as a standalone utility for manual downloads.
 
 '@
         }
