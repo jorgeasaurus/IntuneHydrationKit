@@ -187,6 +187,10 @@ function Invoke-IntuneHydration {
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [switch]$CISBaselines,
+
+        [Parameter(ParameterSetName = 'Interactive')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [switch]$All,
 
         # Platform filter - available for all parameter sets
@@ -255,6 +259,12 @@ function Invoke-IntuneHydration {
                 appProtection         = $All.IsPresent -or $AppProtection.IsPresent
                 notificationTemplates = $All.IsPresent -or $NotificationTemplates.IsPresent
                 mobileApps            = $All.IsPresent -or $MobileApps.IsPresent
+                cisBaselines          = $All.IsPresent -or $CISBaselines.IsPresent
+            }
+
+            # Warn about large number of items when -All includes CIS baselines
+            if ($All.IsPresent) {
+                Write-Warning "The -All parameter includes CIS Baselines (728+ policies). This will significantly increase the number of imported items and import time."
             }
 
             # Validate that at least one target is enabled
@@ -360,6 +370,7 @@ function Invoke-IntuneHydration {
             MobileApps         = Get-ValidPlatforms -ValidSet @('Windows', 'macOS')
             EnrollmentProfiles = Get-ValidPlatforms -ValidSet @('Windows', 'macOS')
             Baseline           = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
+            CISBaseline        = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
             Groups             = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
         }
 
@@ -553,6 +564,20 @@ function Invoke-IntuneHydration {
             $baselineParams['Platform'] = $platformFilters.Baseline
             $baselineResults = Import-IntuneBaseline @baselineParams
             $allResults += $baselineResults
+        }
+
+        # Step 5b: CIS Baselines
+        if ($settings.imports.cisBaselines) {
+            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
+            Write-HydrationLog -Message "Step 5b: $stepAction CIS Baseline policies" -Level Info
+
+            $cisParams = @{
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $WhatIfPreference
+                Platform       = $platformFilters.CISBaseline
+            }
+            $cisResults = Import-CISBaseline @cisParams
+            $allResults += $cisResults
         }
 
         # Step 6: Compliance Templates

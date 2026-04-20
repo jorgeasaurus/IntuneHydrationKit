@@ -42,6 +42,7 @@
         'New-IntuneStaticGroup',
         'Get-OpenIntuneBaseline',
         'Import-IntuneBaseline',
+        'Import-CISBaseline',
         'Import-IntuneCompliancePolicy',
         'Import-IntuneAppProtectionPolicy',
         'Import-IntuneNotificationTemplate',

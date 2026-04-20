@@ -131,6 +131,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Import mobile app templates"
+                },
+                "cisBaselines": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Import CIS Benchmark baseline policies (728+ policies)"
                 }
             }
         },

@@ -126,6 +126,21 @@ Describe 'Invoke-IntuneHydration' {
             $validateSet.ValidValues | Should -Contain 'json'
         }
 
+        It 'Should not have BaselineRepoUrl parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $command.Parameters.ContainsKey('BaselineRepoUrl') | Should -Be $false
+        }
+
+        It 'Should not have BaselineBranch parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $command.Parameters.ContainsKey('BaselineBranch') | Should -Be $false
+        }
+
+        It 'Should not have BaselineDownloadPath parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $command.Parameters.ContainsKey('BaselineDownloadPath') | Should -Be $false
+        }
+
         It 'Should support ShouldProcess' {
             $command = Get-Command Invoke-IntuneHydration
             $cmdletBinding = $command.ScriptBlock.Attributes | Where-Object { $_ -is [System.Management.Automation.CmdletBindingAttribute] }
@@ -206,6 +221,14 @@ Describe 'Invoke-IntuneHydration' {
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([switch])
         }
+
+        It 'Should have CISBaselines switch parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $param = $command.Parameters['CISBaselines']
+
+            $param | Should -Not -BeNullOrEmpty
+            $param.ParameterType | Should -Be ([switch])
+        }
     }
 
     Context 'Settings File Validation' {
@@ -272,6 +295,7 @@ Describe 'Invoke-IntuneHydration' {
         It 'Should not throw when -All switch is used' {
             Mock Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit
             Mock Import-IntuneBaseline -ModuleName IntuneHydrationKit
+            Mock Import-CISBaseline -ModuleName IntuneHydrationKit
             Mock Import-IntuneCompliancePolicy -ModuleName IntuneHydrationKit
             Mock Import-IntuneNotificationTemplate -ModuleName IntuneHydrationKit
             Mock Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit
@@ -425,6 +449,7 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneEnrollmentProfile { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-CISBaseline { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup { @{ Action = 'Created'; Id = 'test-id' } } -ModuleName IntuneHydrationKit
             Mock Invoke-GroupBatchImport { @() } -ModuleName IntuneHydrationKit
         }
@@ -465,16 +490,36 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneNotificationTemplate -ModuleName IntuneHydrationKit -Times 1
         }
 
+        It 'Should call Import-CISBaseline when CISBaselines is enabled' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -CISBaselines -WhatIf
+
+            Should -Invoke Import-CISBaseline -ModuleName IntuneHydrationKit -Times 1
+        }
+
         It 'Should call all import functions when -All is specified' {
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -All -WhatIf
 
             Should -Invoke Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneBaseline -ModuleName IntuneHydrationKit -Times 1
+            Should -Invoke Import-CISBaseline -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneCompliancePolicy -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneNotificationTemplate -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneEnrollmentProfile -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit -Times 1
+        }
+
+        It 'Should call Import-IntuneBaseline without BaselinePath parameter' {
+            $script:capturedBaselineParams = $null
+            Mock Import-IntuneBaseline {
+                $script:capturedBaselineParams = $PSBoundParameters
+                return @()
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -OpenIntuneBaseline -WhatIf
+
+            Should -Invoke Import-IntuneBaseline -ModuleName IntuneHydrationKit -Times 1
+            $script:capturedBaselineParams.ContainsKey('BaselinePath') | Should -Be $false
         }
 
         It 'Should not call import functions for disabled targets' {

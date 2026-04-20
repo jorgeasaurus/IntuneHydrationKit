@@ -1,0 +1,3 @@
+<rule schemaVersion="1.0">
+    <signal type="bluetooth" scenario="Authentication" classOfDevice="768" rssiMin="-10" rssiMaxDelta="-10"/>
+</rule>
