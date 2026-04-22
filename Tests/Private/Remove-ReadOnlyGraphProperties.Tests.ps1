@@ -128,4 +128,42 @@ Describe 'Remove-ReadOnlyGraphProperties' {
             $obj.PSObject.Properties['id'] | Should -BeNullOrEmpty
         }
     }
+
+    Context 'Recursive metadata cleanup' {
+        It 'Should remove nested ids, action metadata, and invalid odata annotations recursively' {
+            $obj = [PSCustomObject]@{
+                displayName = 'Test'
+                settings    = @(
+                    [PSCustomObject]@{
+                        id                            = 'setting-1'
+                        '@odata.type'                 = '#microsoft.graph.deviceManagementComplexSettingInstance'
+                        '@odata.id'                   = 'settings/1'
+                        'value@odata.associationLink' = 'https://graph/value/$ref'
+                        '#microsoft.graph.assign'     = @{ title = 'assign' }
+                        value                         = [PSCustomObject]@{
+                            id                                        = 'value-1'
+                            '@odata.type'                             = '#microsoft.graph.someType'
+                            'definition@odata.bind'                   = 'https://graph/definition'
+                            'settingDefinitions@odata.navigationLink' = 'https://graph/settingDefinitions'
+                        }
+                    }
+                )
+            }
+
+            Remove-ReadOnlyGraphProperties -InputObject $obj
+
+            $setting = $obj.settings[0]
+            $setting.PSObject.Properties['id'] | Should -BeNullOrEmpty
+            $setting.PSObject.Properties['@odata.id'] | Should -BeNullOrEmpty
+            $setting.PSObject.Properties['value@odata.associationLink'] | Should -BeNullOrEmpty
+            $setting.PSObject.Properties['#microsoft.graph.assign'] | Should -BeNullOrEmpty
+            $setting.'@odata.type' | Should -Be '#microsoft.graph.deviceManagementComplexSettingInstance'
+
+            $value = $setting.value
+            $value.PSObject.Properties['id'] | Should -BeNullOrEmpty
+            $value.PSObject.Properties['settingDefinitions@odata.navigationLink'] | Should -BeNullOrEmpty
+            $value.'@odata.type' | Should -Be '#microsoft.graph.someType'
+            $value.'definition@odata.bind' | Should -Be 'https://graph/definition'
+        }
+    }
 }

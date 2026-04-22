@@ -74,6 +74,14 @@ Describe 'Get-TemplateDisplayNames' {
             $result | Should -Contain 'Named Policy'
             $result | Should -Not -Contain 'Display Policy'
         }
+
+        It 'Should fall back to displayName when name is absent' {
+            @{ displayName = 'Display Only Policy' } | ConvertTo-Json |
+                Set-Content (Join-Path $script:tempDir 'display-only.json')
+
+            $result = Get-TemplateDisplayNames -Path $script:tempDir -NameProperty 'name'
+            $result | Should -Contain 'Display Only Policy'
+        }
     }
 
     Context 'ArrayProperty mode' {

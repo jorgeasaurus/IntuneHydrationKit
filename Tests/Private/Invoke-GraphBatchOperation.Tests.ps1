@@ -215,6 +215,46 @@ Describe 'Invoke-GraphBatchOperation' {
         }
     }
 
+    Context 'Throttle-sensitive intent writes use longer retries without Retry-After header' {
+        BeforeAll {
+            $script:callCount = 0
+            Mock Invoke-MgGraphRequest {
+                $script:callCount++
+                if ($script:callCount -lt 3) {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 429; body = @{ error = @{ message = 'Too Many Requests' } } }
+                        )
+                    }
+                }
+
+                return @{
+                    responses = @(
+                        @{ id = '1'; status = 201; body = @{ id = 'intent-guid'; displayName = 'IntentItem' } }
+                    )
+                }
+            }
+
+            $items = @(
+                @{ Name = 'IntentItem'; Url = '/deviceManagement/intents'; BodyJson = '{"displayName":"IntentItem"}' }
+            )
+
+            $script:result = Invoke-GraphBatchOperation -Items $items -Operation 'POST' -ResultType 'TestType' -MaxRetries 1 -RetryDelaySeconds 1
+        }
+
+        It 'Should keep retrying throttled device intent writes beyond the default retry count' {
+            $created = $script:result | Where-Object { $_.Action -eq 'Created' }
+            $created | Should -Not -BeNullOrEmpty
+            $created.Id | Should -Be 'intent-guid'
+            $script:callCount | Should -Be 3
+        }
+
+        It 'Should use a longer fallback delay for device intent throttling' {
+            Should -Invoke Start-Sleep -Times 1 -Scope Context -ParameterFilter { $Seconds -eq 15 }
+            Should -Invoke Start-Sleep -Times 1 -Scope Context -ParameterFilter { $Seconds -eq 30 }
+        }
+    }
+
     Context 'DELETE retry exhaustion maps to Failed' {
         BeforeAll {
             Mock Invoke-MgGraphRequest {

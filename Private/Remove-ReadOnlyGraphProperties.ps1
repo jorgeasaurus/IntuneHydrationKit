@@ -32,9 +32,71 @@ function Remove-ReadOnlyGraphProperties {
     # Combine core properties with any additional ones
     $allPropertiesToRemove = $coreReadOnlyProperties + $AdditionalProperties
 
-    foreach ($prop in $allPropertiesToRemove) {
-        if ($InputObject.PSObject.Properties[$prop]) {
-            $InputObject.PSObject.Properties.Remove($prop)
+    function Test-ShouldRemoveProperty {
+        param(
+            [Parameter(Mandatory)]
+            [string]$Name
+        )
+
+        if ($Name -in $allPropertiesToRemove) {
+            return $true
+        }
+
+        if ($Name -like '#*') {
+            return $true
+        }
+
+        if ($Name -match '@odata\.') {
+            return $Name -ne '@odata.type' -and $Name -notlike '*@odata.bind'
+        }
+
+        return $false
+    }
+
+    function Remove-PropertiesRecursively {
+        param(
+            [Parameter()]
+            [object]$Node
+        )
+
+        if ($null -eq $Node -or $Node -is [string]) {
+            return
+        }
+
+        if ($Node -is [System.Collections.IDictionary]) {
+            foreach ($key in @($Node.Keys)) {
+                if (Test-ShouldRemoveProperty -Name ([string]$key)) {
+                    $Node.Remove($key)
+                }
+            }
+
+            foreach ($key in @($Node.Keys)) {
+                Remove-PropertiesRecursively -Node $Node[$key]
+            }
+            return
+        }
+
+        if ($Node -is [System.Collections.IEnumerable]) {
+            foreach ($item in @($Node)) {
+                Remove-PropertiesRecursively -Node $item
+            }
+            return
+        }
+
+        if (-not $Node.PSObject -or -not $Node.PSObject.Properties) {
+            return
+        }
+
+        foreach ($property in @($Node.PSObject.Properties)) {
+            if (Test-ShouldRemoveProperty -Name $property.Name) {
+                $Node.PSObject.Properties.Remove($property.Name)
+            }
+        }
+
+        foreach ($property in @($Node.PSObject.Properties)) {
+            Remove-PropertiesRecursively -Node $property.Value
         }
     }
+
+    Remove-PropertiesRecursively -Node $InputObject
 }

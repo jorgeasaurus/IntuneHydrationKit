@@ -201,39 +201,7 @@ function Import-IntuneBaseline {
             $deleteEndpoints += 'beta/deviceAppManagement/iosManagedAppProtections'
         }
 
-        # Collect all policies to delete across all endpoints.
-        # Uses accumulation pattern instead of ProcessItems scriptblock to avoid
-        # scope issue ($var += inside & {} creates a local copy that is discarded).
-        $policiesToDelete = @()
-        $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-        foreach ($endpoint in $deleteEndpoints) {
-            try {
-                $allPolicies = Get-GraphPagedResults -Uri $endpoint
-                foreach ($policy in $allPolicies) {
-                    $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
-
-                    # Safety check: Only delete if created by this kit (has hydration marker in description)
-                    if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                        Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
-                        continue
-                    }
-
-                    # Warn if policy name doesn't match current templates (may be from older version)
-                    $baselineNameForLookup = $policyName -replace "^$escapedPrefix", ''
-                    if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
-                        Write-Verbose "Policy '$policyName' not in current templates (may be from an older baseline version) - deleting based on hydration kit marker"
-                    }
-
-                    $policiesToDelete += @{
-                        Name = $policyName
-                        Id   = $policy.id
-                        Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
-                    }
-                }
-            } catch {
-                Write-Warning "Failed to list policies from $endpoint : $_"
-            }
-        }
+        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No baseline policies found to delete"

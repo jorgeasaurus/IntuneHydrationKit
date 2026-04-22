@@ -212,6 +212,40 @@ Describe 'Import-IntuneBaseline' {
 
             $result | Should -BeNullOrEmpty
         }
+
+        It 'Should delete prefixed policies when list response omits description but full GET has marker' {
+            Mock Get-GraphPagedResults {
+                return @(
+                    @{ id = 'policy-1'; displayName = '[IHD] Test Policy' }
+                )
+            } -ModuleName IntuneHydrationKit
+
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit -ParameterFilter {
+                [string]::IsNullOrWhiteSpace($Description) -and [string]::IsNullOrWhiteSpace($Notes)
+            }
+
+            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Description -like '*Imported by Intune Hydration Kit*'
+            }
+
+            Mock Invoke-MgGraphRequest {
+                return @{ id = 'policy-1'; displayName = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
+            } -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceConfigurations/policy-1'
+            }
+
+            Mock Invoke-GraphBatchOperation {
+                return @([PSCustomObject]@{ Name = '[IHD] Test Policy'; Type = 'BaselinePolicy'; Action = 'Deleted'; Status = 'Success' })
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'DeleteBaseline') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
+
+            $result | Should -Not -BeNullOrEmpty
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceConfigurations/policy-1'
+            }
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+        }
     }
 
     Context 'IntuneManagement Folder Routing' {

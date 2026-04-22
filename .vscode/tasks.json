@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Bootstrap: Install Dependencies",
+            "label": "Install Dependencies",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -18,7 +18,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Build: Analyze (PSScriptAnalyzer)",
+            "label": "Analyze (PSScriptAnalyzer)",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -36,7 +36,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Build: Test (Pester)",
+            "label": "Test (Pester)",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -54,7 +54,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Build: Build Module",
+            "label": "Build Module",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -75,7 +75,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Build: Full CI (Analyze + Test + Build)",
+            "label": "Full CI",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -93,7 +93,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Build: Clean",
+            "label": "Clean",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -109,7 +109,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Module: Import Local",
+            "label": "Import Local",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -125,7 +125,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Module: Get ReleaseNotes",
+            "label": "Get ReleaseNotes",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -141,7 +141,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Module: Get Version",
+            "label": "Get Version",
             "type": "shell",
             "command": "pwsh",
             "args": [
@@ -157,7 +157,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Format: All PowerShell Files",
+            "label": "Format: All PowerShell",
             "type": "shell",
             "command": "pwsh",
             "args": [

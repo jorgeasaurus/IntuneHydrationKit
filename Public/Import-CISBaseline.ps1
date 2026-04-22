@@ -100,6 +100,9 @@ function Import-CISBaseline {
     # Map @odata.type to Graph API endpoints
     $odataTypeToEndpoint = @{
         '#microsoft.graph.deviceManagementConfigurationPolicy'      = 'deviceManagement/configurationPolicies'
+        '#microsoft.graph.groupPolicyConfiguration'                 = 'deviceManagement/groupPolicyConfigurations'
+        '#microsoft.graph.deviceManagementIntent'                   = 'deviceManagement/intents'
+        '#microsoft.graph.deviceManagementCompliancePolicy'         = 'deviceManagement/compliancePolicies'
         '#microsoft.graph.windows10CompliancePolicy'                = 'deviceManagement/deviceCompliancePolicies'
         '#microsoft.graph.macOSCompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
         '#microsoft.graph.iosCompliancePolicy'                      = 'deviceManagement/deviceCompliancePolicies'
@@ -110,6 +113,15 @@ function Import-CISBaseline {
         '#microsoft.graph.windows10CustomConfiguration'             = 'deviceManagement/deviceConfigurations'
         '#microsoft.graph.sharedPCConfiguration'                    = 'deviceManagement/deviceConfigurations'
         '#microsoft.graph.windowsDeliveryOptimizationConfiguration' = 'deviceManagement/deviceConfigurations'
+    }
+
+    $odataContextToEndpoint = @{
+        'deviceManagement/configurationPolicies'     = 'deviceManagement/configurationPolicies'
+        'deviceManagement/groupPolicyConfigurations' = 'deviceManagement/groupPolicyConfigurations'
+        'deviceManagement/intents'                   = 'deviceManagement/intents'
+        'deviceManagement/compliancePolicies'        = 'deviceManagement/compliancePolicies'
+        'deviceManagement/deviceCompliancePolicies'  = 'deviceManagement/deviceCompliancePolicies'
+        'deviceManagement/deviceConfigurations'      = 'deviceManagement/deviceConfigurations'
     }
 
     # Map Graph platforms property values to user-facing platform names
@@ -131,39 +143,14 @@ function Import-CISBaseline {
 
         $deleteEndpoints = @(
             'beta/deviceManagement/configurationPolicies',
+            'beta/deviceManagement/groupPolicyConfigurations',
+            'beta/deviceManagement/intents',
+            'beta/deviceManagement/compliancePolicies',
             'beta/deviceManagement/deviceCompliancePolicies',
             'beta/deviceManagement/deviceConfigurations'
         )
 
-        $policiesToDelete = @()
-        $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-        foreach ($endpoint in $deleteEndpoints) {
-            try {
-                $allPolicies = Get-GraphPagedResults -Uri $endpoint
-                foreach ($policy in $allPolicies) {
-                    $policyName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { "Unknown" }
-
-                    if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policyName)) {
-                        Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
-                        continue
-                    }
-
-                    # Only delete policies that match known CIS template names
-                    $baselineNameForLookup = $policyName -replace "^$escapedPrefix", ''
-                    if ($knownTemplateNames -and -not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($baselineNameForLookup))) {
-                        continue
-                    }
-
-                    $policiesToDelete += @{
-                        Name = $policyName
-                        Id   = $policy.id
-                        Url  = "/$($endpoint -replace '^beta/', '')/$($policy.id)"
-                    }
-                }
-            } catch {
-                Write-Warning "Failed to list policies from $endpoint : $_"
-            }
-        }
+        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames -RequireTemplateMatch
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No CIS baseline policies found to delete"
@@ -224,7 +211,9 @@ function Import-CISBaseline {
                             if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
                         }
                         if ($policyDisplayName -and -not $endpointPolicyCache[$cacheEndpoint].ContainsKey($policyDisplayName)) {
-                            $endpointPolicyCache[$cacheEndpoint][$policyDisplayName] = $policy.id
+                            $endpointPolicyCache[$cacheEndpoint][$policyDisplayName] = @{
+                                Id = $policy.id
+                            }
                         }
                     }
                 }
@@ -235,6 +224,56 @@ function Import-CISBaseline {
 
         $policiesToCreate = @()
 
+        function Update-CISSecretSettingValues {
+            param(
+                [Parameter(Mandatory)]
+                [object]$Node
+            )
+
+            if ($null -eq $Node) {
+                return
+            }
+
+            $hasProperties = $Node.PSObject -and $Node.PSObject.Properties
+            if (-not $hasProperties) {
+                return
+            }
+
+            if ($Node.PSObject.Properties['settingDefinitionId'] -and $Node.PSObject.Properties['simpleSettingValue']) {
+                $settingDefinitionId = [string]$Node.settingDefinitionId
+                $settingName = ($settingDefinitionId -split '[_-]')[-1]
+                $simpleSettingValue = $Node.simpleSettingValue
+
+                if ($simpleSettingValue -and
+                    $simpleSettingValue.PSObject.Properties['@odata.type'] -and
+                    $simpleSettingValue.'@odata.type' -eq '#microsoft.graph.deviceManagementConfigurationStringSettingValue' -and
+                    $settingName -match '(?i)(password|secret|credential)s?$') {
+                    $simpleSettingValue.'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSecretSettingValue'
+                    if ($simpleSettingValue.PSObject.Properties['valueState']) {
+                        $simpleSettingValue.valueState = 'notEncrypted'
+                    } else {
+                        $simpleSettingValue | Add-Member -MemberType NoteProperty -Name valueState -Value 'notEncrypted'
+                    }
+                }
+            }
+
+            foreach ($property in $Node.PSObject.Properties) {
+                $value = $property.Value
+                if ($null -eq $value -or $value -is [string]) {
+                    continue
+                }
+
+                if ($value -is [System.Collections.IEnumerable]) {
+                    foreach ($item in $value) {
+                        Update-CISSecretSettingValues -Node $item
+                    }
+                    continue
+                }
+
+                Update-CISSecretSettingValues -Node $value
+            }
+        }
+
         foreach ($policyEntry in $allPolicies) {
             $jsonFile = $policyEntry.File
             $category = $policyEntry.Category
@@ -244,12 +283,27 @@ function Import-CISBaseline {
                 $jsonContent = Get-Content -Path $jsonFile.FullName -Raw
                 $policyContent = $jsonContent | ConvertFrom-Json
                 $odataType = $policyContent.'@odata.type'
+                $odataContext = $policyContent.'@odata.context'
 
-                # Determine endpoint from @odata.type
-                $typeEndpoint = $odataTypeToEndpoint[$odataType]
+                # Some exported templates omit @odata.type but still include enough metadata to infer the endpoint.
+                $typeEndpoint = $null
+                if ($odataType -and $odataTypeToEndpoint.ContainsKey($odataType)) {
+                    $typeEndpoint = $odataTypeToEndpoint[$odataType]
+                } elseif ($odataContext) {
+                    foreach ($contextFragment in $odataContextToEndpoint.Keys) {
+                        if ($odataContext -like "*$contextFragment*") {
+                            $typeEndpoint = $odataContextToEndpoint[$contextFragment]
+                            break
+                        }
+                    }
+                } elseif ($policyContent.PSObject.Properties['settings'] -and $policyContent.PSObject.Properties['platforms'] -and $policyContent.PSObject.Properties['technologies']) {
+                    $typeEndpoint = 'deviceManagement/configurationPolicies'
+                }
+
                 if (-not $typeEndpoint) {
-                    Write-Verbose "  Skipping $policyName - unsupported @odata.type: $odataType"
-                    $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unsupported @odata.type: $odataType"
+                    $unsupportedType = if ($odataType) { $odataType } else { '<missing>' }
+                    Write-Verbose "  Skipping $policyName - unsupported @odata.type: $unsupportedType"
+                    $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unsupported @odata.type: $unsupportedType"
                     continue
                 }
 
@@ -275,18 +329,36 @@ function Import-CISBaseline {
                 }
 
                 # Check if policy exists using pre-fetched cache
-                $existingPolicy = $endpointPolicyCache[$typeEndpoint].ContainsKey($displayName)
-
-                # Dual-lookup: also check without prefix for legacy resources
-                if (-not $existingPolicy) {
-                    $unprefixedName = if ($policyContent.displayName) { $policyContent.displayName } elseif ($policyContent.name) { $policyContent.name } else { $policyName }
-                    $existingPolicy = $endpointPolicyCache[$typeEndpoint].ContainsKey($unprefixedName)
+                $unprefixedName = if ($policyContent.displayName) { $policyContent.displayName } elseif ($policyContent.name) { $policyContent.name } else { $policyName }
+                $lookupNames = @($displayName)
+                if ($unprefixedName -ne $displayName) {
+                    $lookupNames += $unprefixedName
                 }
 
+                $matchedName = $lookupNames | Where-Object { $endpointPolicyCache[$typeEndpoint].ContainsKey($_) } | Select-Object -First 1
+                $existingPolicy = if ($matchedName) { $endpointPolicyCache[$typeEndpoint][$matchedName] } else { $null }
+
                 if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
-                    Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                    $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status 'Already exists'
-                    continue
+                    $alreadyExists = $true
+                    $verifyUri = "beta/$typeEndpoint/$($existingPolicy.Id)"
+
+                    try {
+                        $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
+                    } catch {
+                        if ($_.Exception.Message -match '404|NotFound') {
+                            Write-Verbose "Policy '$matchedName' returned 404 on verify - stale data, will create"
+                            $alreadyExists = $false
+                            $null = $endpointPolicyCache[$typeEndpoint].Remove($matchedName)
+                        } else {
+                            throw
+                        }
+                    }
+
+                    if ($alreadyExists) {
+                        Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
+                        $results += New-HydrationResult -Name $displayName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status 'Already exists'
+                        continue
+                    }
                 }
 
                 # Prepare import body
@@ -306,6 +378,15 @@ function Import-CISBaseline {
                 # Apply import prefix to body properties
                 if ($importBody.displayName) { $importBody.displayName = $displayName }
                 if ($importBody.name) { $importBody.name = $displayName }
+
+                if ($typeEndpoint -eq 'deviceManagement/groupPolicyConfigurations' -and $importBody.PSObject.Properties['definitionValues']) {
+                    $importBody.definitionValues = @($importBody.definitionValues)
+                    foreach ($definitionValue in $importBody.definitionValues) {
+                        if ($definitionValue -and $definitionValue.PSObject.Properties['presentationValues']) {
+                            $definitionValue.presentationValues = @($definitionValue.presentationValues)
+                        }
+                    }
+                }
 
                 # Remove @odata metadata and action properties except @odata.type
                 $metadataProps = @($importBody.PSObject.Properties | Where-Object {
@@ -349,6 +430,7 @@ function Import-CISBaseline {
                                 $cleanSetting.PSObject.Properties.Remove($prop.Name)
                             }
 
+                            Update-CISSecretSettingValues -Node $cleanSetting
                             $cleanBody.settings += $cleanSetting
                         }
                     }
