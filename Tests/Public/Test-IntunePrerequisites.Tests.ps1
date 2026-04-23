@@ -469,11 +469,11 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            # Should not throw but should warn about missing P2
+            # Should not throw when Premium P2 is absent because the missing license is non-blocking
             { Test-IntunePrerequisites -WarningAction SilentlyContinue } | Should -Not -Throw
         }
 
-        It 'Should warn when Premium P2 is not detected' {
+        It 'Should emit a note when Premium P2 is not detected' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
 
@@ -493,14 +493,16 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            # Capture warnings
-            $warnings = @()
-            Test-IntunePrerequisites -WarningVariable warnings -WarningAction SilentlyContinue
+            $messages = @()
+            Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
 
-            # Check that the warning was generated (first warning message)
-            $warnings[0] | Should -BeLike '*No Azure AD Premium P2 license found*'
-            # Verify the second warning about affected policies was also generated
-            $warnings[1] | Should -BeLike '*Affected policies*'
+            $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Contain 'Notes:'
+            $messageData | Should -Contain '  - Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $messageData | Should -Contain "    - 'Require multifactor authentication for risky sign-ins'"
+            $messageData | Should -Contain "    - 'Require password change for high-risk users'"
+            $messageData | Should -Contain "    - 'Block high risk agent identities'"
+            $messageData | Should -Contain "    - 'Block access to Office365 apps for users with insider risk'"
         }
     }
 

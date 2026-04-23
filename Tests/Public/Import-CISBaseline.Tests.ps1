@@ -153,6 +153,25 @@ Describe 'Import-CISBaseline' {
                 $Items | ForEach-Object { $_.Url -like '*/configurationPolicies*' } | Where-Object { $_ -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
             }
         }
+
+        It 'Should log cache and preparation progress during import' {
+            Mock Invoke-GraphBatchOperation { return @() } -ModuleName IntuneHydrationKit
+
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISBaselines') -TenantId '00000000-0000-0000-0000-000000000001' | Out-Null
+
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Discovered * CIS baseline templates across * folders'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Caching existing CIS policies (*): *'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -eq 'Caching complete. Preparing CIS baseline payloads...'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Prepared * CIS baseline payloads. Starting batch import...'
+            }
+        }
     }
 
     Context 'Platform Filtering' {

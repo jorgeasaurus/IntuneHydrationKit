@@ -334,6 +334,15 @@ function Invoke-IntuneHydration {
         # Initialize results tracking
         $allResults = @()
 
+        function Get-NormalizedHydrationResults {
+            param(
+                [Parameter()]
+                [object]$StepResults
+            )
+
+            return @($StepResults | Where-Object { $null -ne $_ })
+        }
+
         # Step 1: Authenticate
         $logParams = @{
             Message = 'Step 1: Authenticating to Microsoft Graph'
@@ -375,7 +384,8 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIfEnabled  = [bool]$WhatIfPreference
             }
-            $allResults += Invoke-HydrationGroupStep @dynamicGroupStepParams
+            $dynamicGroupResults = Get-NormalizedHydrationResults -StepResults (Invoke-HydrationGroupStep @dynamicGroupStepParams)
+            $allResults += $dynamicGroupResults
         }
 
         # Step 3b: Static Groups
@@ -393,7 +403,8 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIfEnabled  = [bool]$WhatIfPreference
             }
-            $allResults += Invoke-HydrationGroupStep @staticGroupStepParams
+            $staticGroupResults = Get-NormalizedHydrationResults -StepResults (Invoke-HydrationGroupStep @staticGroupStepParams)
+            $allResults += $staticGroupResults
         }
 
         # Step 4: Device Filters
@@ -410,7 +421,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $filterResults = Import-IntuneDeviceFilter @filterParams
+            $filterResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneDeviceFilter @filterParams)
             $allResults += $filterResults
         }
 
@@ -429,7 +440,7 @@ function Invoke-IntuneHydration {
             $baselineParams['RemoveExisting'] = $RemoveExisting
             $baselineParams['WhatIf'] = $WhatIfPreference
             $baselineParams['Platform'] = $platformFilters.Baseline
-            $baselineResults = Import-IntuneBaseline @baselineParams
+            $baselineResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneBaseline @baselineParams)
             $allResults += $baselineResults
         }
 
@@ -447,7 +458,7 @@ function Invoke-IntuneHydration {
                 WhatIf         = $WhatIfPreference
                 Platform       = $platformFilters.CISBaseline
             }
-            $cisResults = Import-CISBaseline @cisParams
+            $cisResults = Get-NormalizedHydrationResults -StepResults (Import-CISBaseline @cisParams)
             $allResults += $cisResults
         }
 
@@ -465,7 +476,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $complianceResults = Import-IntuneCompliancePolicy @complianceParams
+            $complianceResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneCompliancePolicy @complianceParams)
             $allResults += $complianceResults
         }
 
@@ -482,7 +493,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $notificationResults = Import-IntuneNotificationTemplate @notificationParams
+            $notificationResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneNotificationTemplate @notificationParams)
             $allResults += $notificationResults
         }
 
@@ -500,7 +511,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $mamResults = Import-IntuneAppProtectionPolicy @mamParams
+            $mamResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneAppProtectionPolicy @mamParams)
             $allResults += $mamResults
         }
 
@@ -518,7 +529,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $enrollmentResults = Import-IntuneEnrollmentProfile @enrollmentParams
+            $enrollmentResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneEnrollmentProfile @enrollmentParams)
             $allResults += $enrollmentResults
         }
 
@@ -535,7 +546,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $caResults = Import-IntuneConditionalAccessPolicy @caParams
+            $caResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneConditionalAccessPolicy @caParams)
             $allResults += $caResults
         }
 
@@ -553,7 +564,7 @@ function Invoke-IntuneHydration {
                 RemoveExisting = $RemoveExisting
                 WhatIf         = $WhatIfPreference
             }
-            $mobileAppResults = Import-IntuneMobileApp @mobileAppParams
+            $mobileAppResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneMobileApp @mobileAppParams)
             $allResults += $mobileAppResults
         }
 

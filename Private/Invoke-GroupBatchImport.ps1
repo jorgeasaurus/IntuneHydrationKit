@@ -187,9 +187,14 @@ function Invoke-GroupBatchImport {
             $batchBody = @{ requests = $batchRequests }
             try {
                 $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
+                $seenResponseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
                 # Process responses
                 foreach ($resp in $batchResponse.responses) {
+                    if ($resp.id) {
+                        $seenResponseIds.Add([string]$resp.id) | Out-Null
+                    }
+
                     $requestIndex = $null
                     $group = $null
                     if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
@@ -216,6 +221,32 @@ function Invoke-GroupBatchImport {
                     } else {
                         # Deletion failed
                         $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
+                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Delete failed: $errorMessage"
+                        Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
+                    }
+                }
+
+                foreach ($request in $batchRequests) {
+                    if ($seenResponseIds.Contains([string]$request.id)) {
+                        continue
+                    }
+
+                    $requestIndex = [int]$request.id - 1
+                    $group = $currentBatch[$requestIndex]
+                    Write-Warning "Missing batch delete response for '$($group.displayName)' - retrying directly"
+
+                    try {
+                        $null = Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
+                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Deleted' -Status 'Success'
+                        Write-Verbose "  Deleted: $($group.displayName) (direct retry)"
+                    } catch {
+                        $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
+                        if ($errorMessage -like '*404*' -or $errorMessage -like '*Not Found*') {
+                            $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Action 'Skipped' -Status 'Already deleted'
+                            Write-Verbose "  Skipped: $($group.displayName) (already deleted)"
+                            continue
+                        }
+
                         $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Delete failed: $errorMessage"
                         Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
                     }

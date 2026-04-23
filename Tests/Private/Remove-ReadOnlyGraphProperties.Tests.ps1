@@ -165,5 +165,27 @@ Describe 'Remove-ReadOnlyGraphProperties' {
             $value.'@odata.type' | Should -Be '#microsoft.graph.someType'
             $value.'definition@odata.bind' | Should -Be 'https://graph/definition'
         }
+
+        It 'Should stop revisiting reference cycles while still cleaning note properties' {
+            $child = [PSCustomObject]@{
+                id          = 'child-1'
+                displayName = 'Child'
+            }
+
+            $parent = [PSCustomObject]@{
+                id          = 'parent-1'
+                displayName = 'Parent'
+                child       = $child
+            }
+
+            $child | Add-Member -NotePropertyName parent -NotePropertyValue $parent
+
+            { Remove-ReadOnlyGraphProperties -InputObject $parent } | Should -Not -Throw
+
+            $parent.PSObject.Properties['id'] | Should -BeNullOrEmpty
+            $child.PSObject.Properties['id'] | Should -BeNullOrEmpty
+            $parent.displayName | Should -Be 'Parent'
+            $child.displayName | Should -Be 'Child'
+        }
     }
 }

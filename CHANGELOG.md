@@ -5,19 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.2] - 2026-04-21
+## [0.7.0] - 2026-04-22
 
 ### Fixed
 
-- **CIS Baseline imports**: Hardened Intune batch retry behavior for throttled `deviceManagement/intents` writes, including broader Retry-After parsing and more conservative retry defaults for device-intent POST operations.
-- **CIS payload shaping**: Fixed recursive removal of invalid nested Graph metadata (`@odata.associationLink`, navigation links, read-only properties) before import so nested configuration payloads are accepted by Graph.
-- **CIS group policy imports**: Normalized singleton `definitionValues` and nested `presentationValues` into arrays for `groupPolicyConfiguration` payloads exported by Intune.
-- **Cloud Remediation secret handling**: Corrected secret vs string coercion by matching only the final setting-name segment, so `networkpassword` is treated as a secret while adjacent names like `networkpasswordencryptionstore` remain strings.
+- **Minor bug fixes and enhancements**: Included smaller reliability fixes and import-path improvements across CIS and related baseline workflows.
 
 ### Changed
 
-- **Orchestrator maintainability**: Refactored `Invoke-IntuneHydration` into focused private helpers for settings resolution, platform filtering, group-step execution, auth parameter construction, and summary/report generation.
-- **Recent helper call style**: Standardized the newly refactored orchestrator/helper code to use splatting for multi-parameter function calls.
+- **CIS baseline coverage**: Added a substantial amount of new bundled CIS baseline templates across supported policy categories.
+- **General maintainability**: Included additional workflow and code-quality enhancements throughout the hydration process.
 
 ## [0.6.1] - 2026-04-16
 

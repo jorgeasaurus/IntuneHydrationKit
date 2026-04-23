@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.6.2'
+    ModuleVersion     = '0.7.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -103,10 +103,10 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.6.2
+## v0.7.0
 
-- **CIS Import Hardening:** Fixed multiple CIS import edge cases, including Intune throttling retries for device intent writes, recursive removal of invalid nested Graph metadata, group policy payload normalization, and configuration-setting secret/string coercion for Cloud Remediation policies.
-- **Orchestrator Maintainability:** Refactored `Invoke-IntuneHydration` into focused private helpers and standardized recent multi-parameter helper calls to use splatting for readability.
+- **CIS Baselines:** Added a substantial amount of new bundled CIS baseline templates.
+- **Minor Improvements:** Included other minor bug fixes and enhancements across the hydration workflow.
 
 '@
         }

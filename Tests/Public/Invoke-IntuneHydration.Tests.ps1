@@ -431,6 +431,51 @@ Describe 'Invoke-IntuneHydration' {
         }
     }
 
+    Context 'Step result normalization' {
+        BeforeAll {
+            Mock Connect-IntuneHydration -ModuleName IntuneHydrationKit
+            Mock Test-IntunePrerequisites -ModuleName IntuneHydrationKit
+            Mock Initialize-HydrationLogging -ModuleName IntuneHydrationKit
+            Mock Write-HydrationLog -ModuleName IntuneHydrationKit
+            Mock Get-ObfuscatedTenantId { return '12345678-****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
+            Mock Get-ResultSummary { return @{ Created = 1; Updated = 0; Skipped = 0; Failed = 0; WouldCreate = 0; WouldUpdate = 0; WouldDelete = 0; Deleted = 0 } } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGroupStep {
+                $null
+                [PSCustomObject]@{
+                    Name   = 'Test Static Group'
+                    Type   = 'StaticGroup'
+                    Action = 'Created'
+                    Status = 'Success'
+                }
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should ignore null group-step output when collecting results' {
+            $result = Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -StaticGroups -WhatIf
+
+            $result.Results | Should -HaveCount 1
+            $result.Results[0].Name | Should -Be 'Test Static Group'
+        }
+
+        It 'Should ignore null import-step output when collecting results' {
+            Mock Invoke-HydrationGroupStep { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneNotificationTemplate {
+                $null
+                [PSCustomObject]@{
+                    Name   = 'Test Notification Template'
+                    Type   = 'NotificationTemplate'
+                    Action = 'Deleted'
+                    Status = 'Success'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Delete -NotificationTemplates -Force
+
+            $result.Results | Should -HaveCount 1
+            $result.Results[0].Name | Should -Be 'Test Notification Template'
+        }
+    }
+
     Context 'Import Function Calls' {
         BeforeAll {
             Mock Connect-IntuneHydration -ModuleName IntuneHydrationKit

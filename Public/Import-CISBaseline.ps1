@@ -44,8 +44,7 @@ function Import-CISBaseline {
         [switch]$RemoveExisting
     )
 
-    # Use connected tenant if not specified
-    if (-not $TenantId -and $script:HydrationState.TenantId) {
+    if (-not $TenantId) {
         $TenantId = $script:HydrationState.TenantId
     }
 
@@ -97,43 +96,10 @@ function Import-CISBaseline {
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
-    # Map @odata.type to Graph API endpoints
-    $odataTypeToEndpoint = @{
-        '#microsoft.graph.deviceManagementConfigurationPolicy'      = 'deviceManagement/configurationPolicies'
-        '#microsoft.graph.groupPolicyConfiguration'                 = 'deviceManagement/groupPolicyConfigurations'
-        '#microsoft.graph.deviceManagementIntent'                   = 'deviceManagement/intents'
-        '#microsoft.graph.deviceManagementCompliancePolicy'         = 'deviceManagement/compliancePolicies'
-        '#microsoft.graph.windows10CompliancePolicy'                = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.macOSCompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.iosCompliancePolicy'                      = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidCompliancePolicy'                  = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidWorkProfileCompliancePolicy'       = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidDeviceOwnerCompliancePolicy'       = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.windowsHealthMonitoringConfiguration'     = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10CustomConfiguration'             = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.sharedPCConfiguration'                    = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsDeliveryOptimizationConfiguration' = 'deviceManagement/deviceConfigurations'
-    }
-
-    $odataContextToEndpoint = @{
-        'deviceManagement/configurationPolicies'     = 'deviceManagement/configurationPolicies'
-        'deviceManagement/groupPolicyConfigurations' = 'deviceManagement/groupPolicyConfigurations'
-        'deviceManagement/intents'                   = 'deviceManagement/intents'
-        'deviceManagement/compliancePolicies'        = 'deviceManagement/compliancePolicies'
-        'deviceManagement/deviceCompliancePolicies'  = 'deviceManagement/deviceCompliancePolicies'
-        'deviceManagement/deviceConfigurations'      = 'deviceManagement/deviceConfigurations'
-    }
-
-    # Map Graph platforms property values to user-facing platform names
-    $platformValueMapping = @{
-        'windows10'         = 'Windows'
-        'windows10AndLater' = 'Windows'
-        'androidEnterprise' = 'Android'
-        'android'           = 'Android'
-        'iOS'               = 'iOS'
-        'macOS'             = 'macOS'
-        'linux'             = 'Linux'
-    }
+    $importMetadata = Get-BaselineImportMetadata -Kind 'CIS'
+    $odataTypeToEndpoint = $importMetadata.ODataTypeToEndpoint
+    $odataContextToEndpoint = $importMetadata.ODataContextToEndpoint
+    $platformValueMapping = $importMetadata.PlatformValueMapping
 
     $results = @()
 
@@ -196,10 +162,23 @@ function Import-CISBaseline {
     }
 
     if ($PSCmdlet.ShouldProcess("$totalPolicies policies from CIS Baselines", "Import to Intune")) {
+        $logParams = @{
+            Message = "Discovered $totalPolicies CIS baseline templates across $($categoryFolders.Count) folders"
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
+
         # Pre-fetch existing policies from all unique endpoints
         $endpointPolicyCache = @{}
         $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
+        $cacheIndex = 0
         foreach ($cacheEndpoint in $uniqueEndpoints) {
+            $cacheIndex++
+            $logParams = @{
+                Message = "Caching existing CIS policies ($cacheIndex/$($uniqueEndpoints.Count)): $cacheEndpoint"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
             $endpointPolicyCache[$cacheEndpoint] = @{}
             try {
                 Get-GraphPagedResults -Uri "beta/$cacheEndpoint" -ProcessItems {
@@ -221,6 +200,12 @@ function Import-CISBaseline {
                 Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
             }
         }
+
+        $logParams = @{
+            Message = 'Caching complete. Preparing CIS baseline payloads...'
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
 
         $policiesToCreate = @()
 
@@ -483,6 +468,11 @@ function Import-CISBaseline {
 
         # Batch create all collected policies
         if ($policiesToCreate.Count -gt 0) {
+            $logParams = @{
+                Message = "Prepared $($policiesToCreate.Count) CIS baseline payloads. Starting batch import..."
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
             $results += Invoke-GraphBatchOperation -Items $policiesToCreate -Operation 'POST' -ResultType 'CISBaselinePolicy'
         }
 

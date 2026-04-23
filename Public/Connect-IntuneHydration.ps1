@@ -44,32 +44,9 @@ function Connect-IntuneHydration {
         [string]$Environment = 'Global'
     )
 
-    $scopes = @(
-        "DeviceManagementConfiguration.ReadWrite.All",
-        "DeviceManagementServiceConfig.ReadWrite.All",
-        "DeviceManagementManagedDevices.ReadWrite.All",
-        "DeviceManagementScripts.ReadWrite.All",
-        "DeviceManagementApps.ReadWrite.All",
-        "Group.ReadWrite.All",
-        "Policy.Read.All",
-        "Policy.ReadWrite.ConditionalAccess",
-        "Application.Read.All",
-        "Directory.ReadWrite.All",
-        "LicenseAssignment.Read.All",
-        "Organization.Read.All"
-    )
-
-    # Store environment for use by other functions
-    $script:GraphEnvironment = $Environment
-    $script:GraphEndpoint = switch ($Environment) {
-        'Global' { 'https://graph.microsoft.com' }
-        'USGov' { 'https://graph.microsoft.us' }
-        'USGovDoD' { 'https://dod-graph.microsoft.us' }
-        'Germany' { 'https://graph.microsoft.de' }
-        'China' { 'https://microsoftgraph.chinacloudapi.cn' }
-    }
-
-    Write-Host "Connecting to $Environment environment ($script:GraphEndpoint)"
+    $scopes = Get-HydrationGraphScopes
+    $environmentInfo = Get-HydrationGraphEnvironmentInfo -Environment $Environment
+    Write-Information "Connecting to $Environment environment ($($environmentInfo.Endpoint))" -InformationAction Continue
 
     try {
         $connectParams = @{
@@ -89,11 +66,9 @@ function Connect-IntuneHydration {
 
         Connect-MgGraph @connectParams
 
-        $script:HydrationState.Connected = $true
-        $script:HydrationState.TenantId = $TenantId
-        $script:HydrationState.Environment = $Environment
+        $null = Set-HydrationConnectionState -TenantId $TenantId -Environment $Environment
 
-        Write-Host "Successfully connected to tenant: $(Get-ObfuscatedTenantId -TenantId $TenantId) ($Environment)"
+        Write-Information "Successfully connected to tenant: $(Get-ObfuscatedTenantId -TenantId $TenantId) ($Environment)" -InformationAction Continue
     } catch {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
             [System.Exception]::new("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception),

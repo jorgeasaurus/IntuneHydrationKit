@@ -571,6 +571,35 @@ Describe 'Invoke-GroupBatchImport' {
             ($result | Where-Object { $_.Action -eq 'Deleted' }).Count | Should -Be 25
         }
 
+        It 'Should retry missing batch delete responses directly' {
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'GET' } {
+                return @{
+                    value = @(
+                        @{ id = 'id-1'; displayName = 'Group 1'; description = 'Imported by Intune Hydration Kit' }
+                        @{ id = 'id-2'; displayName = 'Group 2'; description = 'Imported by Intune Hydration Kit' }
+                    )
+                }
+            }
+
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*$batch*' } {
+                return @{
+                    responses = @(
+                        @{ id = '1'; status = 204 }
+                    )
+                }
+            }
+
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'DELETE' -and $Uri -eq 'beta/groups/id-2' } {
+                return $null
+            }
+
+            $result = Invoke-GroupBatchImport -GroupType 'Dynamic' -Delete
+
+            $result | Should -HaveCount 2
+            ($result | Where-Object { $_.Action -eq 'Deleted' }).Count | Should -Be 2
+            Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'DELETE' -and $Uri -eq 'beta/groups/id-2' } -Times 1
+        }
+
         It 'Should handle 404 response as already deleted' {
             Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'GET' } {
                 return @{

@@ -117,6 +117,28 @@ Describe 'Import-IntuneBaseline' {
             $resultTypes | Should -Not -Contain 'MACOS/IntuneManagement'
             $resultTypes | Should -Not -Contain 'BYOD/IntuneManagement'
         }
+
+        It 'Should log cache and preparation progress during import' {
+            Mock Invoke-GraphBatchOperation { return @() } -ModuleName IntuneHydrationKit
+
+            Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'BaselineTemplates') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001' | Out-Null
+
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Discovered * OpenIntuneBaseline templates across * folders'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Caching existing policies (*): *'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -eq 'Caching complete. Preparing OpenIntuneBaseline payloads...'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Preparing OpenIntuneBaseline folder (*): */* (* templates)'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Prepared * OpenIntuneBaseline payloads. Starting batch import...'
+            }
+        }
     }
 
     Context 'WhatIf Support' {

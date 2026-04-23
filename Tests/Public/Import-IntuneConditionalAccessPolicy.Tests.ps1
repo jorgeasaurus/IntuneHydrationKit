@@ -248,12 +248,18 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
         }
 
         It 'Should delete disabled policies matching template names' {
+            $script:caDeleteListCallCount = 0
+
             Mock Get-GraphPagedResults {
                 param($Uri, $ProcessItems)
+                $script:caDeleteListCallCount++
+
                 if ($ProcessItems) {
-                    & $ProcessItems @(
-                        @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
-                    )
+                    if ($script:caDeleteListCallCount -eq 1) {
+                        & $ProcessItems @(
+                            @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
+                        )
+                    }
                 }
             } -ModuleName IntuneHydrationKit
 
@@ -268,9 +274,13 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
         }
 
         It 'Should skip enabled policies during delete' {
+            $script:caListCallCount = 0
+
             Mock Get-GraphPagedResults {
                 param($Uri, $ProcessItems)
-                if ($ProcessItems) {
+                $script:caListCallCount++
+
+                if ($ProcessItems -and $script:caListCallCount -eq 1) {
                     & $ProcessItems @(
                         @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'enabled' }
                     )
@@ -279,8 +289,9 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
             $result = Import-IntuneConditionalAccessPolicy -TemplatePath (Join-Path 'TestDrive:' 'CADelete') -RemoveExisting -Confirm:$false
 
-            $skipped = @($result | Where-Object { $_.Action -eq 'Skipped' -and $_.Status -like '*must be disabled*' })
-            $skipped.Count | Should -Be 1
+            $result | Should -HaveCount 1
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Status | Should -BeLike '*must be disabled*'
         }
 
         It 'Should return WouldDelete in WhatIf mode' {
@@ -297,6 +308,95 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
             $wouldDelete = @($result | Where-Object { $_.Action -eq 'WouldDelete' })
             $wouldDelete.Count | Should -Be 1
+        }
+
+        It 'Should refetch and delete newly visible disabled policies across delete passes' {
+            $script:caListCallCount = 0
+            $script:caTemplateFiles = @(
+                [PSCustomObject]@{
+                    FullName = (Join-Path 'TestDrive:' 'CADelete\Block Legacy Auth.json')
+                    Name     = 'Block Legacy Auth.json'
+                }
+                [PSCustomObject]@{
+                    FullName = (Join-Path 'TestDrive:' 'CADelete\Require MFA.json')
+                    Name     = 'Require MFA.json'
+                }
+            )
+
+            Mock Get-HydrationTemplates {
+                $script:caTemplateFiles
+            } -ModuleName IntuneHydrationKit
+
+            Mock Get-GraphPagedResults {
+                param($Uri, $ProcessItems)
+                $script:caListCallCount++
+
+                if (-not $ProcessItems) {
+                    return
+                }
+
+                switch ($script:caListCallCount) {
+                    1 {
+                        & $ProcessItems @(
+                            @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
+                        )
+                    }
+                    2 {
+                        & $ProcessItems @(
+                            @{ id = 'ca-2'; displayName = '[IHD] Require MFA'; state = 'disabled' }
+                        )
+                    }
+                    default { }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation {
+                param($Items)
+                foreach ($item in $Items) {
+                    [PSCustomObject]@{
+                        Name   = $item.Name
+                        Type   = 'ConditionalAccessPolicy'
+                        Action = 'Deleted'
+                        Status = 'Success'
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneConditionalAccessPolicy -TemplatePath (Join-Path 'TestDrive:' 'CADelete') -RemoveExisting -Confirm:$false
+
+            $deleted = @($result | Where-Object { $_.Action -eq 'Deleted' })
+            $deleted.Count | Should -Be 2
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 2
+        }
+
+        It 'Should not duplicate failed delete results across delete passes' {
+            $script:caListCallCount = 0
+
+            Mock Get-GraphPagedResults {
+                param($Uri, $ProcessItems)
+                $script:caListCallCount++
+
+                if ($ProcessItems) {
+                    & $ProcessItems @(
+                        @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation {
+                @([PSCustomObject]@{
+                        Name   = '[IHD] Block Legacy Auth'
+                        Type   = 'ConditionalAccessPolicy'
+                        Action = 'Failed'
+                        Status = 'Delete failed: Access denied'
+                    })
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneConditionalAccessPolicy -TemplatePath (Join-Path 'TestDrive:' 'CADelete') -RemoveExisting -Confirm:$false
+
+            $failed = @($result | Where-Object { $_.Action -eq 'Failed' })
+            $failed.Count | Should -Be 1
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 1
         }
     }
 }

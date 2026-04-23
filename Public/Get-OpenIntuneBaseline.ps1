@@ -33,7 +33,7 @@ function Get-OpenIntuneBaseline {
     $zipPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OpenIntuneBaseline-$Branch.zip"
 
     try {
-        Write-Host "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
+        Write-Information "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
 
         # Download the repository
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
@@ -58,7 +58,7 @@ function Get-OpenIntuneBaseline {
         # Clean up zip
         Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue -WhatIf:$false
 
-        Write-Host "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
+        Write-Information "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
 
         return $DestinationPath
     } catch {

@@ -48,8 +48,7 @@ function Import-IntuneBaseline {
         [switch]$RemoveExisting
     )
 
-    # Use connected tenant if not specified
-    if (-not $TenantId -and $script:HydrationState.TenantId) {
+    if (-not $TenantId) {
         $TenantId = $script:HydrationState.TenantId
     }
 
@@ -107,69 +106,11 @@ function Import-IntuneBaseline {
     # - OS/NativeImport/ - Settings Catalog policies that can be imported via Graph API
     # - BYOD/AppProtection/ - App protection policies
 
-    # Map folder names to Graph API endpoints (includes aliases for different baseline versions)
-    $endpointMap = @{
-        'NativeImport'                     = 'deviceManagement/configurationPolicies'
-        'AppProtection'                    = 'deviceAppManagement/managedAppPolicies'
-        'Administrative Templates'         = 'deviceManagement/groupPolicyConfigurations'
-        'Compliance'                       = 'deviceManagement/deviceCompliancePolicies'
-        'Compliance Policies'              = 'deviceManagement/deviceCompliancePolicies'
-        'Configuration Profiles'           = 'deviceManagement/deviceConfigurations'
-        'Device Configuration'             = 'deviceManagement/deviceConfigurations'
-        'Device Enrollment Configurations' = 'deviceManagement/deviceEnrollmentConfigurations'
-        'Endpoint Security'                = 'deviceManagement/intents'
-        'Settings Catalog'                 = 'deviceManagement/configurationPolicies'
-        'Scripts'                          = 'deviceManagement/deviceManagementScripts'
-        'Proactive Remediations'           = 'deviceManagement/deviceHealthScripts'
-        'Windows Autopilot'                = 'deviceManagement/windowsAutopilotDeploymentProfiles'
-        'App Configuration'                = 'deviceAppManagement/mobileAppConfigurations'
-        'App Protection Policies'          = 'deviceAppManagement/managedAppPolicies'
-    }
-
-    # Map @odata.type to Graph API endpoints for IntuneManagement exports
-    $odataTypeToEndpoint = @{
-        # Device Configurations
-        '#microsoft.graph.windowsHealthMonitoringConfiguration'         = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10GeneralConfiguration'                = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10EndpointProtectionConfiguration'     = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windows10CustomConfiguration'                 = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsDeliveryOptimizationConfiguration'     = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsUpdateForBusinessConfiguration'        = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsIdentityProtectionConfiguration'       = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsKioskConfiguration'                    = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.editionUpgradeConfiguration'                  = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.sharedPCConfiguration'                        = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsWifiConfiguration'                     = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.windowsWiredNetworkConfiguration'             = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSGeneralDeviceConfiguration'              = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSCustomConfiguration'                     = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.macOSEndpointProtectionConfiguration'         = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.iosGeneralDeviceConfiguration'                = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.iosCustomConfiguration'                       = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.androidGeneralDeviceConfiguration'            = 'deviceManagement/deviceConfigurations'
-        '#microsoft.graph.androidWorkProfileGeneralDeviceConfiguration' = 'deviceManagement/deviceConfigurations'
-        # Compliance Policies
-        '#microsoft.graph.windows10CompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.windows81CompliancePolicy'                    = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.macOSCompliancePolicy'                        = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.iosCompliancePolicy'                          = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidCompliancePolicy'                      = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidWorkProfileCompliancePolicy'           = 'deviceManagement/deviceCompliancePolicies'
-        '#microsoft.graph.androidDeviceOwnerCompliancePolicy'           = 'deviceManagement/deviceCompliancePolicies'
-        # Settings Catalog / Configuration Policies
-        '#microsoft.graph.deviceManagementConfigurationPolicy'          = 'deviceManagement/configurationPolicies'
-        # Windows Update for Business - Driver Updates
-        '#microsoft.graph.windowsDriverUpdateProfile'                   = 'deviceManagement/windowsDriverUpdateProfiles'
-        # App Protection Policies (BYOD baseline)
-        '#microsoft.graph.androidManagedAppProtection'                  = 'deviceAppManagement/androidManagedAppProtections'
-        '#microsoft.graph.iosManagedAppProtection'                      = 'deviceAppManagement/iosManagedAppProtections'
-    }
-
-    # Folders routed via @odata.type lookup instead of $endpointMap
-    $intuneManagementFolders = @('IntuneManagement', 'AppProtection')
-
-    # Folders to skip - NativeImport duplicates policies from IntuneManagement with fewer options
-    $skipFolders = @('NativeImport')
+    $importMetadata = Get-BaselineImportMetadata -Kind 'OpenIntune'
+    $endpointMap = $importMetadata.EndpointMap
+    $odataTypeToEndpoint = $importMetadata.ODataTypeToEndpoint
+    $intuneManagementFolders = $importMetadata.IntuneManagementFolders
+    $skipFolders = $importMetadata.SkipFolders
 
     $results = @()
 
@@ -279,10 +220,23 @@ function Import-IntuneBaseline {
     }
 
     if ($PSCmdlet.ShouldProcess("$totalPolicies policies from OpenIntuneBaseline", "Import to Intune")) {
+        $logParams = @{
+            Message = "Discovered $totalPolicies OpenIntuneBaseline templates across $($policyTypefolders.Count) folders"
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
+
         # Pre-fetch existing policies from all unique endpoints to avoid repeated API calls
         $endpointPolicyCache = @{}
         $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
+        $cacheIndex = 0
         foreach ($cacheEndpoint in $uniqueEndpoints) {
+            $cacheIndex++
+            $logParams = @{
+                Message = "Caching existing policies ($cacheIndex/$($uniqueEndpoints.Count)): $cacheEndpoint"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
             $endpointPolicyCache[$cacheEndpoint] = @{}
             try {
                 Get-GraphPagedResults -Uri "beta/$cacheEndpoint" -ProcessItems {
@@ -305,8 +259,16 @@ function Import-IntuneBaseline {
             }
         }
 
+        $logParams = @{
+            Message = 'Caching complete. Preparing OpenIntuneBaseline payloads...'
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
+
         # Collect all policies to create with their prepared bodies
         $policiesToCreate = @()
+        $activePolicyFolders = @($policyTypefolders | Where-Object { $_.PolicyType -notin $skipFolders })
+        $folderIndex = 0
 
         foreach ($policyFolder in $policyTypefolders) {
             $folder = $policyFolder.Folder
@@ -320,6 +282,12 @@ function Import-IntuneBaseline {
             }
 
             $jsonFiles = Get-ChildItem -Path $folder.FullName -Filter "*.json" -File -Recurse
+            $folderIndex++
+            $logParams = @{
+                Message = "Preparing OpenIntuneBaseline folder ($folderIndex/$($activePolicyFolders.Count)): $osName/$folderName ($($jsonFiles.Count) templates)"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
             # For IntuneManagement folders, try to import using @odata.type routing
             if ($folderName -in $intuneManagementFolders) {
@@ -595,6 +563,11 @@ function Import-IntuneBaseline {
 
         # Batch create all collected policies using centralized helper
         if ($policiesToCreate.Count -gt 0) {
+            $logParams = @{
+                Message = "Prepared $($policiesToCreate.Count) OpenIntuneBaseline payloads. Starting batch import..."
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
             $results += Invoke-GraphBatchOperation -Items $policiesToCreate -Operation 'POST' -ResultType 'BaselinePolicy'
         }
 
