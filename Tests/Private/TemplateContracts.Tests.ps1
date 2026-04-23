@@ -33,8 +33,9 @@ Describe 'Bundled template contracts' {
 
             $metadata = Get-BaselineImportMetadata -Kind 'OpenIntune'
             $templateFiles = $TemplateFiles | Where-Object {
-                $_.DirectoryName -match '/(IntuneManagement|AppProtection)(/|$)' -and
-                $_.DirectoryName -notmatch '/NativeImport(/|$)'
+                $normalizedDirectory = $_.DirectoryName -replace '\\', '/'
+                $normalizedDirectory -match '/(IntuneManagement|AppProtection)(/|$)' -and
+                $normalizedDirectory -notmatch '/NativeImport(/|$)'
             }
 
             $templateFiles.Count | Should -BeGreaterThan 0
