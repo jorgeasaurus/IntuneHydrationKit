@@ -61,7 +61,6 @@ function Test-HydrationKitObject {
             }
 
             if ($isHydrationKit) {
-                $isHydrationKit = $true
                 break
             }
         }
