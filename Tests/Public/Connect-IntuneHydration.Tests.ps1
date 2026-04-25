@@ -212,7 +212,7 @@ Describe 'Connect-IntuneHydration' {
             try {
                 Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
             } catch {
-                # Expected
+                $null = $_
             }
 
             $state = Get-ModuleVariable -Name 'HydrationState'

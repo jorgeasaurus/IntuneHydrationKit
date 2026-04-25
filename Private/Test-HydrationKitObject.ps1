@@ -46,16 +46,21 @@ function Test-HydrationKitObject {
         [string]$ObjectName
     )
 
-    # The marker that identifies objects created by this kit (centralized in psm1)
-    $hydrationMarker = if ($script:HydrationMarkerAlt) { $script:HydrationMarkerAlt } else { "Imported by Intune-Hydration-Kit" }
-    $alternateMarker = if ($script:HydrationMarker) { $script:HydrationMarker } else { "Imported by Intune Hydration Kit" }
+    $markers = (Get-HydrationMarkerSet).All
 
     $fieldsToCheck = @($Description, $Notes)
     $isHydrationKit = $false
 
     foreach ($field in $fieldsToCheck) {
         if (-not [string]::IsNullOrWhiteSpace($field)) {
-            if (($field -like "*$hydrationMarker*") -or ($field -like "*$alternateMarker*")) {
+            foreach ($marker in $markers) {
+                if ($field -like "*$marker*") {
+                    $isHydrationKit = $true
+                    break
+                }
+            }
+
+            if ($isHydrationKit) {
                 $isHydrationKit = $true
                 break
             }

@@ -162,6 +162,7 @@ function Invoke-GroupBatchImport {
         # Handle WhatIf mode for deletion
         if ($WhatIfPreference) {
             foreach ($group in $groupsToDelete) {
+                $null = $PSCmdlet.ShouldProcess($group.displayName, "Delete $GroupType group")
                 $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'WouldDelete' -Status 'DryRun'
                 Write-Verbose "  WouldDelete: $($group.displayName)"
             }
@@ -378,6 +379,7 @@ function Invoke-GroupBatchImport {
     # Handle WhatIf mode
     if ($WhatIfPreference) {
         foreach ($groupDef in $groupsToCreate) {
+            $null = $PSCmdlet.ShouldProcess($groupDef.displayName, "Create $GroupType group")
             $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'WouldCreate' -Status 'DryRun'
             Write-Verbose "  WouldCreate: $($groupDef.displayName)"
         }

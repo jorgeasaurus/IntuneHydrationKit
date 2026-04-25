@@ -86,7 +86,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
         It 'Should force all policies to disabled state' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET' -and $Uri -like '*subscribedSkus*') {
                     return @{ value = @(@{ capabilityStatus = 'Enabled'; servicePlans = @(@{ servicePlanName = 'AAD_PREMIUM_P2'; provisioningStatus = 'Success' }) }) }
                 }
@@ -118,7 +118,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             } -ModuleName IntuneHydrationKit
 
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'existing-id'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
@@ -134,7 +134,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
         It 'Should skip policies requiring P2 when no P2 license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET' -and $Uri -like '*subscribedSkus*') {
                     return @{ value = @(@{ capabilityStatus = 'Enabled'; servicePlans = @(@{ servicePlanName = 'BASIC_PLAN'; provisioningStatus = 'Success' }) }) }
                 }
@@ -152,7 +152,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
         It 'Should skip policies requiring private preview features' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET' -and $Uri -like '*subscribedSkus*') {
                     return @{ value = @(@{ capabilityStatus = 'Enabled'; servicePlans = @(@{ servicePlanName = 'AAD_PREMIUM_P2'; provisioningStatus = 'Success' }) }) }
                 }
@@ -193,7 +193,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             Mock Test-ConditionalAccessPolicyRequiresPreview { return $null } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET' -and $Uri -like '*subscribedSkus*') {
                     return @{ value = @(@{ capabilityStatus = 'Enabled'; servicePlans = @(@{ servicePlanName = 'AAD_PREMIUM_P2'; provisioningStatus = 'Success' }) }) }
                 }
@@ -240,7 +240,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             Mock Get-PremiumP2ServicePlans { return @('AAD_PREMIUM_P2') } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET' -and $Uri -like '*subscribedSkus*') {
                     return @{ value = @(@{ capabilityStatus = 'Enabled'; servicePlans = @(@{ servicePlanName = 'AAD_PREMIUM_P2'; provisioningStatus = 'Success' }) }) }
                 }
@@ -251,7 +251,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             $script:caDeleteListCallCount = 0
 
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 $script:caDeleteListCallCount++
 
                 if ($ProcessItems) {
@@ -277,7 +277,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             $script:caListCallCount = 0
 
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 $script:caListCallCount++
 
                 if ($ProcessItems -and $script:caListCallCount -eq 1) {
@@ -296,7 +296,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
 
         It 'Should return WouldDelete in WhatIf mode' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'ca-1'; displayName = '[IHD] Block Legacy Auth'; state = 'disabled' }
@@ -328,7 +328,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             } -ModuleName IntuneHydrationKit
 
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 $script:caListCallCount++
 
                 if (-not $ProcessItems) {
@@ -373,7 +373,7 @@ Describe 'Import-IntuneConditionalAccessPolicy' {
             $script:caListCallCount = 0
 
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 $script:caListCallCount++
 
                 if ($ProcessItems) {

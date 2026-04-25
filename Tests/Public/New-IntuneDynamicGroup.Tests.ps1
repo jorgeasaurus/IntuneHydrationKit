@@ -125,7 +125,7 @@ Describe 'New-IntuneDynamicGroup' {
         It 'Should include [IHD] prefix in displayName' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Body)
                 $script:capturedBody = $Body
                 @{ id = 'new-group-id'; displayName = '[IHD] Windows 11 Devices' }
             } -ModuleName IntuneHydrationKit
@@ -138,7 +138,7 @@ Describe 'New-IntuneDynamicGroup' {
         It 'Should include dynamic membership groupTypes' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Body)
                 $script:capturedBody = $Body
                 @{ id = 'new-group-id'; displayName = '[IHD] Windows 11 Devices' }
             } -ModuleName IntuneHydrationKit
@@ -151,7 +151,7 @@ Describe 'New-IntuneDynamicGroup' {
         It 'Should set membershipRule in request body' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Body)
                 $script:capturedBody = $Body
                 @{ id = 'new-group-id'; displayName = '[IHD] Windows 11 Devices' }
             } -ModuleName IntuneHydrationKit
@@ -172,7 +172,7 @@ Describe 'New-IntuneDynamicGroup' {
         It 'Should include hydration kit marker in description' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Body)
                 $script:capturedBody = $Body
                 @{ id = 'new-group-id'; displayName = '[IHD] Test Group' }
             } -ModuleName IntuneHydrationKit
@@ -185,7 +185,7 @@ Describe 'New-IntuneDynamicGroup' {
         It 'Should preserve existing description text with marker appended' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Body)
                 $script:capturedBody = $Body
                 @{ id = 'new-group-id'; displayName = '[IHD] Test Group' }
             } -ModuleName IntuneHydrationKit

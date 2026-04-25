@@ -257,12 +257,14 @@ function Invoke-IntuneHydration {
             ReportOutputPath      = $ReportOutputPath
             ReportFormats         = $ReportFormats
             WhatIfEnabled         = [bool]$WhatIfPreference
-            PSCmdlet              = $PSCmdlet
+            CommandRuntime        = $PSCmdlet
         }
         $settings = Resolve-HydrationExecutionSettings @resolveSettingsParams
 
         Write-HydrationExecutionSettingsSummary -Settings $settings
         $platformFilters = Get-HydrationPlatformFilters -Platforms $settings.platforms
+        $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
+        $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
 
         # Apply options from settings
         $createEnabled = $settings.options.create -eq $true
@@ -274,26 +276,16 @@ function Invoke-IntuneHydration {
             CreateEnabled = $createEnabled
             DeleteEnabled = $deleteEnabled
             ForceDelete   = $forceDelete
-            WhatIfEnabled = [bool]$WhatIfPreference
+            WhatIfEnabled = $effectiveWhatIfEnabled
             PSCmdlet      = $PSCmdlet
         }
         if (-not (Test-HydrationOperationSettings @testOperationSettingsParams)) {
             return
         }
 
-        # dryRun from settings enables WhatIf if not already set via command line
-        if ($settings.options.dryRun -eq $true -and -not $WhatIfPreference) {
-            $script:WhatIfPreference = $true
-        }
-
-        # verbose from settings enables verbose output
-        if ($settings.options.verbose -eq $true) {
-            $script:VerbosePreference = 'Continue'
-        }
-
         # Initialize logging (after applying verbose setting)
         # Uses OS temp directory by default (e.g., $env:TEMP/IntuneHydrationKit/Logs on Windows, /tmp/IntuneHydrationKit/Logs on macOS/Linux)
-        Initialize-HydrationLogging -EnableVerbose:($VerbosePreference -eq 'Continue')
+        Initialize-HydrationLogging -EnableVerbose:$effectiveVerboseEnabled
 
         $logParams = @{
             Message = '=== Intune Hydration Kit Started ==='
@@ -307,7 +299,7 @@ function Invoke-IntuneHydration {
         }
         Write-HydrationLog @logParams
 
-        if ($WhatIfPreference) {
+        if ($effectiveWhatIfEnabled) {
             $logParams = @{
                 Message = 'Running in DRY-RUN mode - no changes will be made'
                 Level   = 'Warning'
@@ -334,15 +326,6 @@ function Invoke-IntuneHydration {
         # Initialize results tracking
         $allResults = @()
 
-        function Get-NormalizedHydrationResults {
-            param(
-                [Parameter()]
-                [object]$StepResults
-            )
-
-            return @($StepResults | Where-Object { $null -ne $_ })
-        }
-
         # Step 1: Authenticate
         $logParams = @{
             Message = 'Step 1: Authenticating to Microsoft Graph'
@@ -355,6 +338,7 @@ function Invoke-IntuneHydration {
             TenantId               = $settings.tenant.tenantId
         }
         $authParams = Get-HydrationAuthParameters @getAuthParams
+        $authParams['Verbose'] = $effectiveVerboseEnabled
 
         # Always connect to Graph API (needed for dry-run to check existing policies)
         Connect-IntuneHydration @authParams
@@ -367,7 +351,7 @@ function Invoke-IntuneHydration {
         Write-HydrationLog @logParams
 
         # Always run pre-flight checks (read-only operations)
-        Test-IntunePrerequisites | Out-Null
+        Test-IntunePrerequisites -Verbose:$effectiveVerboseEnabled | Out-Null
 
         # Step 3: Dynamic Groups
         if ($settings.imports.dynamicGroups) {
@@ -382,9 +366,10 @@ function Invoke-IntuneHydration {
                 TemplatePath   = $dynamicGroupTemplatePath
                 Platforms      = $platformFilters.Groups
                 RemoveExisting = $RemoveExisting
-                WhatIfEnabled  = [bool]$WhatIfPreference
+                WhatIfEnabled  = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $dynamicGroupResults = Get-NormalizedHydrationResults -StepResults (Invoke-HydrationGroupStep @dynamicGroupStepParams)
+            $dynamicGroupResults = @((Invoke-HydrationGroupStep @dynamicGroupStepParams) | Where-Object { $null -ne $_ })
             $allResults += $dynamicGroupResults
         }
 
@@ -401,9 +386,10 @@ function Invoke-IntuneHydration {
                 TemplatePath   = $staticGroupTemplatePath
                 Platforms      = $platformFilters.Groups
                 RemoveExisting = $RemoveExisting
-                WhatIfEnabled  = [bool]$WhatIfPreference
+                WhatIfEnabled  = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $staticGroupResults = Get-NormalizedHydrationResults -StepResults (Invoke-HydrationGroupStep @staticGroupStepParams)
+            $staticGroupResults = @((Invoke-HydrationGroupStep @staticGroupStepParams) | Where-Object { $null -ne $_ })
             $allResults += $staticGroupResults
         }
 
@@ -419,9 +405,10 @@ function Invoke-IntuneHydration {
             $filterParams = @{
                 Platform       = $platformFilters.DeviceFilters
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $filterResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneDeviceFilter @filterParams)
+            $filterResults = @((Import-IntuneDeviceFilter @filterParams) | Where-Object { $null -ne $_ })
             $allResults += $filterResults
         }
 
@@ -438,9 +425,10 @@ function Invoke-IntuneHydration {
 
             # Import function handles ShouldProcess internally for each policy
             $baselineParams['RemoveExisting'] = $RemoveExisting
-            $baselineParams['WhatIf'] = $WhatIfPreference
+            $baselineParams['WhatIf'] = $effectiveWhatIfEnabled
             $baselineParams['Platform'] = $platformFilters.Baseline
-            $baselineResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneBaseline @baselineParams)
+            $baselineParams['Verbose'] = $effectiveVerboseEnabled
+            $baselineResults = @((Import-IntuneBaseline @baselineParams) | Where-Object { $null -ne $_ })
             $allResults += $baselineResults
         }
 
@@ -455,10 +443,11 @@ function Invoke-IntuneHydration {
 
             $cisParams = @{
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
                 Platform       = $platformFilters.CISBaseline
+                Verbose        = $effectiveVerboseEnabled
             }
-            $cisResults = Get-NormalizedHydrationResults -StepResults (Import-CISBaseline @cisParams)
+            $cisResults = @((Import-CISBaseline @cisParams) | Where-Object { $null -ne $_ })
             $allResults += $cisResults
         }
 
@@ -474,9 +463,10 @@ function Invoke-IntuneHydration {
             $complianceParams = @{
                 Platform       = $platformFilters.Compliance
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $complianceResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneCompliancePolicy @complianceParams)
+            $complianceResults = @((Import-IntuneCompliancePolicy @complianceParams) | Where-Object { $null -ne $_ })
             $allResults += $complianceResults
         }
 
@@ -491,9 +481,10 @@ function Invoke-IntuneHydration {
 
             $notificationParams = @{
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $notificationResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneNotificationTemplate @notificationParams)
+            $notificationResults = @((Import-IntuneNotificationTemplate @notificationParams) | Where-Object { $null -ne $_ })
             $allResults += $notificationResults
         }
 
@@ -509,9 +500,10 @@ function Invoke-IntuneHydration {
             $mamParams = @{
                 Platform       = $platformFilters.AppProtection
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $mamResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneAppProtectionPolicy @mamParams)
+            $mamResults = @((Import-IntuneAppProtectionPolicy @mamParams) | Where-Object { $null -ne $_ })
             $allResults += $mamResults
         }
 
@@ -527,9 +519,10 @@ function Invoke-IntuneHydration {
             $enrollmentParams = @{
                 Platform       = $platformFilters.EnrollmentProfiles
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $enrollmentResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneEnrollmentProfile @enrollmentParams)
+            $enrollmentResults = @((Import-IntuneEnrollmentProfile @enrollmentParams) | Where-Object { $null -ne $_ })
             $allResults += $enrollmentResults
         }
 
@@ -544,9 +537,10 @@ function Invoke-IntuneHydration {
 
             $caParams = @{
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $caResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneConditionalAccessPolicy @caParams)
+            $caResults = @((Import-IntuneConditionalAccessPolicy @caParams) | Where-Object { $null -ne $_ })
             $allResults += $caResults
         }
 
@@ -562,16 +556,18 @@ function Invoke-IntuneHydration {
             $mobileAppParams = @{
                 Platform       = $platformFilters.MobileApps
                 RemoveExisting = $RemoveExisting
-                WhatIf         = $WhatIfPreference
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
             }
-            $mobileAppResults = Get-NormalizedHydrationResults -StepResults (Import-IntuneMobileApp @mobileAppParams)
+            $mobileAppResults = @((Import-IntuneMobileApp @mobileAppParams) | Where-Object { $null -ne $_ })
             $allResults += $mobileAppResults
         }
 
         $summaryParams = @{
             Settings      = $settings
             Results       = $allResults
-            WhatIfEnabled = [bool]$WhatIfPreference
+            WhatIfEnabled = $effectiveWhatIfEnabled
+            Verbose       = $effectiveVerboseEnabled
         }
         $summaryOutput = Write-HydrationExecutionSummary @summaryParams
         $summary = $summaryOutput.Summary

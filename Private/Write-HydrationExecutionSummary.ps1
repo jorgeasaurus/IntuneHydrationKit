@@ -182,47 +182,27 @@ function Write-HydrationExecutionSummary {
     }
     Write-HydrationLog @logParams
 
-    $writeHostParams = @{
-        Object            = ''
-        InformationAction = 'Continue'
-    }
-    Write-Host @writeHostParams
-    $writeHostParams = @{
-        Object            = '---------------- Summary ----------------'
-        InformationAction = 'Continue'
-    }
-    Write-Host @writeHostParams
-    if ($WhatIfEnabled) {
-        $writeHostParams = @{
-            Object            = ("Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed)
-            InformationAction = 'Continue'
-        }
-        Write-Host @writeHostParams
+    $summaryStatusLine = if ($WhatIfEnabled) {
+        "Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed
     } else {
-        $writeHostParams = @{
-            Object            = ("Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed)
-            InformationAction = 'Continue'
-        }
-        Write-Host @writeHostParams
+        "Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed
     }
 
-    $writeHostParams = @{
-        Object            = "Reports: $reportPath"
-        InformationAction = 'Continue'
-    }
-    Write-Host @writeHostParams
+    $summaryLines = @(
+        ''
+        '---------------- Summary ----------------'
+        $summaryStatusLine
+        "Reports: $reportPath"
+    )
+
     if ($jsonReportPath) {
-        $writeHostParams = @{
-            Object            = "JSON:    $jsonReportPath"
-            InformationAction = 'Continue'
-        }
-        Write-Host @writeHostParams
+        $summaryLines += "JSON:    $jsonReportPath"
     }
-    $writeHostParams = @{
-        Object            = '----------------------------------------'
-        InformationAction = 'Continue'
+    $summaryLines += '----------------------------------------'
+
+    foreach ($summaryLine in $summaryLines) {
+        Write-Information $summaryLine -InformationAction Continue
     }
-    Write-Host @writeHostParams
 
     if ($summary.Failed -gt 0) {
         $logParams = @{

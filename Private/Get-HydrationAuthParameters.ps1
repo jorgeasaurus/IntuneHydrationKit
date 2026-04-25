@@ -18,11 +18,15 @@ function Get-HydrationAuthParameters {
 
     if ($AuthenticationSettings.mode -eq 'clientSecret') {
         $authParams['ClientId'] = $AuthenticationSettings.clientId
-        $convertToSecureStringParams = @{
-            AsPlainText = $true
-            Force       = $true
+        if ($AuthenticationSettings.clientSecret -is [SecureString]) {
+            $authParams['ClientSecret'] = $AuthenticationSettings.clientSecret
+        } else {
+            $convertToSecureStringParams = @{
+                AsPlainText = $true
+                Force       = $true
+            }
+            $authParams['ClientSecret'] = $AuthenticationSettings.clientSecret | ConvertTo-SecureString @convertToSecureStringParams
         }
-        $authParams['ClientSecret'] = $AuthenticationSettings.clientSecret | ConvertTo-SecureString @convertToSecureStringParams
     } else {
         $authParams['Interactive'] = $true
     }

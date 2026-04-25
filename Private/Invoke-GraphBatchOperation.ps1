@@ -65,18 +65,24 @@ function Invoke-GraphBatchOperation {
     function Get-ItemUrl {
         param(
             [Parameter(Mandatory)]
-            [hashtable]$Item
+            [hashtable]$Item,
+
+            [Parameter(Mandatory)]
+            [string]$OperationName,
+
+            [Parameter()]
+            [string]$DefaultUrl
         )
 
         if ($Item.Url) {
             return $Item.Url
         }
 
-        if ($Operation -eq 'DELETE') {
-            return "$BaseUrl/$($Item.Id)"
+        if ($OperationName -eq 'DELETE') {
+            return "$DefaultUrl/$($Item.Id)"
         }
 
-        return $BaseUrl
+        return $DefaultUrl
     }
 
     function Get-RetryAfterSeconds {
@@ -166,7 +172,7 @@ function Invoke-GraphBatchOperation {
 
     $containsThrottleSensitiveWrites = $false
     foreach ($item in $Items) {
-        $resolvedUrl = Get-ItemUrl -Item $item
+        $resolvedUrl = Get-ItemUrl -Item $item -OperationName $Operation -DefaultUrl $BaseUrl
         if (Test-IsThrottleSensitiveWrite -Url $resolvedUrl) {
             $containsThrottleSensitiveWrites = $true
             break
@@ -218,7 +224,7 @@ function Invoke-GraphBatchOperation {
                     $batchRequests += @{
                         id     = ($i + 1).ToString()
                         method = "DELETE"
-                        url    = Get-ItemUrl -Item $item
+                        url    = Get-ItemUrl -Item $item -OperationName $Operation -DefaultUrl $BaseUrl
                     }
                 }
 
@@ -247,7 +253,7 @@ function Invoke-GraphBatchOperation {
                 $validItems = @()
                 $invalidItems = @()
                 foreach ($item in $pendingItems) {
-                    $url = Get-ItemUrl -Item $item
+                    $url = Get-ItemUrl -Item $item -OperationName $Operation -DefaultUrl $BaseUrl
                     if ([string]::IsNullOrWhiteSpace($url)) {
                         $invalidItems += $item
                     } else {
@@ -273,7 +279,7 @@ function Invoke-GraphBatchOperation {
                 $batchRequestsJson = @()
                 for ($i = 0; $i -lt $pendingItems.Count; $i++) {
                     $item = $pendingItems[$i]
-                    $url = Get-ItemUrl -Item $item
+                    $url = Get-ItemUrl -Item $item -OperationName $Operation -DefaultUrl $BaseUrl
                     $requestJson = "{`"id`":`"$(($i + 1).ToString())`",`"method`":`"POST`",`"url`":`"$url`",`"headers`":{`"Content-Type`":`"application/json`"},`"body`":$($item.BodyJson)}"
                     $batchRequestsJson += $requestJson
                 }

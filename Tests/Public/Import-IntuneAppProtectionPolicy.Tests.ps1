@@ -100,7 +100,7 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
         It 'Should skip policy if it already exists and is tagged' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{
                                 id          = 'existing-id'
@@ -119,7 +119,7 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
         It 'Should create policy when it does not exist' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') { return @{ value = @() } }
             } -ModuleName IntuneHydrationKit
 
@@ -184,7 +184,7 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
         It 'Should only delete policies with hydration marker and matching template names' {
             Mock Test-HydrationKitObject {
-                param($Description, $ObjectName)
+                param($Description)
                 return $Description -like '*Imported by Intune Hydration Kit*'
             } -ModuleName IntuneHydrationKit
 
@@ -195,7 +195,7 @@ Describe 'Import-IntuneAppProtectionPolicy' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(

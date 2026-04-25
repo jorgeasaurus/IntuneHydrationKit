@@ -121,14 +121,7 @@ function Import-IntuneNotificationTemplate {
                     $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
                     $verified = $true
                 } catch {
-                    $statusCode = $null
-                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
-                        $statusCode = [int]$_.Exception.ResponseStatusCode
-                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
-                        $statusCode = [int]$_.Exception.StatusCode
-                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
-                        $statusCode = [int]$_.Exception.Response.StatusCode
-                    }
+                    $statusCode = Get-GraphStatusCode -ErrorRecord $_
                     if ($statusCode -eq 404) {
                         Write-Verbose "Template '$displayName' (ID: $existId) no longer exists - proceeding to create"
                     } else {
@@ -150,14 +143,7 @@ function Import-IntuneNotificationTemplate {
                     $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
                     $verified = $true
                 } catch {
-                    $statusCode = $null
-                    if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
-                        $statusCode = [int]$_.Exception.ResponseStatusCode
-                    } elseif ($_.Exception.PSObject.Properties['StatusCode']) {
-                        $statusCode = [int]$_.Exception.StatusCode
-                    } elseif ($_.Exception.PSObject.Properties['Response'] -and $null -ne $_.Exception.Response -and $null -ne $_.Exception.Response.StatusCode) {
-                        $statusCode = [int]$_.Exception.Response.StatusCode
-                    }
+                    $statusCode = Get-GraphStatusCode -ErrorRecord $_
                     if ($statusCode -eq 404) {
                         Write-Verbose "Legacy template '$($template.displayName)' (ID: $existId) no longer exists - proceeding to create"
                     } else {
@@ -188,16 +174,24 @@ function Import-IntuneNotificationTemplate {
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
                 # Create localized messages if present
+                $localizedMessageFailures = [System.Collections.Generic.List[string]]::new()
                 foreach ($loc in $localizedMessages) {
                     try {
                         $locBody = $loc | ConvertTo-Json -Depth 20
                         Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
                     } catch {
-                        Write-HydrationLog -Message "  Failed to add localized message ($($loc.locale)): $($_.Exception.Message)" -Level Warning
+                        $locale = if ($loc.locale) { $loc.locale } else { 'unknown-locale' }
+                        $localizedMessageFailures.Add($locale)
+                        Write-HydrationLog -Message "  Failed to add localized message ($locale): $($_.Exception.Message)" -Level Warning
                     }
                 }
 
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status 'Success'
+                $status = if ($localizedMessageFailures.Count -eq 0) {
+                    'Success'
+                } else {
+                    "PartialSuccess - $($localizedMessageFailures.Count) localized message failure(s): $($localizedMessageFailures -join ', ')"
+                }
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status $status
             } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'WouldCreate' -Status 'DryRun'

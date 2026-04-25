@@ -8,73 +8,73 @@ BeforeAll {
 Describe 'New-HydrationResult' {
     Context 'Required properties' {
         BeforeAll {
-            $result = New-HydrationResult -Name 'Test Policy' -Action 'Created' -Status 'Success'
+            $script:result = New-HydrationResult -Name 'Test Policy' -Action 'Created' -Status 'Success'
         }
 
         It 'Should have Name property' {
-            $result.Name | Should -Be 'Test Policy'
+            $script:result.Name | Should -Be 'Test Policy'
         }
 
         It 'Should have Action property' {
-            $result.Action | Should -Be 'Created'
+            $script:result.Action | Should -Be 'Created'
         }
 
         It 'Should have Status property' {
-            $result.Status | Should -Be 'Success'
+            $script:result.Status | Should -Be 'Success'
         }
 
         It 'Should have Timestamp property' {
-            $result.Timestamp | Should -Not -BeNullOrEmpty
+            $script:result.Timestamp | Should -Not -BeNullOrEmpty
         }
 
         It 'Should have Timestamp in "yyyy-MM-dd HH:mm:ss" format' {
-            $result.Timestamp | Should -Match '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+            $script:result.Timestamp | Should -Match '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
         }
     }
 
     Context 'Optional properties when provided' {
         BeforeAll {
-            $result = New-HydrationResult -Name 'Test' -Action 'Created' -Status 'Success' `
+            $script:result = New-HydrationResult -Name 'Test' -Action 'Created' -Status 'Success' `
                 -Path '/templates/policy.json' -Type 'CompliancePolicy' `
                 -Id 'abc-123' -Platform 'Windows' -State 'enabled'
         }
 
         It 'Should include Path when provided' {
-            $result.Path | Should -Be '/templates/policy.json'
+            $script:result.Path | Should -Be '/templates/policy.json'
         }
 
         It 'Should include Type when provided' {
-            $result.Type | Should -Be 'CompliancePolicy'
+            $script:result.Type | Should -Be 'CompliancePolicy'
         }
 
         It 'Should include Id when provided' {
-            $result.Id | Should -Be 'abc-123'
+            $script:result.Id | Should -Be 'abc-123'
         }
 
         It 'Should include Platform when provided' {
-            $result.Platform | Should -Be 'Windows'
+            $script:result.Platform | Should -Be 'Windows'
         }
 
         It 'Should include State when provided' {
-            $result.State | Should -Be 'enabled'
+            $script:result.State | Should -Be 'enabled'
         }
     }
 
     Context 'Optional properties when NOT provided' {
         BeforeAll {
-            $result = New-HydrationResult -Name 'Test' -Action 'Deleted' -Status 'Success'
+            $script:result = New-HydrationResult -Name 'Test' -Action 'Deleted' -Status 'Success'
         }
 
         It 'Should NOT have Path property' {
-            $result.PSObject.Properties['Path'] | Should -BeNullOrEmpty
+            $script:result.PSObject.Properties['Path'] | Should -BeNullOrEmpty
         }
 
         It 'Should NOT have Type property' {
-            $result.PSObject.Properties['Type'] | Should -BeNullOrEmpty
+            $script:result.PSObject.Properties['Type'] | Should -BeNullOrEmpty
         }
 
         It 'Should NOT have Id property' {
-            $result.PSObject.Properties['Id'] | Should -BeNullOrEmpty
+            $script:result.PSObject.Properties['Id'] | Should -BeNullOrEmpty
         }
 
         It 'Should NOT have Platform property' {

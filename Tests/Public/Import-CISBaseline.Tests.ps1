@@ -132,7 +132,7 @@ Describe 'Import-CISBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISBaselines') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISBaselines') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items.Count -eq 2
@@ -147,7 +147,7 @@ Describe 'Import-CISBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISBaselines') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISBaselines') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items | ForEach-Object { $_.Url -like '*/configurationPolicies*' } | Where-Object { $_ -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
@@ -219,7 +219,7 @@ Describe 'Import-CISBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISPlatformFilter') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISPlatformFilter') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items.Count -eq 1 -and $Items[0].Name -like '*Windows*'
@@ -256,6 +256,24 @@ Describe 'Import-CISBaseline' {
 
             $result | Should -Not -BeNullOrEmpty
             $result[0].Action | Should -Be 'WouldCreate'
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
+
+        It 'Should skip existing CIS policies in WhatIf mode after checking the cache' {
+            Mock Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+            Mock Get-GraphPagedResults {
+                param($ProcessItems)
+                if ($ProcessItems) {
+                    & $ProcessItems @(@{ name = '[IHD] WhatIf CIS Policy'; id = 'existing-id' })
+                }
+                return @()
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISWhatIf') -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
+
+            $result | Should -HaveCount 1
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Status | Should -Be 'Already exists'
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
         }
     }
@@ -443,7 +461,7 @@ Describe 'Import-CISBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISAdditionalTypes') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISAdditionalTypes') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items.Count -eq 3 -and
@@ -479,7 +497,7 @@ Describe 'Import-CISBaseline' {
 
         It 'Should skip policies that already exist in tenant' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(@{ name = '[IHD] Existing Policy'; id = 'existing-id' })
                 }
@@ -496,7 +514,7 @@ Describe 'Import-CISBaseline' {
 
         It 'Should create policy when cached existing item returns 404 on verify' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(@{ name = '[IHD] Existing Policy'; id = 'existing-id' })
                 }
@@ -618,7 +636,7 @@ Describe 'Import-CISBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISSecretSettings') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISSecretSettings') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $body = $Items[0].BodyJson | ConvertFrom-Json -Depth 50

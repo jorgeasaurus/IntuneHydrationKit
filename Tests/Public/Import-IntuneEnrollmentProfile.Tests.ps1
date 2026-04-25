@@ -89,7 +89,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if profile already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -105,7 +105,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should skip profile if it already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = 'Default Autopilot Profile' }) }
                 }
@@ -121,7 +121,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
             Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = 'Default Autopilot Profile'; description = 'Manually created profile' }) }
                 }
@@ -135,7 +135,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should create profile if it does not exist' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -155,7 +155,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should use custom device name template when provided' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -170,7 +170,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should append hydration marker to description' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -215,7 +215,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if ESP profile already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -231,7 +231,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should create ESP profile to deviceEnrollmentConfigurations endpoint' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -276,7 +276,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if device preparation policy already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -292,7 +292,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should create device preparation policy to configurationPolicies endpoint' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }

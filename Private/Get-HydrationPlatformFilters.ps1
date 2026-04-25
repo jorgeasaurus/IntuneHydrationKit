@@ -8,14 +8,17 @@ function Get-HydrationPlatformFilters {
     function Get-FilteredPlatforms {
         param(
             [Parameter(Mandatory)]
-            [string[]]$ValidSet
+            [string[]]$ValidSet,
+
+            [Parameter(Mandatory)]
+            [string[]]$SelectedPlatforms
         )
 
-        if ($Platforms -contains 'All') {
+        if ($SelectedPlatforms -contains 'All') {
             return @('All')
         }
 
-        $validPlatforms = $Platforms | Where-Object { $_ -in $ValidSet }
+        $validPlatforms = $SelectedPlatforms | Where-Object { $_ -in $ValidSet }
         if ($validPlatforms.Count -eq 0) {
             return @('All')
         }
@@ -24,13 +27,13 @@ function Get-HydrationPlatformFilters {
     }
 
     return @{
-        Compliance         = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
-        DeviceFilters      = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
-        AppProtection      = Get-FilteredPlatforms -ValidSet @('iOS', 'Android')
-        MobileApps         = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS')
-        EnrollmentProfiles = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS')
-        Baseline           = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
-        CISBaseline        = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
-        Groups             = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
+        Compliance         = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux') -SelectedPlatforms $Platforms
+        DeviceFilters      = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android') -SelectedPlatforms $Platforms
+        AppProtection      = Get-FilteredPlatforms -ValidSet @('iOS', 'Android') -SelectedPlatforms $Platforms
+        MobileApps         = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS') -SelectedPlatforms $Platforms
+        EnrollmentProfiles = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS') -SelectedPlatforms $Platforms
+        Baseline           = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android') -SelectedPlatforms $Platforms
+        CISBaseline        = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux') -SelectedPlatforms $Platforms
+        Groups             = Get-FilteredPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android') -SelectedPlatforms $Platforms
     }
 }

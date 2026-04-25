@@ -13,7 +13,7 @@ function Get-OpenIntuneBaseline {
     .EXAMPLE
         Get-OpenIntuneBaseline -DestinationPath ./Baselines
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
         [string]$RepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
@@ -32,31 +32,35 @@ function Get-OpenIntuneBaseline {
     $zipUrl = "$RepoUrl/archive/refs/heads/$Branch.zip"
     $zipPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OpenIntuneBaseline-$Branch.zip"
 
+    if (-not $PSCmdlet.ShouldProcess($DestinationPath, "Download and extract OpenIntuneBaseline from '$RepoUrl'")) {
+        return $DestinationPath
+    }
+
     try {
         Write-Information "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
 
         # Download the repository
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
 
-        # Clean existing directory if present (always execute, not affected by WhatIf)
+        # Clean existing directory if present
         if (Test-Path -Path $DestinationPath) {
-            Remove-Item -Path $DestinationPath -Recurse -Force -WhatIf:$false
+            Remove-Item -Path $DestinationPath -Recurse -Force
         }
 
         # Extract
-        Expand-Archive -Path $zipPath -DestinationPath $DestinationPath -Force -WhatIf:$false
+        Expand-Archive -Path $zipPath -DestinationPath $DestinationPath -Force
 
         # The archive extracts to a subfolder, move contents up
         $extractedFolder = Get-ChildItem -Path $DestinationPath -Directory | Select-Object -First 1
         if ($extractedFolder) {
             $tempMove = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OIB-temp-$(Get-Random)"
-            Move-Item -Path $extractedFolder.FullName -Destination $tempMove -WhatIf:$false
-            Remove-Item -Path $DestinationPath -Force -Recurse -WhatIf:$false
-            Move-Item -Path $tempMove -Destination $DestinationPath -WhatIf:$false
+            Move-Item -Path $extractedFolder.FullName -Destination $tempMove
+            Remove-Item -Path $DestinationPath -Force -Recurse
+            Move-Item -Path $tempMove -Destination $DestinationPath
         }
 
         # Clean up zip
-        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue -WhatIf:$false
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
 
         Write-Information "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
 

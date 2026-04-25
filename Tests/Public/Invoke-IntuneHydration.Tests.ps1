@@ -12,6 +12,16 @@ BeforeAll {
         throw "Failed to import IntuneHydrationKit module"
     }
 
+    function Get-ModuleVariable {
+        param([string]$Name)
+        & $script:TestModule { param($VarName) Get-Variable -Name $VarName -Scope Script -ValueOnly -ErrorAction SilentlyContinue } $Name
+    }
+
+    function Set-ModuleVariable {
+        param([string]$Name, $Value)
+        & $script:TestModule { param($VarName, $VarValue) Set-Variable -Name $VarName -Value $VarValue -Scope Script } $Name $Value
+    }
+
     # Create a temp directory for test settings files
     $script:TestTempPath = Join-Path ([System.IO.Path]::GetTempPath()) 'IntuneHydrationKitTests'
     if (-not (Test-Path $script:TestTempPath)) {
@@ -382,6 +392,67 @@ Describe 'Invoke-IntuneHydration' {
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -DeviceFilters -WhatIf
 
             Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -Times 1
+        }
+
+        It 'Should preserve ClientSecret as SecureString for service principal authentication' {
+            $secret = ConvertTo-SecureString 'super-secret' -AsPlainText -Force
+
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -ClientId 'client-id' -ClientSecret $secret -Create -DeviceFilters -WhatIf
+
+            Should -Invoke Connect-IntuneHydration -ModuleName IntuneHydrationKit -ParameterFilter {
+                $TenantId -eq '12345678-1234-1234-1234-123456789abc' -and
+                $ClientId -eq 'client-id' -and
+                $ClientSecret -is [SecureString]
+            }
+        }
+    }
+
+    Context 'Settings-driven execution behavior' {
+        BeforeEach {
+            Mock Connect-IntuneHydration -ModuleName IntuneHydrationKit
+            Mock Test-IntunePrerequisites -ModuleName IntuneHydrationKit
+            Mock Initialize-HydrationLogging -ModuleName IntuneHydrationKit
+            Mock Write-HydrationLog -ModuleName IntuneHydrationKit
+            Mock Write-HydrationExecutionSettingsSummary -ModuleName IntuneHydrationKit
+            Mock Write-HydrationExecutionSummary {
+                @{
+                    Summary        = @{ Failed = 0 }
+                    ReportPath     = $null
+                    JsonReportPath = $null
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Get-ObfuscatedTenantId { return '12345678-****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneDeviceFilter { @() } -ModuleName IntuneHydrationKit
+
+            Set-ModuleVariable -Name 'WhatIfPreference' -Value $false
+            Set-ModuleVariable -Name 'VerbosePreference' -Value 'SilentlyContinue'
+        }
+
+        It 'Should apply dry-run and verbose settings without mutating module-scoped preferences' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-dryrun-verbose.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $true }
+                    imports        = @{ deviceFilters = $true }
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath
+
+            Should -Invoke Initialize-HydrationLogging -ModuleName IntuneHydrationKit -ParameterFilter {
+                $EnableVerbose -eq $true
+            } -Times 1
+            Should -Invoke Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit -ParameterFilter {
+                $WhatIf -eq $true
+            } -Times 1
+
+            Get-ModuleVariable -Name 'WhatIfPreference' | Should -Be $false
+            Get-ModuleVariable -Name 'VerbosePreference' | Should -Be 'SilentlyContinue'
         }
     }
 

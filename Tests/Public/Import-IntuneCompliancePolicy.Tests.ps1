@@ -73,7 +73,7 @@ Describe 'Import-IntuneCompliancePolicy' {
 
         It 'Should prefetch existing policies from both endpoints' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -89,7 +89,7 @@ Describe 'Import-IntuneCompliancePolicy' {
 
         It 'Should skip policy if it already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Existing policy' }) }
                 }
@@ -105,7 +105,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Manually created policy' }) }
                 }
@@ -119,7 +119,7 @@ Describe 'Import-IntuneCompliancePolicy' {
 
         It 'Should create policy if it does not exist' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -212,6 +212,100 @@ Describe 'Import-IntuneCompliancePolicy' {
         }
     }
 
+    Context 'Create Mode - Custom Compliance Policy Scripts' {
+        BeforeEach {
+            Mock Get-FilteredTemplates {
+                @(
+                    [PSCustomObject]@{ FullName = 'TestPath\Custom-A.json'; Name = 'Custom-A.json' }
+                    [PSCustomObject]@{ FullName = 'TestPath\Custom-B.json'; Name = 'Custom-B.json' }
+                )
+            } -ModuleName IntuneHydrationKit
+
+            Mock Get-Content {
+                param($Path)
+                if ($Path -like '*Custom-A.json') {
+                    @{
+                        '@odata.type'                          = '#microsoft.graph.windows10CompliancePolicy'
+                        displayName                            = 'Custom Policy A'
+                        description                            = 'Custom policy A'
+                        deviceCompliancePolicyScript           = @{}
+                        deviceCompliancePolicyScriptDefinition = @{
+                            displayName                  = 'Shared Compliance Script'
+                            description                  = 'Shared script'
+                            detectionScriptContentBase64 = 'ZGV0ZWN0aW9u'
+                            enforceSignatureCheck        = $false
+                            runAs32Bit                   = $false
+                            runAsAccount                 = 'system'
+                            rules                        = @(
+                                @{
+                                    property = 'ComplianceState'
+                                    operator = 'equals'
+                                    value    = 'Compliant'
+                                }
+                            )
+                        }
+                    } | ConvertTo-Json -Depth 10
+                } else {
+                    @{
+                        '@odata.type'                          = '#microsoft.graph.windows10CompliancePolicy'
+                        displayName                            = 'Custom Policy B'
+                        description                            = 'Custom policy B'
+                        deviceCompliancePolicyScript           = @{}
+                        deviceCompliancePolicyScriptDefinition = @{
+                            displayName                  = 'Shared Compliance Script'
+                            description                  = 'Shared script'
+                            detectionScriptContentBase64 = 'ZGV0ZWN0aW9u'
+                            enforceSignatureCheck        = $false
+                            runAs32Bit                   = $false
+                            runAsAccount                 = 'system'
+                            rules                        = @(
+                                @{
+                                    property = 'ComplianceState'
+                                    operator = 'equals'
+                                    value    = 'Compliant'
+                                }
+                            )
+                        }
+                    } | ConvertTo-Json -Depth 10
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Copy-DeepObject { param($InputObject) return $InputObject } -ModuleName IntuneHydrationKit
+            Mock Remove-ReadOnlyGraphProperties -ModuleName IntuneHydrationKit
+            Mock Get-GraphPagedResults {
+                param($Uri, $ProcessItems)
+                if ($Uri -like '*deviceComplianceScripts*' -and $ProcessItems) {
+                    & $ProcessItems @(
+                        @{ id = 'existing-script-id'; displayName = 'Shared Compliance Script' }
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST' -and $Uri -eq 'beta/deviceManagement/deviceCompliancePolicies') {
+                    return @{ id = 'created-policy-id' }
+                }
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should prefetch compliance scripts once and reuse them for custom policies' {
+            $result = Import-IntuneCompliancePolicy -Platform Windows
+
+            $created = @($result | Where-Object { $_.Action -eq 'Created' })
+            $created.Count | Should -Be 2
+            Should -Invoke Get-GraphPagedResults -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Uri -like '*deviceComplianceScripts*'
+            } -Times 1
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'POST' -and $Uri -eq 'beta/deviceManagement/deviceComplianceScripts'
+            } -Times 0
+        }
+    }
+
     Context 'WhatIf Support' {
         BeforeEach {
             Mock Get-FilteredTemplates {
@@ -256,7 +350,7 @@ Describe 'Import-IntuneCompliancePolicy' {
 
         It 'Should list existing policies when RemoveExisting is specified' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(
@@ -280,7 +374,7 @@ Describe 'Import-IntuneCompliancePolicy' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(

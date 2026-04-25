@@ -73,7 +73,7 @@ Describe 'Get-GraphPagedResults' {
         }
 
         It 'Should not return results in ProcessItems mode' {
-            $result = Get-GraphPagedResults -Uri 'beta/test' -ProcessItems { param($items) }
+            $result = Get-GraphPagedResults -Uri 'beta/test' -ProcessItems { }
             $result | Should -BeNullOrEmpty
         }
     }

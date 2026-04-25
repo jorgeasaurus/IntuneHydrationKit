@@ -75,9 +75,6 @@ $excludedPatterns = @(
     'Scripts'
 )
 
-# File extensions to compare (only JSON policy files)
-$includeExtension = '.json'
-
 # --- Download upstream ---
 $repoName = ($UpstreamRepoUrl -split '/')[-1]
 $repoOwner = ($UpstreamRepoUrl -split '/')[-2]
@@ -86,25 +83,25 @@ $tempBase = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OIB-Co
 $zipPath = Join-Path -Path $tempBase -ChildPath "$repoName-$Branch.zip"
 $extractPath = Join-Path -Path $tempBase -ChildPath 'upstream'
 
-Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║       OpenIntuneBaseline Parity Check                      ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "  Upstream : $repoOwner/$repoName ($Branch)" -ForegroundColor Gray
-Write-Host "  Local    : $LocalPath" -ForegroundColor Gray
-Write-Host ""
+Write-Information ""
+Write-Information "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Information "║       OpenIntuneBaseline Parity Check                      ║" -ForegroundColor Cyan
+Write-Information "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Information ""
+Write-Information "  Upstream : $repoOwner/$repoName ($Branch)" -ForegroundColor Gray
+Write-Information "  Local    : $LocalPath" -ForegroundColor Gray
+Write-Information ""
 
 try {
     $null = New-Item -Path $tempBase -ItemType Directory -Force
 
-    Write-Host "  Downloading upstream baseline..." -ForegroundColor Yellow -NoNewline
+    Write-Information "  Downloading upstream baseline..." -ForegroundColor Yellow -NoNewline
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -ErrorAction Stop
-    Write-Host " Done" -ForegroundColor Green
+    Write-Information " Done" -ForegroundColor Green
 
-    Write-Host "  Extracting..." -ForegroundColor Yellow -NoNewline
+    Write-Information "  Extracting..." -ForegroundColor Yellow -NoNewline
     Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-    Write-Host " Done" -ForegroundColor Green
+    Write-Information " Done" -ForegroundColor Green
 
     # GitHub archives extract to a subfolder like OpenIntuneBaseline-main/
     $extractedFolder = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
@@ -156,11 +153,11 @@ try {
         return $results
     }
 
-    Write-Host "  Scanning files..." -ForegroundColor Yellow -NoNewline
+    Write-Information "  Scanning files..." -ForegroundColor Yellow -NoNewline
     $upstreamFiles = Get-PolicyFiles -BasePath $upstreamRoot
     $localFiles = Get-PolicyFiles -BasePath $LocalPath
-    Write-Host " Done" -ForegroundColor Green
-    Write-Host ""
+    Write-Information " Done" -ForegroundColor Green
+    Write-Information ""
 
     # --- Compare ---
     $onlyUpstream = [System.Collections.Generic.List[string]]::new()
@@ -190,60 +187,60 @@ try {
     $totalUpstream = $upstreamFiles.Count
     $totalLocal = $localFiles.Count
 
-    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  RESULTS" -ForegroundColor Cyan
-    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  Upstream files (JSON, excl. NativeImport) : $totalUpstream" -ForegroundColor Gray
-    Write-Host "  Local bundled files                       : $totalLocal" -ForegroundColor Gray
-    Write-Host "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  Identical                                 : $($matched.Count)" -ForegroundColor Green
-    Write-Host "  Modified (content differs)                : $($modified.Count)" -ForegroundColor $(if ($modified.Count -gt 0) { 'Yellow' } else { 'Green' })
-    Write-Host "  Only in upstream (missing locally)        : $($onlyUpstream.Count)" -ForegroundColor $(if ($onlyUpstream.Count -gt 0) { 'Red' } else { 'Green' })
-    Write-Host "  Only in local (not in upstream)           : $($onlyLocal.Count)" -ForegroundColor $(if ($onlyLocal.Count -gt 0) { 'Yellow' } else { 'Green' })
-    Write-Host ""
+    Write-Information "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Information "  RESULTS" -ForegroundColor Cyan
+    Write-Information "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Information ""
+    Write-Information "  Upstream files (JSON, excl. NativeImport) : $totalUpstream" -ForegroundColor Gray
+    Write-Information "  Local bundled files                       : $totalLocal" -ForegroundColor Gray
+    Write-Information "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Information "  Identical                                 : $($matched.Count)" -ForegroundColor Green
+    Write-Information "  Modified (content differs)                : $($modified.Count)" -ForegroundColor $(if ($modified.Count -gt 0) { 'Yellow' } else { 'Green' })
+    Write-Information "  Only in upstream (missing locally)        : $($onlyUpstream.Count)" -ForegroundColor $(if ($onlyUpstream.Count -gt 0) { 'Red' } else { 'Green' })
+    Write-Information "  Only in local (not in upstream)           : $($onlyLocal.Count)" -ForegroundColor $(if ($onlyLocal.Count -gt 0) { 'Yellow' } else { 'Green' })
+    Write-Information ""
 
     if ($modified.Count -gt 0) {
-        Write-Host "  ⚠ MODIFIED FILES (content differs from upstream):" -ForegroundColor Yellow
+        Write-Information "  ⚠ MODIFIED FILES (content differs from upstream):" -ForegroundColor Yellow
         foreach ($file in ($modified | Sort-Object)) {
-            Write-Host "    ∆ $file" -ForegroundColor Yellow
+            Write-Information "    ∆ $file" -ForegroundColor Yellow
         }
-        Write-Host ""
+        Write-Information ""
     }
 
     if ($onlyUpstream.Count -gt 0) {
-        Write-Host "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):" -ForegroundColor Red
+        Write-Information "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):" -ForegroundColor Red
         foreach ($file in ($onlyUpstream | Sort-Object)) {
-            Write-Host "    + $file" -ForegroundColor Red
+            Write-Information "    + $file" -ForegroundColor Red
         }
-        Write-Host ""
+        Write-Information ""
     }
 
     if ($onlyLocal.Count -gt 0) {
-        Write-Host "  ◦ ONLY IN LOCAL (not found upstream, may be custom or renamed):" -ForegroundColor DarkYellow
+        Write-Information "  ◦ ONLY IN LOCAL (not found upstream, may be custom or renamed):" -ForegroundColor DarkYellow
         foreach ($file in ($onlyLocal | Sort-Object)) {
-            Write-Host "    - $file" -ForegroundColor DarkYellow
+            Write-Information "    - $file" -ForegroundColor DarkYellow
         }
-        Write-Host ""
+        Write-Information ""
     }
 
     # Final verdict
     if ($modified.Count -eq 0 -and $onlyUpstream.Count -eq 0 -and $onlyLocal.Count -eq 0) {
-        Write-Host "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
+        Write-Information "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
     } else {
         $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
-        Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found." -ForegroundColor Red
-        Write-Host "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
+        Write-Information "  ✗ PARITY CHECK: $issueCount difference(s) found." -ForegroundColor Red
+        Write-Information "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
     }
-    Write-Host ""
+    Write-Information ""
 
 } catch {
     Write-Error "Comparison failed: $_"
 } finally {
     if (-not $KeepDownload -and (Test-Path -Path $tempBase -ErrorAction SilentlyContinue)) {
         Remove-Item -Path $tempBase -Recurse -Force -ErrorAction SilentlyContinue *>$null
-        Write-Host "  Cleaned up temporary files." -ForegroundColor DarkGray
+        Write-Information "  Cleaned up temporary files." -ForegroundColor DarkGray
     } elseif ($KeepDownload -and (Test-Path -Path $tempBase -ErrorAction SilentlyContinue)) {
-        Write-Host "  Upstream files kept at: $tempBase" -ForegroundColor DarkGray
+        Write-Information "  Upstream files kept at: $tempBase" -ForegroundColor DarkGray
     }
 }

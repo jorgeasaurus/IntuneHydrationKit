@@ -5,12 +5,16 @@ BeforeAll {
     $functionPath = Join-Path $PSScriptRoot '..\..\Private\Invoke-GroupBatchImport.ps1'
     $newHydrationResultPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationResult.ps1'
     $newHydrationDescriptionPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationDescription.ps1'
+    $getHydrationMarkerSetPath = Join-Path $PSScriptRoot '..\..\Private\Get-HydrationMarkerSet.ps1'
     $getGraphErrorMessagePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphErrorMessage.ps1'
+    $getGraphStatusCodePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphStatusCode.ps1'
     $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Test-HydrationKitObject.ps1'
     $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphPagedResults.ps1'
     . $functionPath
     . $newHydrationResultPath
+    . $getHydrationMarkerSetPath
     . $newHydrationDescriptionPath
+    . $getGraphStatusCodePath
     . $getGraphErrorMessagePath
     . $testHydrationKitObjectPath
     . $getGraphPagedResultsPath
@@ -67,7 +71,7 @@ Describe 'Invoke-GroupBatchImport' {
 
     Context 'When checking group existence' {
         BeforeEach {
-            $testGroupDefs = @(
+            $script:testGroupDefs = @(
                 @{ displayName = 'Test Group 1'; description = 'Description 1'; membershipRule = '(device.deviceOSType -eq "Windows")' }
                 @{ displayName = 'Test Group 2'; description = 'Description 2'; membershipRule = '(device.deviceOSType -eq "macOS")' }
             )
@@ -95,7 +99,7 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $testGroupDefs -GroupType 'Dynamic'
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:testGroupDefs -GroupType 'Dynamic'
 
             $result | Should -HaveCount 2
             $result[0].Action | Should -Be 'Skipped'
@@ -127,7 +131,7 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $testGroupDefs -GroupType 'Dynamic'
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:testGroupDefs -GroupType 'Dynamic'
 
             $result | Should -HaveCount 2
             $result[0].Action | Should -Be 'Created'
@@ -137,7 +141,7 @@ Describe 'Invoke-GroupBatchImport' {
 
     Context 'When creating dynamic groups' {
         BeforeEach {
-            $dynamicGroupDefs = @(
+            $script:dynamicGroupDefs = @(
                 @{
                     displayName    = 'Windows Devices'
                     description    = 'All Windows devices'
@@ -159,7 +163,7 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $dynamicGroupDefs -GroupType 'Dynamic'
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:dynamicGroupDefs -GroupType 'Dynamic'
 
             $result | Should -HaveCount 1
             $result[0].Action | Should -Be 'Created'
@@ -179,13 +183,13 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            Invoke-GroupBatchImport -GroupDefinitions $dynamicGroupDefs -GroupType 'Dynamic'
+            Invoke-GroupBatchImport -GroupDefinitions $script:dynamicGroupDefs -GroupType 'Dynamic'
         }
     }
 
     Context 'When creating static groups' {
         BeforeEach {
-            $staticGroupDefs = @(
+            $script:staticGroupDefs = @(
                 @{
                     displayName = 'Pilot Users'
                     description = 'Users for pilot ring'
@@ -208,13 +212,13 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            Invoke-GroupBatchImport -GroupDefinitions $staticGroupDefs -GroupType 'Static'
+            Invoke-GroupBatchImport -GroupDefinitions $script:staticGroupDefs -GroupType 'Static'
         }
     }
 
     Context 'When handling service principal owner groups' {
         BeforeEach {
-            $spOwnerGroupDefs = @(
+            $script:spOwnerGroupDefs = @(
                 @{
                     displayName                   = 'Windows Autopilot device preparation'
                     description                   = 'Autopilot prep group'
@@ -244,7 +248,7 @@ Describe 'Invoke-GroupBatchImport' {
                 return @{}
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $spOwnerGroupDefs -GroupType 'Static'
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:spOwnerGroupDefs -GroupType 'Static'
 
             # Filter to only SP owner results (skip the batch existence check skipped result)
             $spResults = $result | Where-Object { $_.Status -like '*service principal*' }
@@ -277,7 +281,7 @@ Describe 'Invoke-GroupBatchImport' {
                 return @{}
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $spOwnerGroupDefs -GroupType 'Static'
+            Invoke-GroupBatchImport -GroupDefinitions $script:spOwnerGroupDefs -GroupType 'Static'
 
             Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -eq 'v1.0/servicePrincipals' } -Times 1
         }
@@ -285,7 +289,7 @@ Describe 'Invoke-GroupBatchImport' {
 
     Context 'When handling WhatIf mode' {
         BeforeEach {
-            $testGroupDefs = @(
+            $script:testGroupDefs = @(
                 @{ displayName = 'Test Group'; description = 'Test'; membershipRule = '(device.deviceOSType -eq "Windows")' }
             )
         }
@@ -296,7 +300,7 @@ Describe 'Invoke-GroupBatchImport' {
                 return @{ responses = @(@{ id = '1'; status = 200; body = @{ value = @() } }) }
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $testGroupDefs -GroupType 'Dynamic' -WhatIf
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:testGroupDefs -GroupType 'Dynamic' -WhatIf
 
             $result | Should -HaveCount 1
             $result[0].Action | Should -Be 'WouldCreate'
@@ -314,7 +318,7 @@ Describe 'Invoke-GroupBatchImport' {
                 }
             }
 
-            $result = Invoke-GroupBatchImport -GroupDefinitions $testGroupDefs -GroupType 'Dynamic' -WhatIf
+            $result = Invoke-GroupBatchImport -GroupDefinitions $script:testGroupDefs -GroupType 'Dynamic' -WhatIf
 
             $result[0].Action | Should -Be 'WouldCreate'
         }
@@ -322,7 +326,7 @@ Describe 'Invoke-GroupBatchImport' {
 
     Context 'When handling errors' {
         BeforeEach {
-            $testGroupDefs = @(
+            $script:testGroupDefs = @(
                 @{ displayName = 'Test Group'; description = 'Test'; membershipRule = '(device.deviceOSType -eq "Windows")' }
             )
         }

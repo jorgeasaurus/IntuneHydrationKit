@@ -1,6 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
+    . $PSScriptRoot/../../Private/Get-HydrationMarkerSet.ps1
     . $PSScriptRoot/../../Private/New-HydrationDescription.ps1
 }
 

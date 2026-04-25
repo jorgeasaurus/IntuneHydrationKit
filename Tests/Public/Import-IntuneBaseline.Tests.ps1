@@ -170,6 +170,24 @@ Describe 'Import-IntuneBaseline' {
             $result[0].Action | Should -Be 'WouldCreate'
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
         }
+
+        It 'Should skip existing policies in WhatIf mode after checking the cache' {
+            Mock Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+            Mock Get-GraphPagedResults {
+                param($ProcessItems)
+                if ($ProcessItems) {
+                    & $ProcessItems @(@{ displayName = '[IHD] WhatIf Test Policy'; id = 'existing-id' })
+                }
+                return @()
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'WhatIfBaseline') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
+
+            $result | Should -HaveCount 1
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Status | Should -Be 'Already exists'
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
     }
 
     Context 'RemoveExisting Mode' {
@@ -300,7 +318,7 @@ Describe 'Import-IntuneBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'RoutingBaseline') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'RoutingBaseline') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items[0].Url -like '*/deviceConfigurations*'
@@ -349,7 +367,7 @@ Describe 'Import-IntuneBaseline' {
 
         It 'Should skip policies that already exist in tenant' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(@{ displayName = '[IHD] Existing Policy'; id = 'existing-id' })
                 }

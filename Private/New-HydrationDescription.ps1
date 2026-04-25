@@ -31,7 +31,7 @@ function New-HydrationDescription {
         [string]$Separator = ' - '
     )
 
-    $tag = if ($script:HydrationMarker) { $script:HydrationMarker } else { 'Imported by Intune Hydration Kit' }
+    $tag = (Get-HydrationMarkerSet).Primary
     if (-not [string]::IsNullOrWhiteSpace($ExistingText)) {
         return "$ExistingText$Separator$tag"
     }

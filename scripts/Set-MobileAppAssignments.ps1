@@ -54,13 +54,13 @@ function Connect-ToGraph {
 
     $context = Get-MgContext
     if (-not $context) {
-        Write-Host "Connecting to Microsoft Graph..." -ForegroundColor Cyan
+        Write-Information "Connecting to Microsoft Graph..." -ForegroundColor Cyan
         Connect-MgGraph -Scopes $requiredScopes -NoWelcome
     } else {
         # Check if we have the required scope
         $hasScope = $context.Scopes | Where-Object { $_ -like '*DeviceManagementApps*' }
         if (-not $hasScope) {
-            Write-Host "Reconnecting with required scopes..." -ForegroundColor Yellow
+            Write-Information "Reconnecting with required scopes..." -ForegroundColor Yellow
             Disconnect-MgGraph | Out-Null
             Connect-MgGraph -Scopes $requiredScopes -NoWelcome
         }
@@ -124,7 +124,7 @@ function Set-AppAvailableToAllUsers {
     }
 
     if ($hasAllUsersAssignment) {
-        Write-Host "  [Skip] $AppName - Already assigned to All Users" -ForegroundColor DarkGray
+        Write-Information "  [Skip] $AppName - Already assigned to All Users" -ForegroundColor DarkGray
         return @{
             Name   = $AppName
             Status = 'Skipped'
@@ -150,14 +150,14 @@ function Set-AppAvailableToAllUsers {
             $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$AppId/assign"
             Invoke-MgGraphRequest -Method POST -Uri $uri -Body $assignmentBody -ContentType "application/json" | Out-Null
 
-            Write-Host "  [OK] $AppName" -ForegroundColor Green
+            Write-Information "  [OK] $AppName" -ForegroundColor Green
             return @{
                 Name   = $AppName
                 Status = 'Assigned'
                 Reason = $null
             }
         } catch {
-            Write-Host "  [Error] $AppName - $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "  [Error] $AppName - $($_.Exception.Message)" -ForegroundColor Red
             return @{
                 Name   = $AppName
                 Status = 'Failed'
@@ -165,7 +165,7 @@ function Set-AppAvailableToAllUsers {
             }
         }
     } else {
-        Write-Host "  [WhatIf] Would assign: $AppName" -ForegroundColor Yellow
+        Write-Information "  [WhatIf] Would assign: $AppName" -ForegroundColor Yellow
         return @{
             Name   = $AppName
             Status = 'WhatIf'
@@ -176,29 +176,29 @@ function Set-AppAvailableToAllUsers {
 #endregion
 
 #region Main
-Write-Host "`n=== Mobile App Assignment Script ===" -ForegroundColor Cyan
-Write-Host "This script assigns all mobile apps as 'Available' to All Users`n"
+Write-Information "`n=== Mobile App Assignment Script ===" -ForegroundColor Cyan
+Write-Information "This script assigns all mobile apps as 'Available' to All Users`n"
 
 # Connect to Graph
 Connect-ToGraph
 
 # Get all mobile apps
-Write-Host "Fetching mobile apps from Intune..." -ForegroundColor Cyan
+Write-Information "Fetching mobile apps from Intune..." -ForegroundColor Cyan
 $allApps = Get-AllMobileApps
 
 # Filter to specified app types
 $filteredApps = $allApps | Where-Object { $_.'@odata.type' -in $AppTypes }
 
-Write-Host "Found $($filteredApps.Count) apps to process (filtered from $($allApps.Count) total)`n" -ForegroundColor Cyan
+Write-Information "Found $($filteredApps.Count) apps to process (filtered from $($allApps.Count) total)`n" -ForegroundColor Cyan
 
 if ($filteredApps.Count -eq 0) {
-    Write-Host "No apps found matching the specified types." -ForegroundColor Yellow
+    Write-Information "No apps found matching the specified types." -ForegroundColor Yellow
     exit 0
 }
 
 # Process each app
 $results = @()
-Write-Host "Processing assignments:" -ForegroundColor Cyan
+Write-Information "Processing assignments:" -ForegroundColor Cyan
 
 foreach ($app in $filteredApps) {
     $result = Set-AppAvailableToAllUsers -AppId $app.id -AppName $app.displayName
@@ -206,19 +206,19 @@ foreach ($app in $filteredApps) {
 }
 
 # Summary
-Write-Host "`n=== Summary ===" -ForegroundColor Cyan
+Write-Information "`n=== Summary ===" -ForegroundColor Cyan
 $assigned = ($results | Where-Object { $_.Status -eq 'Assigned' }).Count
 $skipped = ($results | Where-Object { $_.Status -eq 'Skipped' }).Count
 $failed = ($results | Where-Object { $_.Status -eq 'Failed' }).Count
 $whatif = ($results | Where-Object { $_.Status -eq 'WhatIf' }).Count
 
-Write-Host "Assigned: $assigned" -ForegroundColor Green
-Write-Host "Skipped:  $skipped" -ForegroundColor DarkGray
+Write-Information "Assigned: $assigned" -ForegroundColor Green
+Write-Information "Skipped:  $skipped" -ForegroundColor DarkGray
 if ($failed -gt 0) {
-    Write-Host "Failed:   $failed" -ForegroundColor Red
+    Write-Information "Failed:   $failed" -ForegroundColor Red
 }
 if ($whatif -gt 0) {
-    Write-Host "WhatIf:   $whatif" -ForegroundColor Yellow
+    Write-Information "WhatIf:   $whatif" -ForegroundColor Yellow
 }
 
 # Return results for pipeline

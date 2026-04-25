@@ -86,12 +86,12 @@ function Resolve-HydrationExecutionSettings {
         [bool]$WhatIfEnabled,
 
         [Parameter(Mandatory)]
-        [System.Management.Automation.PSCmdlet]$PSCmdlet
+        [System.Management.Automation.PSCmdlet]$CommandRuntime
     )
 
     if ($ParameterSetName -eq 'SettingsFile') {
         $settings = Import-HydrationSettings -Path $SettingsPath
-        Write-Host "Loaded settings from: $SettingsPath" -InformationAction Continue
+        Write-Information "Loaded settings from: $SettingsPath" -InformationAction Continue
 
         if (-not $settings.options) {
             $settings['options'] = @{}
@@ -108,7 +108,7 @@ function Resolve-HydrationExecutionSettings {
         return $settings
     }
 
-    Write-Host "Using parameter-based configuration" -InformationAction Continue
+    Write-Information 'Using parameter-based configuration' -InformationAction Continue
 
     $importsEnabled = @{
         dynamicGroups         = $All.IsPresent -or $DynamicGroups.IsPresent
@@ -135,7 +135,7 @@ function Resolve-HydrationExecutionSettings {
             [System.Management.Automation.ErrorCategory]::InvalidArgument,
             $null
         )
-        $PSCmdlet.ThrowTerminatingError($errorRecord)
+        $CommandRuntime.ThrowTerminatingError($errorRecord)
     }
 
     return @{
@@ -146,7 +146,7 @@ function Resolve-HydrationExecutionSettings {
         authentication = @{
             mode         = if ($Interactive) { 'interactive' } else { 'clientSecret' }
             clientId     = $ClientId
-            clientSecret = if ($ClientSecret) { [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)) } else { $null }
+            clientSecret = $ClientSecret
             environment  = $Environment
         }
         options        = @{

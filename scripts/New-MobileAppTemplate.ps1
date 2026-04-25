@@ -304,7 +304,7 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
 
     # Search for app if SearchTerm provided
     if ($SearchTerm) {
-        Write-Host "Searching Microsoft Store for: $SearchTerm" -ForegroundColor Cyan
+        Write-Information "Searching Microsoft Store for: $SearchTerm" -ForegroundColor Cyan
         $searchResults = Search-MicrosoftStore -SearchTerm $SearchTerm
 
         if (-not $searchResults -or $searchResults.Count -eq 0) {
@@ -316,16 +316,16 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
 
         if ($exactMatch) {
             $selectedApp = $exactMatch
-            Write-Host "Found exact match: $($selectedApp.PackageName)" -ForegroundColor Green
+            Write-Information "Found exact match: $($selectedApp.PackageName)" -ForegroundColor Green
         } elseif ($searchResults.Count -eq 1) {
             $selectedApp = $searchResults[0]
-            Write-Host "Found: $($selectedApp.PackageName)" -ForegroundColor Green
+            Write-Information "Found: $($selectedApp.PackageName)" -ForegroundColor Green
         } else {
-            Write-Host "`nMultiple apps found:" -ForegroundColor Yellow
+            Write-Information "`nMultiple apps found:" -ForegroundColor Yellow
             for ($i = 0; $i -lt [Math]::Min($searchResults.Count, 10); $i++) {
-                Write-Host "  [$($i + 1)] $($searchResults[$i].PackageName) - $($searchResults[$i].Publisher)" -ForegroundColor White
+                Write-Information "  [$($i + 1)] $($searchResults[$i].PackageName) - $($searchResults[$i].Publisher)" -ForegroundColor White
             }
-            Write-Host ""
+            Write-Information ""
 
             $selection = Read-Host "Select an app (1-$([Math]::Min($searchResults.Count, 10)))"
             $selectedIndex = [int]$selection - 1
@@ -338,7 +338,7 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
         }
 
         $resolvedPackageId = $selectedApp.PackageIdentifier.ToUpper()
-        Write-Host "Package Identifier: $resolvedPackageId" -ForegroundColor Gray
+        Write-Information "Package Identifier: $resolvedPackageId" -ForegroundColor Gray
     } elseif (-not $PackageIdentifier) {
         throw "Either -SearchTerm or -PackageIdentifier is required when using -FetchFromStore"
     } else {
@@ -347,7 +347,7 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
     }
 
     # Fetch manifest details
-    Write-Host "Fetching app details from Microsoft Store..." -ForegroundColor Cyan
+    Write-Information "Fetching app details from Microsoft Store..." -ForegroundColor Cyan
     $storeManifest = Get-StoreAppManifest -PackageIdentifier $resolvedPackageId
 
     if (-not $storeManifest) {
@@ -359,15 +359,15 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
     $storeAppInfo = $latestVersion.DefaultLocale
     $storeInstaller = $latestVersion.Installers | Select-Object -First 1
 
-    Write-Host "  App Name: $($storeAppInfo.PackageName)" -ForegroundColor Gray
-    Write-Host "  Publisher: $($storeAppInfo.Publisher)" -ForegroundColor Gray
-    Write-Host "  Version: $($latestVersion.PackageVersion)" -ForegroundColor Gray
+    Write-Information "  App Name: $($storeAppInfo.PackageName)" -ForegroundColor Gray
+    Write-Information "  Publisher: $($storeAppInfo.Publisher)" -ForegroundColor Gray
+    Write-Information "  Version: $($latestVersion.PackageVersion)" -ForegroundColor Gray
 
     # Fetch full description from DisplayCatalog (and icon if not provided via -IconPath)
     if ($IconPath) {
-        Write-Host "Fetching full description from DisplayCatalog..." -ForegroundColor Cyan
+        Write-Information "Fetching full description from DisplayCatalog..." -ForegroundColor Cyan
     } else {
-        Write-Host "Fetching app icon and full description from DisplayCatalog..." -ForegroundColor Cyan
+        Write-Information "Fetching app icon and full description from DisplayCatalog..." -ForegroundColor Cyan
     }
     $storeDetails = Get-StoreAppDetails -PackageIdentifier $resolvedPackageId
     $storeFullDescription = $storeDetails.Description
@@ -376,15 +376,15 @@ if ($AppType -eq 'winGetApp' -and $FetchFromStore) {
     if (-not $IconPath) {
         $storeIcon = $storeDetails.Icon
         if ($storeIcon) {
-            Write-Host "  Icon: Downloaded successfully" -ForegroundColor Gray
+            Write-Information "  Icon: Downloaded successfully" -ForegroundColor Gray
         } else {
             Write-Warning "No icon found in store for package: $resolvedPackageId"
         }
     } else {
-        Write-Host "  Icon: Using provided path" -ForegroundColor Gray
+        Write-Information "  Icon: Using provided path" -ForegroundColor Gray
     }
     if ($storeFullDescription) {
-        Write-Host "  Description: Full description retrieved" -ForegroundColor Gray
+        Write-Information "  Description: Full description retrieved" -ForegroundColor Gray
     }
 }
 
@@ -519,21 +519,21 @@ $outputFile = Join-Path -Path $OutputPath -ChildPath "$safeName.json"
 $jsonContent = $body | ConvertTo-Json -Depth 10
 $jsonContent | Out-File -FilePath $outputFile -Encoding utf8
 
-Write-Host ""
-Write-Host "Template created: $outputFile" -ForegroundColor Green
-Write-Host ""
-Write-Host "App Details:" -ForegroundColor Cyan
-Write-Host "  Type: $AppType"
-Write-Host "  Display Name: $($body.displayName)"
-Write-Host "  Publisher: $($body.publisher)"
+Write-Information ""
+Write-Information "Template created: $outputFile" -ForegroundColor Green
+Write-Information ""
+Write-Information "App Details:" -ForegroundColor Cyan
+Write-Information "  Type: $AppType"
+Write-Information "  Display Name: $($body.displayName)"
+Write-Information "  Publisher: $($body.publisher)"
 if ($body.packageIdentifier) {
-    Write-Host "  Package ID: $($body.packageIdentifier)"
+    Write-Information "  Package ID: $($body.packageIdentifier)"
 }
 if ($body.largeIcon) {
-    Write-Host "  Icon: Included"
+    Write-Information "  Icon: Included"
 }
 if ($body.installExperience) {
-    Write-Host "  Run As: $($body.installExperience.runAsAccount)"
+    Write-Information "  Run As: $($body.installExperience.runAsAccount)"
 }
 
 return $outputFile

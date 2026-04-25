@@ -8,17 +8,17 @@ BeforeAll {
 Describe 'Get-PremiumP2ServicePlans' {
     Context 'Return value' {
         BeforeAll {
-            $plans = Get-PremiumP2ServicePlans
+            $script:plans = Get-PremiumP2ServicePlans
         }
 
         It 'Should return a non-empty array' {
-            $plans | Should -Not -BeNullOrEmpty
-            $plans.Count | Should -BeGreaterThan 0
+            $script:plans | Should -Not -BeNullOrEmpty
+            $script:plans.Count | Should -BeGreaterThan 0
         }
 
         It 'Should return string elements' {
-            $plans | Should -HaveCount $plans.Count
-            $plans[0] | Should -BeOfType [string]
+            $script:plans | Should -HaveCount $script:plans.Count
+            $script:plans[0] | Should -BeOfType [string]
         }
     }
 

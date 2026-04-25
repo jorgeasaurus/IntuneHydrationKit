@@ -40,12 +40,6 @@ function Write-HydrationLog {
         'Error'   = '[x]'
         'Debug'   = '[~]'
     }
-    $colors = @{
-        'Info'    = 'Cyan'
-        'Warning' = 'Yellow'
-        'Error'   = 'Red'
-        'Debug'   = 'Gray'
-    }
 
     $consoleMessage = "$($icons[$Level]) $Message"
 
@@ -55,14 +49,19 @@ function Write-HydrationLog {
     }
 
     if ($consoleMessage) {
+        $informationMessages = @()
         if ($Message -match '^Step \d+:') {
-            Write-Host ""
-            Write-Host "▶ $Message" -ForegroundColor $colors[$Level]
+            $informationMessages += ''
+            $informationMessages += "▶ $Message"
         } elseif ($Message -match '^===') {
-            Write-Host ""
-            Write-Host $Message -ForegroundColor $colors[$Level]
+            $informationMessages += ''
+            $informationMessages += $Message
         } else {
-            Write-Host "  $consoleMessage" -ForegroundColor $colors[$Level]
+            $informationMessages += "  $consoleMessage"
+        }
+
+        foreach ($informationMessage in $informationMessages) {
+            Write-Information $informationMessage -InformationAction Continue
         }
     }
 

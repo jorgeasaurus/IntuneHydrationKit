@@ -14,7 +14,7 @@
     CompanyName       = 'Jorgeasaurus'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2025 Jorgeasaurus. All rights reserved.'
+    Copyright         = '(c) 2026 Jorgeasaurus. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description       = 'Hydrates Microsoft Intune tenants with best-practice baseline configurations including policies, compliance packs, enrollment profiles, dynamic groups, security baselines, and conditional access starter packs.'

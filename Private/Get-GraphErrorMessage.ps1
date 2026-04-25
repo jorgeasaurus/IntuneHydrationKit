@@ -12,14 +12,8 @@ function Get-GraphErrorMessage {
         [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
 
-    $statusCode = $null
+    $statusCode = Get-GraphStatusCode -ErrorRecord $ErrorRecord
     $errorCode = $null
-    $errorMessage = $null
-
-    # Try to get HTTP status code
-    if ($ErrorRecord.Exception.Response.StatusCode) {
-        $statusCode = [int]$ErrorRecord.Exception.Response.StatusCode
-    }
 
     # Try to parse the JSON error response
     $rawMessage = if ($ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
@@ -29,10 +23,11 @@ function Get-GraphErrorMessage {
     }
 
     # Attempt to extract error code and detail message from JSON response
+    $detailMessage = $null
     if ($rawMessage -match '"code"\s*:\s*"([^"]+)"') {
         $errorCode = $matches[1]
     }
-    $detailMessage = $null
+
     # Use regex that handles escaped quotes inside the message value
     if ($rawMessage -match '"message"\s*:\s*"((?:[^"\\]|\\.)*)"') {
         $rawDetail = $matches[1]

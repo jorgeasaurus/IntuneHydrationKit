@@ -261,6 +261,23 @@ function Import-IntuneCompliancePolicy {
         $results += Invoke-GraphBatchOperation -Items $standardPoliciesToCreate -Operation 'POST' -ResultType 'CompliancePolicy'
     }
 
+    $existingComplianceScripts = @{}
+    if ($customPoliciesToCreate.Count -gt 0) {
+        try {
+            Get-GraphPagedResults -Uri "beta/deviceManagement/deviceComplianceScripts?`$select=id,displayName" -ProcessItems {
+                param($items)
+
+                foreach ($script in $items) {
+                    if ($script.displayName -and -not $existingComplianceScripts.ContainsKey($script.displayName)) {
+                        $existingComplianceScripts[$script.displayName] = $script.id
+                    }
+                }
+            }
+        } catch {
+            Write-Warning "Failed to prefetch compliance scripts: $_"
+        }
+    }
+
     # Process custom compliance policies with scripts sequentially (require script creation first)
     foreach ($policyInfo in $customPoliciesToCreate) {
         $displayName = $policyInfo.Name
@@ -275,11 +292,8 @@ function Import-IntuneCompliancePolicy {
 
             # Step 1: Check if compliance script already exists or create it
             $scriptId = $null
-            $existingScripts = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceComplianceScripts?`$select=id,displayName" -ErrorAction Stop
-            $existingScript = $existingScripts.value | Where-Object { $_.displayName -eq $scriptDisplayName }
-
-            if ($existingScript) {
-                $scriptId = $existingScript.id
+            if ($existingComplianceScripts.ContainsKey($scriptDisplayName)) {
+                $scriptId = $existingComplianceScripts[$scriptDisplayName]
             } elseif ($scriptDefinition -and $scriptDefinition.detectionScriptContentBase64) {
                 # Create the compliance script
                 $scriptBody = @{
@@ -294,6 +308,7 @@ function Import-IntuneCompliancePolicy {
 
                 $newScript = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceComplianceScripts" -Body ($scriptBody | ConvertTo-Json -Depth 10) -ContentType "application/json" -ErrorAction Stop
                 $scriptId = $newScript.id
+                $existingComplianceScripts[$scriptDisplayName] = $scriptId
             } else {
                 Write-Warning "Skipping compliance policy '$displayName' - no script definition found with detectionScriptContentBase64"
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status 'Missing detectionScriptContentBase64 in deviceCompliancePolicyScriptDefinition'
