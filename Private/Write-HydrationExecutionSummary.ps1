@@ -9,6 +9,9 @@ function Write-HydrationExecutionSummary {
         [array]$Results,
 
         [Parameter(Mandatory)]
+        [datetime]$StartTime,
+
+        [Parameter(Mandatory)]
         [bool]$WhatIfEnabled
     )
 
@@ -49,12 +52,18 @@ function Write-HydrationExecutionSummary {
     }
     $reportPath = Join-Path @joinPathParams
     $jsonReportPath = $null
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $completionTime = Get-Date
+    $timestamp = $completionTime.ToString('yyyy-MM-dd HH:mm:ss')
+    $elapsedTime = $completionTime - $StartTime
+    $elapsedTimeDisplay = '{0:00}:{1:00}:{2:00}' -f [Math]::Floor($elapsedTime.TotalHours), $elapsedTime.Minutes, $elapsedTime.Seconds
+    $startedTimestamp = $StartTime.ToString('yyyy-MM-dd HH:mm:ss')
 
     $reportContent = @"
 # Intune Hydration Summary
 
-**Generated:** $timestamp
+**Started:** $startedTimestamp
+**Completed:** $timestamp
+**Elapsed:** $elapsedTimeDisplay
 **Tenant:** $($Settings.tenant.tenantId)
 **Environment:** $($Settings.authentication.environment)
 **Mode:** $(if ($WhatIfEnabled) { 'Dry-Run' } else { 'Live' })
@@ -155,12 +164,15 @@ function Write-HydrationExecutionSummary {
         }
         $jsonReportPath = Join-Path @joinPathParams
         @{
-            Timestamp   = $timestamp
-            Tenant      = $Settings.tenant.tenantId
-            Environment = $Settings.authentication.environment
-            Mode        = if ($WhatIfEnabled) { 'DryRun' } else { 'Live' }
-            Summary     = $summary
-            Results     = $Results
+            Timestamp          = $timestamp
+            Started            = $startedTimestamp
+            Tenant             = $Settings.tenant.tenantId
+            Environment        = $Settings.authentication.environment
+            Mode               = if ($WhatIfEnabled) { 'DryRun' } else { 'Live' }
+            ElapsedTime        = $elapsedTimeDisplay
+            ElapsedSeconds     = [Math]::Round($elapsedTime.TotalSeconds, 3)
+            Summary            = $summary
+            Results            = $Results
         } | ConvertTo-Json -Depth 10 | ForEach-Object {
             $jsonOutFileParams = @{
                 FilePath = $jsonReportPath
@@ -192,6 +204,7 @@ function Write-HydrationExecutionSummary {
         ''
         '---------------- Summary ----------------'
         $summaryStatusLine
+        "Elapsed: $elapsedTimeDisplay"
         "Reports: $reportPath"
     )
 
@@ -212,21 +225,23 @@ function Write-HydrationExecutionSummary {
         Write-HydrationLog @logParams
     } elseif ($WhatIfEnabled) {
         $logParams = @{
-            Message = "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.WouldDelete) would delete, $($summary.Skipped) skipped"
+            Message = 'Dry-run completed in {0}: {1} would create, {2} would update, {3} would delete, {4} skipped' -f $elapsedTimeDisplay, $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped
             Level   = 'Info'
         }
         Write-HydrationLog @logParams
     } else {
         $logParams = @{
-            Message = "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Deleted) deleted, $($summary.Skipped) skipped"
+            Message = 'Completed successfully in {0}: {1} created, {2} updated, {3} deleted, {4} skipped' -f $elapsedTimeDisplay, $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped
             Level   = 'Info'
         }
         Write-HydrationLog @logParams
     }
 
     return @{
-        Summary        = $summary
-        ReportPath     = $reportPath
-        JsonReportPath = $jsonReportPath
+        Summary            = $summary
+        ReportPath         = $reportPath
+        JsonReportPath     = $jsonReportPath
+        ElapsedTime        = $elapsedTime
+        ElapsedTimeDisplay = $elapsedTimeDisplay
     }
 }

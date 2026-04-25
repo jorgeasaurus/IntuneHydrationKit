@@ -416,9 +416,11 @@ Describe 'Invoke-IntuneHydration' {
             Mock Write-HydrationExecutionSettingsSummary -ModuleName IntuneHydrationKit
             Mock Write-HydrationExecutionSummary {
                 @{
-                    Summary        = @{ Failed = 0 }
-                    ReportPath     = $null
-                    JsonReportPath = $null
+                    Summary            = @{ Failed = 0 }
+                    ReportPath         = $null
+                    JsonReportPath     = $null
+                    ElapsedTime        = [TimeSpan]::FromSeconds(3)
+                    ElapsedTimeDisplay = '00:00:03'
                 }
             } -ModuleName IntuneHydrationKit
             Mock Get-ObfuscatedTenantId { return '12345678-****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
@@ -453,6 +455,27 @@ Describe 'Invoke-IntuneHydration' {
 
             Get-ModuleVariable -Name 'WhatIfPreference' | Should -Be $false
             Get-ModuleVariable -Name 'VerbosePreference' | Should -Be 'SilentlyContinue'
+        }
+
+        It 'Should pass execution start time to the summary writer' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-summary-timer.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ deviceFilters = $true }
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath | Out-Null
+
+            Should -Invoke Write-HydrationExecutionSummary -ModuleName IntuneHydrationKit -ParameterFilter {
+                $StartTime -is [datetime]
+            } -Times 1
         }
     }
 
@@ -491,6 +514,15 @@ Describe 'Invoke-IntuneHydration' {
             $result = Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -DeviceFilters -WhatIf
 
             $result.ReportPath | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should return object with elapsed time properties' {
+            $result = Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -DeviceFilters -WhatIf
+
+            $result.Keys | Should -Contain 'ElapsedTime'
+            $result.Keys | Should -Contain 'ElapsedTimeDisplay'
+            $result.ElapsedTime | Should -BeOfType ([TimeSpan])
+            $result.ElapsedTimeDisplay | Should -Match '^\d{2}:\d{2}:\d{2}$'
         }
 
         It 'Should return Success = false when there are failures' {

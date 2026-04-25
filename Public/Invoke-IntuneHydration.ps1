@@ -227,6 +227,8 @@ function Invoke-IntuneHydration {
 
     #region Main Execution
 
+    $executionStartTime = Get-Date
+
     try {
         $resolveSettingsParams = @{
             ParameterSetName      = $PSCmdlet.ParameterSetName
@@ -566,6 +568,7 @@ function Invoke-IntuneHydration {
         $summaryParams = @{
             Settings      = $settings
             Results       = $allResults
+            StartTime     = $executionStartTime
             WhatIfEnabled = $effectiveWhatIfEnabled
             Verbose       = $effectiveVerboseEnabled
         }
@@ -573,6 +576,8 @@ function Invoke-IntuneHydration {
         $summary = $summaryOutput.Summary
         $reportPath = $summaryOutput.ReportPath
         $jsonReportPath = $summaryOutput.JsonReportPath
+        $elapsedTime = $summaryOutput.ElapsedTime
+        $elapsedTimeDisplay = $summaryOutput.ElapsedTimeDisplay
 
         # Return summary object (functions shouldn't call exit)
         return @{
@@ -581,6 +586,8 @@ function Invoke-IntuneHydration {
             Results        = $allResults
             ReportPath     = $reportPath
             JsonReportPath = $jsonReportPath
+            ElapsedTime    = $elapsedTime
+            ElapsedTimeDisplay = $elapsedTimeDisplay
         }
     } catch {
         $logParams = @{

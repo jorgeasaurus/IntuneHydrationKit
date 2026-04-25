@@ -7,6 +7,7 @@ BeforeAll {
 Describe 'Write-HydrationExecutionSummary' {
     BeforeEach {
         Mock Write-HydrationLog { }
+        Mock Get-Date { [datetime]'2026-04-24T22:02:03' }
         Mock Get-ResultSummary {
             @{
                 Created     = 1
@@ -28,19 +29,22 @@ Describe 'Write-HydrationExecutionSummary' {
             authentication = @{ environment = 'Global' }
             reporting      = @{ outputPath = 'TestDrive:\Reports'; formats = @('markdown', 'json') }
         }
+        $startTime = [datetime]'2026-04-24T21:00:00'
         $expectedMarkdownPath = Join-Path -Path 'TestDrive:\Reports' -ChildPath 'Hydration-Summary.md'
         $expectedJsonPath = Join-Path -Path 'TestDrive:\Reports' -ChildPath 'Hydration-Summary.json'
 
-        $result = Write-HydrationExecutionSummary -Settings $settings -Results @() -WhatIfEnabled $true
+        $result = Write-HydrationExecutionSummary -Settings $settings -Results @() -StartTime $startTime -WhatIfEnabled $true
 
         $result.ReportPath | Should -Be $expectedMarkdownPath
         $result.JsonReportPath | Should -Be $expectedJsonPath
+        $result.ElapsedTimeDisplay | Should -Be '01:02:03'
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '---------------- Summary ----------------' } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq 'Would Create: 5 | Would Update: 6 | Would Delete: 7 | Skipped: 4 | Failed: 0' } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq 'Elapsed: 01:02:03' } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq "Reports: $expectedMarkdownPath" } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq "JSON:    $expectedJsonPath" } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '' } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '----------------------------------------' } -Times 1
-        Should -Invoke Write-Information -Exactly 6
+        Should -Invoke Write-Information -Exactly 7
     }
 }
