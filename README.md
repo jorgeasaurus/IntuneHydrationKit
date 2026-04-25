@@ -43,9 +43,9 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It automatically downloads the latest [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies and imports them alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
 
-> **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. This ensures stability and prevents unplanned breaking changes from affecting your deployments.
+> **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. Baselines are bundled with the module and periodically refreshed only after validation and testing, which prevents unplanned upstream changes from affecting your deployments.
 
 ### Demo
 
@@ -528,13 +528,7 @@ These modes cannot be combined - choose one or the other.
 
 Affects: OpenIntuneBaseline, ComplianceTemplates, AppProtection, DeviceFilters, MobileApps, EnrollmentProfiles. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
 
-### OpenIntuneBaseline Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `-BaselineRepoUrl` | String | GitHub repository URL |
-| `-BaselineBranch` | String | Git branch to use |
-| `-BaselineDownloadPath` | String | Local download path |
+There are no separate baseline source or download parameters. OpenIntuneBaseline content is bundled with the module and updated through tested module releases.
 
 ### Reporting Parameters (Parameter Mode Only)
 
