@@ -30,7 +30,8 @@ function Get-HydrationDeleteCandidates {
     )
 
     $deleteCandidates = @()
-    $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+    $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
+    $escapedPrefix = [regex]::Escape($importPrefix)
 
     foreach ($currentEndpoint in $Endpoint) {
         try {

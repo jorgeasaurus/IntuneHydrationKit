@@ -75,9 +75,11 @@
 | Total Operations | $($Results.Count) |
 | Created | $($summary.Created) |
 | Updated | $($summary.Updated) |
+| Deleted | $($summary.Deleted) |
 | Skipped | $($summary.Skipped) |
 | Would Create | $($summary.WouldCreate) |
 | Would Update | $($summary.WouldUpdate) |
+| Would Delete | $($summary.WouldDelete) |
 | Failed | $($summary.Failed) |
 
 ## Details by Type
@@ -89,9 +91,11 @@
         $typeResults = $typeGroup.Group
         $created = ($typeResults | Where-Object { $_.Action -eq 'Created' }).Count
         $updated = ($typeResults | Where-Object { $_.Action -eq 'Updated' }).Count
+        $deleted = ($typeResults | Where-Object { $_.Action -eq 'Deleted' }).Count
         $skipped = ($typeResults | Where-Object { $_.Action -eq 'Skipped' }).Count
         $wouldCreate = ($typeResults | Where-Object { $_.Action -eq 'WouldCreate' }).Count
         $wouldUpdate = ($typeResults | Where-Object { $_.Action -eq 'WouldUpdate' }).Count
+        $wouldDelete = ($typeResults | Where-Object { $_.Action -eq 'WouldDelete' }).Count
         $failed = ($typeResults | Where-Object { $_.Action -eq 'Failed' }).Count
 
         $reportContent += @"
@@ -99,9 +103,11 @@
 ### $($typeGroup.Name)
 - Created: $created
 - Updated: $updated
+- Deleted: $deleted
 - Skipped: $skipped
 - Would Create: $wouldCreate
 - Would Update: $wouldUpdate
+- Would Delete: $wouldDelete
 - Failed: $failed
 
 "@
