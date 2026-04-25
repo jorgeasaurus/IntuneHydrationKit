@@ -354,7 +354,8 @@ function Import-CISBaseline {
             $existingPolicy = $null
             $matchedName = $null
             if ($failedCacheEndpoints.Contains($typeEndpoint)) {
-                # Cache unavailable for this endpoint - fall back to per-policy individual existence check
+                # Cache unavailable for this endpoint - fall back to per-policy individual existence check.
+                # Single quotes in the name are escaped by doubling them, which is the correct OData string escape.
                 $nameField = if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') { 'name' } else { 'displayName' }
                 foreach ($lookupName in $lookupNames) {
                     $odataFilter = "$nameField eq '$($lookupName -replace "'", "''")'"
