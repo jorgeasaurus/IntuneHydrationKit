@@ -35,7 +35,7 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies alongside compliance policies, dynamic groups, and more-turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
 
 > **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. Baselines are bundled with the module and periodically refreshed only after validation and testing, which prevents unplanned upstream changes from affecting your deployments.
 

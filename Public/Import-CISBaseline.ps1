@@ -193,6 +193,7 @@ function Import-CISBaseline {
 
     # Pre-fetch existing policies from all unique endpoints
     $endpointPolicyCache = @{}
+    $failedCacheEndpoints = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
     $cacheIndex = 0
     foreach ($cacheEndpoint in $uniqueEndpoints) {
@@ -221,6 +222,7 @@ function Import-CISBaseline {
             }
         } catch {
             Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
+            [void]$failedCacheEndpoints.Add($cacheEndpoint)
         }
     }
 
@@ -321,7 +323,12 @@ function Import-CISBaseline {
                 $policyPlatform = $policyContent.platforms
                 if ($policyPlatform) {
                     $mappedPlatform = $platformValueMapping[$policyPlatform]
-                    if ($mappedPlatform -and $mappedPlatform -notin $Platform) {
+                    if ($null -eq $mappedPlatform) {
+                        Write-Warning "Skipping $policyName - unrecognized platform value '$policyPlatform' (not in platform mapping)"
+                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unrecognized platform: $policyPlatform"
+                        continue
+                    }
+                    if ($mappedPlatform -notin $Platform) {
                         Write-Verbose "  Skipping $policyName - platform '$policyPlatform' not in filter"
                         continue
                     }
@@ -344,8 +351,27 @@ function Import-CISBaseline {
                 $lookupNames += $unprefixedName
             }
 
-            $matchedName = $lookupNames | Where-Object { $endpointPolicyCache[$typeEndpoint].ContainsKey($_) } | Select-Object -First 1
-            $existingPolicy = if ($matchedName) { $endpointPolicyCache[$typeEndpoint][$matchedName] } else { $null }
+            $existingPolicy = $null
+            $matchedName = $null
+            if ($failedCacheEndpoints.Contains($typeEndpoint)) {
+                # Cache unavailable for this endpoint - fall back to per-policy individual existence check
+                $nameField = if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') { 'name' } else { 'displayName' }
+                foreach ($lookupName in $lookupNames) {
+                    $odataFilter = "$nameField eq '$($lookupName -replace "'", "''")'"
+                    try {
+                        $lookupResult = Invoke-MgGraphRequest -Method GET -Uri "beta/$typeEndpoint?`$filter=$odataFilter&`$top=1" -ErrorAction Stop
+                        if ($lookupResult.value -and $lookupResult.value.Count -gt 0) {
+                            $existingPolicy = @{ Id = $lookupResult.value[0].id }
+                            break
+                        }
+                    } catch {
+                        Write-Verbose "Individual policy lookup failed for '$lookupName' in $typeEndpoint - assuming not present: $_"
+                    }
+                }
+            } else {
+                $matchedName = $lookupNames | Where-Object { $endpointPolicyCache[$typeEndpoint].ContainsKey($_) } | Select-Object -First 1
+                $existingPolicy = if ($matchedName) { $endpointPolicyCache[$typeEndpoint][$matchedName] } else { $null }
+            }
 
             if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
                 $alreadyExists = $true
@@ -355,9 +381,9 @@ function Import-CISBaseline {
                     $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
                 } catch {
                     if ($_.Exception.Message -match '404|NotFound') {
-                        Write-Verbose "Policy '$matchedName' returned 404 on verify - stale data, will create"
+                        Write-Verbose "Policy '$displayName' returned 404 on verify - stale data, will create"
                         $alreadyExists = $false
-                        $null = $endpointPolicyCache[$typeEndpoint].Remove($matchedName)
+                        if ($matchedName) { $null = $endpointPolicyCache[$typeEndpoint].Remove($matchedName) }
                     } else {
                         throw
                     }

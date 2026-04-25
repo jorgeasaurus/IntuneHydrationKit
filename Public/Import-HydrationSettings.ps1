@@ -27,6 +27,10 @@ function Import-HydrationSettings {
 
         Write-HydrationLog -Message "Settings loaded from: $Path" -Level Info
         return $settings
+    } catch [System.Management.Automation.PipelineStoppedException] {
+        throw
+    } catch [System.OperationCanceledException] {
+        throw
     } catch {
         Write-HydrationLog -Message "Failed to load settings: $_" -Level Error
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
