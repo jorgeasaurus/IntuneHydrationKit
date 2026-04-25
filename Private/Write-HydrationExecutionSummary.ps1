@@ -164,15 +164,15 @@ function Write-HydrationExecutionSummary {
         }
         $jsonReportPath = Join-Path @joinPathParams
         @{
-            Timestamp          = $timestamp
-            Started            = $startedTimestamp
-            Tenant             = $Settings.tenant.tenantId
-            Environment        = $Settings.authentication.environment
-            Mode               = if ($WhatIfEnabled) { 'DryRun' } else { 'Live' }
-            ElapsedTime        = $elapsedTimeDisplay
-            ElapsedSeconds     = [Math]::Round($elapsedTime.TotalSeconds, 3)
-            Summary            = $summary
-            Results            = $Results
+            Timestamp      = $timestamp
+            Started        = $startedTimestamp
+            Tenant         = $Settings.tenant.tenantId
+            Environment    = $Settings.authentication.environment
+            Mode           = if ($WhatIfEnabled) { 'DryRun' } else { 'Live' }
+            ElapsedTime    = $elapsedTimeDisplay
+            ElapsedSeconds = [Math]::Round($elapsedTime.TotalSeconds, 3)
+            Summary        = $summary
+            Results        = $Results
         } | ConvertTo-Json -Depth 10 | ForEach-Object {
             $jsonOutFileParams = @{
                 FilePath = $jsonReportPath

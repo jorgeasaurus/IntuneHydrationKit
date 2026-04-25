@@ -286,6 +286,21 @@ Describe 'Import-IntuneBaseline' {
             }
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
         }
+
+        It 'Should not delete hydration-tagged policies that are not in OpenIntuneBaseline templates' {
+            Mock Get-GraphPagedResults {
+                return @(
+                    @{ id = 'cis-policy-1'; displayName = '[IHD] CIS Windows Policy'; description = 'Imported by Intune Hydration Kit' }
+                )
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation { @() } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'DeleteBaseline') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
+
+            $result | Should -BeNullOrEmpty
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
     }
 
     Context 'IntuneManagement Folder Routing' {

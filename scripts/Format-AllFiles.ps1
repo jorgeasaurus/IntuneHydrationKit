@@ -11,17 +11,17 @@ param()
 $files = Get-ChildItem -Path $PSScriptRoot/.. -Include *.ps1, *.psm1 -Recurse -File |
     Where-Object { $_.DirectoryName -notlike '*build*' }
 
-Write-Information "Formatting $($files.Count) PowerShell files..." -ForegroundColor Cyan
+Write-Host "Formatting $($files.Count) PowerShell files..." -ForegroundColor Cyan
 
 foreach ($file in $files) {
     try {
         $content = Get-Content $file.FullName -Raw
         $formatted = Invoke-Formatter -ScriptDefinition $content -Settings CodeFormattingOTBS
         Set-Content -Path $file.FullName -Value $formatted -NoNewline
-        Write-Information "  Formatted: $($file.Name)" -ForegroundColor Green
+        Write-Host "  Formatted: $($file.Name)" -ForegroundColor Green
     } catch {
-        Write-Information "  Failed: $($file.Name) - $_" -ForegroundColor Red
+        Write-Host "  Failed: $($file.Name) - $_"
     }
 }
 
-Write-Information "Done!" -ForegroundColor Cyan
+Write-Host "Done!" -ForegroundColor Cyan

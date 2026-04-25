@@ -142,7 +142,7 @@ function Import-IntuneBaseline {
             $deleteEndpoints += 'beta/deviceAppManagement/iosManagedAppProtections'
         }
 
-        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames
+        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames -RequireTemplateMatch
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No baseline policies found to delete"

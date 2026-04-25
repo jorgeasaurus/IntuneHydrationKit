@@ -83,25 +83,25 @@ $tempBase = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "OIB-Co
 $zipPath = Join-Path -Path $tempBase -ChildPath "$repoName-$Branch.zip"
 $extractPath = Join-Path -Path $tempBase -ChildPath 'upstream'
 
-Write-Information ""
-Write-Information "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Information "║       OpenIntuneBaseline Parity Check                      ║" -ForegroundColor Cyan
-Write-Information "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Information ""
-Write-Information "  Upstream : $repoOwner/$repoName ($Branch)" -ForegroundColor Gray
-Write-Information "  Local    : $LocalPath" -ForegroundColor Gray
-Write-Information ""
+Write-Host ""
+Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║       OpenIntuneBaseline Parity Check                      ║" -ForegroundColor Cyan
+Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  Upstream : $repoOwner/$repoName ($Branch)" -ForegroundColor Gray
+Write-Host "  Local    : $LocalPath" -ForegroundColor Gray
+Write-Host ""
 
 try {
     $null = New-Item -Path $tempBase -ItemType Directory -Force
 
-    Write-Information "  Downloading upstream baseline..." -ForegroundColor Yellow -NoNewline
+    Write-Host "  Downloading upstream baseline..." -ForegroundColor Yellow -NoNewline
     Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -ErrorAction Stop
-    Write-Information " Done" -ForegroundColor Green
+    Write-Host " Done" -ForegroundColor Green
 
-    Write-Information "  Extracting..." -ForegroundColor Yellow -NoNewline
+    Write-Host "  Extracting..." -ForegroundColor Yellow -NoNewline
     Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-    Write-Information " Done" -ForegroundColor Green
+    Write-Host " Done" -ForegroundColor Green
 
     # GitHub archives extract to a subfolder like OpenIntuneBaseline-main/
     $extractedFolder = Get-ChildItem -Path $extractPath -Directory | Select-Object -First 1
@@ -153,11 +153,11 @@ try {
         return $results
     }
 
-    Write-Information "  Scanning files..." -ForegroundColor Yellow -NoNewline
+    Write-Host "  Scanning files..." -ForegroundColor Yellow -NoNewline
     $upstreamFiles = Get-PolicyFiles -BasePath $upstreamRoot
     $localFiles = Get-PolicyFiles -BasePath $LocalPath
-    Write-Information " Done" -ForegroundColor Green
-    Write-Information ""
+    Write-Host " Done" -ForegroundColor Green
+    Write-Host ""
 
     # --- Compare ---
     $onlyUpstream = [System.Collections.Generic.List[string]]::new()
@@ -187,60 +187,60 @@ try {
     $totalUpstream = $upstreamFiles.Count
     $totalLocal = $localFiles.Count
 
-    Write-Information "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Information "  RESULTS" -ForegroundColor Cyan
-    Write-Information "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Information ""
-    Write-Information "  Upstream files (JSON, excl. NativeImport) : $totalUpstream" -ForegroundColor Gray
-    Write-Information "  Local bundled files                       : $totalLocal" -ForegroundColor Gray
-    Write-Information "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Information "  Identical                                 : $($matched.Count)" -ForegroundColor Green
-    Write-Information "  Modified (content differs)                : $($modified.Count)" -ForegroundColor $(if ($modified.Count -gt 0) { 'Yellow' } else { 'Green' })
-    Write-Information "  Only in upstream (missing locally)        : $($onlyUpstream.Count)" -ForegroundColor $(if ($onlyUpstream.Count -gt 0) { 'Red' } else { 'Green' })
-    Write-Information "  Only in local (not in upstream)           : $($onlyLocal.Count)" -ForegroundColor $(if ($onlyLocal.Count -gt 0) { 'Yellow' } else { 'Green' })
-    Write-Information ""
+    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  RESULTS" -ForegroundColor Cyan
+    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Upstream files (JSON, excl. NativeImport) : $totalUpstream" -ForegroundColor Gray
+    Write-Host "  Local bundled files                       : $totalLocal" -ForegroundColor Gray
+    Write-Host "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  Identical                                 : $($matched.Count)" -ForegroundColor Green
+    Write-Host "  Modified (content differs)                : $($modified.Count)" -ForegroundColor $(if ($modified.Count -gt 0) { 'Yellow' } else { 'Green' })
+    Write-Host "  Only in upstream (missing locally)        : $($onlyUpstream.Count)" -ForegroundColor $(if ($onlyUpstream.Count -gt 0) { 'Red' } else { 'Green' })
+    Write-Host "  Only in local (not in upstream)           : $($onlyLocal.Count)" -ForegroundColor $(if ($onlyLocal.Count -gt 0) { 'Yellow' } else { 'Green' })
+    Write-Host ""
 
     if ($modified.Count -gt 0) {
-        Write-Information "  ⚠ MODIFIED FILES (content differs from upstream):" -ForegroundColor Yellow
+        Write-Host "  ⚠ MODIFIED FILES (content differs from upstream):" -ForegroundColor Yellow
         foreach ($file in ($modified | Sort-Object)) {
-            Write-Information "    ∆ $file" -ForegroundColor Yellow
+            Write-Host "    ∆ $file" -ForegroundColor Yellow
         }
-        Write-Information ""
+        Write-Host ""
     }
 
     if ($onlyUpstream.Count -gt 0) {
-        Write-Information "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):" -ForegroundColor Red
+        Write-Host "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):"
         foreach ($file in ($onlyUpstream | Sort-Object)) {
-            Write-Information "    + $file" -ForegroundColor Red
+            Write-Host "    + $file"
         }
-        Write-Information ""
+        Write-Host ""
     }
 
     if ($onlyLocal.Count -gt 0) {
-        Write-Information "  ◦ ONLY IN LOCAL (not found upstream, may be custom or renamed):" -ForegroundColor DarkYellow
+        Write-Host "  ◦ ONLY IN LOCAL (not found upstream, may be custom or renamed):" -ForegroundColor DarkYellow
         foreach ($file in ($onlyLocal | Sort-Object)) {
-            Write-Information "    - $file" -ForegroundColor DarkYellow
+            Write-Host "    - $file" -ForegroundColor DarkYellow
         }
-        Write-Information ""
+        Write-Host ""
     }
 
     # Final verdict
     if ($modified.Count -eq 0 -and $onlyUpstream.Count -eq 0 -and $onlyLocal.Count -eq 0) {
-        Write-Information "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
+        Write-Host "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
     } else {
         $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
-        Write-Information "  ✗ PARITY CHECK: $issueCount difference(s) found." -ForegroundColor Red
-        Write-Information "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
+        Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found."
+        Write-Host "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
     }
-    Write-Information ""
+    Write-Host ""
 
 } catch {
     Write-Error "Comparison failed: $_"
 } finally {
     if (-not $KeepDownload -and (Test-Path -Path $tempBase -ErrorAction SilentlyContinue)) {
         Remove-Item -Path $tempBase -Recurse -Force -ErrorAction SilentlyContinue *>$null
-        Write-Information "  Cleaned up temporary files." -ForegroundColor DarkGray
+        Write-Host "  Cleaned up temporary files." -ForegroundColor DarkGray
     } elseif ($KeepDownload -and (Test-Path -Path $tempBase -ErrorAction SilentlyContinue)) {
-        Write-Information "  Upstream files kept at: $tempBase" -ForegroundColor DarkGray
+        Write-Host "  Upstream files kept at: $tempBase" -ForegroundColor DarkGray
     }
 }

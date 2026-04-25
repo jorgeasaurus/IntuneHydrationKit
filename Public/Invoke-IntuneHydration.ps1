@@ -581,12 +581,12 @@ function Invoke-IntuneHydration {
 
         # Return summary object (functions shouldn't call exit)
         return @{
-            Success        = $summary.Failed -eq 0
-            Summary        = $summary
-            Results        = $allResults
-            ReportPath     = $reportPath
-            JsonReportPath = $jsonReportPath
-            ElapsedTime    = $elapsedTime
+            Success            = $summary.Failed -eq 0
+            Summary            = $summary
+            Results            = $allResults
+            ReportPath         = $reportPath
+            JsonReportPath     = $jsonReportPath
+            ElapsedTime        = $elapsedTime
             ElapsedTimeDisplay = $elapsedTimeDisplay
         }
     } catch {
