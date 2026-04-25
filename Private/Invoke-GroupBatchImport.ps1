@@ -378,7 +378,6 @@ function Invoke-GroupBatchImport {
     # Handle WhatIf mode
     if ($WhatIfPreference) {
         foreach ($groupDef in $groupsToCreate) {
-            $null = $PSCmdlet.ShouldProcess($groupDef.displayName, "Create $GroupType group")
             $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'WouldCreate' -Status 'DryRun'
             Write-Verbose "  WouldCreate: $($groupDef.displayName)"
         }

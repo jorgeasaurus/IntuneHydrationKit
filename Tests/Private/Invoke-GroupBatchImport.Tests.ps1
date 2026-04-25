@@ -307,6 +307,16 @@ Describe 'Invoke-GroupBatchImport' {
             $result[0].Status | Should -Be 'DryRun'
         }
 
+        It 'Should not emit built-in WhatIf output in create mode' {
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*$batch*' } {
+                return @{ responses = @(@{ id = '1'; status = 200; body = @{ value = @() } }) }
+            }
+
+            $stream = Invoke-GroupBatchImport -GroupDefinitions $script:testGroupDefs -GroupType 'Dynamic' -WhatIf 6>&1
+
+            @($stream | Where-Object { $_ -is [System.Management.Automation.InformationRecord] }).Count | Should -Be 0
+        }
+
         It 'Should not make creation API calls in WhatIf mode' {
             Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*$batch*' } {
                 param($Body)
@@ -547,6 +557,20 @@ Describe 'Invoke-GroupBatchImport' {
             $result | Should -HaveCount 1
             $result[0].Action | Should -Be 'WouldDelete'
             $result[0].Status | Should -Be 'DryRun'
+        }
+
+        It 'Should not emit built-in WhatIf output in delete mode' {
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'GET' } {
+                return @{
+                    value = @(
+                        @{ id = 'id-1'; displayName = 'Test Group'; description = 'Imported by Intune Hydration Kit' }
+                    )
+                }
+            }
+
+            $stream = Invoke-GroupBatchImport -GroupType 'Dynamic' -Delete -WhatIf 6>&1
+
+            @($stream | Where-Object { $_ -is [System.Management.Automation.InformationRecord] }).Count | Should -Be 0
         }
 
         It 'Should delete all 25 groups when batching' {

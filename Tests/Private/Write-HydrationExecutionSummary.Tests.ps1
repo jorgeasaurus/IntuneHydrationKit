@@ -53,6 +53,9 @@ Describe 'Write-HydrationExecutionSummary' {
         Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq "🧾 JSON:    $expectedJsonPath" } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '' } -Times 1
         Should -Invoke Write-Information -Exactly 6
+
+        $reportContent = Get-Content -Path $expectedMarkdownPath -Raw
+        $reportContent | Should -Match '\| Deleted \| 3 \|'
+        $reportContent | Should -Match '\| Would Delete \| 7 \|'
     }
 }
-
