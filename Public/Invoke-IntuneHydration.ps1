@@ -267,6 +267,10 @@ function Invoke-IntuneHydration {
         $platformFilters = Get-HydrationPlatformFilters -Platforms $settings.platforms
         $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
         $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
+        if ($settings.options.verbose -eq $true -and $VerbosePreference -ne 'Continue') {
+            $VerbosePreference = 'Continue'
+            Write-Verbose 'Verbose output enabled for this hydration run'
+        }
 
         # Apply options from settings
         $createEnabled = $settings.options.create -eq $true

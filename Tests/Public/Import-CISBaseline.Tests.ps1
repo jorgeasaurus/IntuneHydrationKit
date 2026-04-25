@@ -625,6 +625,54 @@ Describe 'Import-CISBaseline' {
             $created.Count | Should -Be 1
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 1
         }
+
+        It 'Should use the endpoint-specific name property when cache fallback checks compliance policies' {
+            $baseDir = Join-Path 'TestDrive:' 'CISComplianceSkip'
+            $catDir = Join-Path $baseDir '1.0 - Test Category'
+            $script:queriedUris = @()
+            New-Item -Path $catDir -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $catDir 'LinuxCompliance.json') -Value (@{
+                    '@odata.type'           = '#microsoft.graph.deviceManagementCompliancePolicy'
+                    name                    = 'Linux Compliance Policy'
+                    description             = ''
+                    platforms               = 'linux'
+                    technologies            = 'linuxMdm'
+                    settings                = @()
+                    scheduledActionsForRule = @()
+                } | ConvertTo-Json -Depth 10)
+
+            Mock Get-GraphPagedResults {
+                param($Uri)
+                if ($Uri -eq 'beta/deviceManagement/compliancePolicies') {
+                    throw 'cache unavailable'
+                }
+
+                return @()
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+                $script:queriedUris += $Uri
+
+                if ($Uri -like 'beta/deviceManagement/compliancePolicies?*') {
+                    return @{
+                        value = @()
+                    }
+                }
+
+                return @{
+                    id = 'existing-compliance-id'
+                }
+            } -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET'
+            }
+
+            Mock Invoke-GraphBatchOperation { return @() } -ModuleName IntuneHydrationKit
+
+            Import-CISBaseline -BaselinePath $baseDir -TenantId '00000000-0000-0000-0000-000000000001' | Out-Null
+
+            $script:queriedUris | Should -Contain "beta/deviceManagement/compliancePolicies?`$filter=name eq '[IHD] Linux Compliance Policy'&`$top=1"
+        }
     }
 
     Context 'Missing @odata.type inference' {

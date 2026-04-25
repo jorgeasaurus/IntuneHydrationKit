@@ -100,8 +100,25 @@ function Import-CISBaseline {
     $odataTypeToEndpoint = $importMetadata.ODataTypeToEndpoint
     $odataContextToEndpoint = $importMetadata.ODataContextToEndpoint
     $platformValueMapping = $importMetadata.PlatformValueMapping
+    $endpointNamePropertyMap = @{
+        'deviceManagement/configurationPolicies' = 'name'
+        'deviceManagement/compliancePolicies'    = 'name'
+    }
 
     $results = @()
+
+    function Get-CISNameProperty {
+        param(
+            [Parameter(Mandatory)]
+            [string]$Endpoint
+        )
+
+        if ($endpointNamePropertyMap.ContainsKey($Endpoint)) {
+            return $endpointNamePropertyMap[$Endpoint]
+        }
+
+        return 'displayName'
+    }
 
     # Remove existing CIS baseline policies if requested
     if ($RemoveExisting) {
@@ -208,8 +225,9 @@ function Import-CISBaseline {
             Get-GraphPagedResults -Uri "beta/$cacheEndpoint" -ProcessItems {
                 param($items)
                 foreach ($policy in $items) {
-                    $policyDisplayName = if ($cacheEndpoint -eq 'deviceManagement/configurationPolicies') {
-                        $policy.name
+                    $nameProperty = Get-CISNameProperty -Endpoint $cacheEndpoint
+                    $policyDisplayName = if ($nameProperty -eq 'name') {
+                        if ($policy.name) { $policy.name } elseif ($policy.displayName) { $policy.displayName } else { $null }
                     } else {
                         if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
                     }
@@ -366,11 +384,11 @@ function Import-CISBaseline {
             if ($failedCacheEndpoints.Contains($typeEndpoint)) {
                 # Cache unavailable for this endpoint - fall back to per-policy individual existence check.
                 # Single quotes in the name are escaped by doubling them, which is the correct OData string escape.
-                $nameField = if ($typeEndpoint -eq 'deviceManagement/configurationPolicies') { 'name' } else { 'displayName' }
+                $nameField = Get-CISNameProperty -Endpoint $typeEndpoint
                 foreach ($lookupName in $lookupNames) {
                     $odataFilter = "$nameField eq '$($lookupName -replace "'", "''")'"
                     try {
-                        $lookupResult = Invoke-MgGraphRequest -Method GET -Uri "beta/$typeEndpoint?`$filter=$odataFilter&`$top=1" -ErrorAction Stop
+                        $lookupResult = Invoke-MgGraphRequest -Method GET -Uri "beta/$($typeEndpoint)?`$filter=$odataFilter&`$top=1" -ErrorAction Stop
                         if ($lookupResult.value -and $lookupResult.value.Count -gt 0) {
                             $existingPolicy = @{ Id = $lookupResult.value[0].id }
                             break

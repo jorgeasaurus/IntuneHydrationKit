@@ -457,6 +457,27 @@ Describe 'Invoke-IntuneHydration' {
             Get-ModuleVariable -Name 'VerbosePreference' | Should -Be 'SilentlyContinue'
         }
 
+        It 'Should emit verbose records when settings request verbose output' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-verbose-scope.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $true }
+                    imports        = @{ deviceFilters = $true }
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Invoke-IntuneHydration -SettingsPath $testSettingsPath 4>&1
+            $verboseMessages = @($result | Where-Object { $_ -is [System.Management.Automation.VerboseRecord] } | ForEach-Object { $_.Message })
+
+            $verboseMessages | Should -Contain 'Verbose output enabled for this hydration run'
+            Get-ModuleVariable -Name 'VerbosePreference' | Should -Be 'SilentlyContinue'
+        }
+
         It 'Should pass execution start time to the summary writer' {
             $testSettingsPath = Join-Path $script:TestTempPath 'settings-summary-timer.json'
             '{}' | Set-Content -Path $testSettingsPath -Encoding utf8

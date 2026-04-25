@@ -17,7 +17,7 @@
     Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
 
     $issues = @()
-    $notes = @()
+    $notes = [System.Collections.Generic.List[object]]::new()
     $riskBasedPolicyNames = @()
 
     # Required scopes from Connect-IntuneHydration
@@ -75,10 +75,16 @@
                 'Block high risk agent identities'
                 'Block access to Office365 apps for users with insider risk'
             )
-            $notes += 'Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $notes.Add([PSCustomObject]@{
+                    Message     = 'Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+                    DetailLines = $riskBasedPolicyNames
+                })
         }
 
-        $notes += 'Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+        $notes.Add([PSCustomObject]@{
+                Message     = 'Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+                DetailLines = @()
+            })
 
         # Check for required permission scopes
         $context = Get-MgContext
@@ -88,7 +94,10 @@
             $isAppOnly = $context.AuthType -eq 'AppOnly' -or ($context.ClientId -and -not $context.Account)
             if ($isAppOnly) {
                 # App-only auth uses app roles, so delegated scope validation does not apply
-                $notes += 'App-only authentication detected; delegated scope validation was skipped.'
+                $notes.Add([PSCustomObject]@{
+                        Message     = 'App-only authentication detected; delegated scope validation was skipped.'
+                        DetailLines = @()
+                    })
             } else {
                 $currentScopes = $context.Scopes
                 $missingScopes = @($requiredScopes | Where-Object { $currentScopes -notcontains $_ })
@@ -104,12 +113,10 @@
         if ($notes.Count -gt 0) {
             Write-Information (Format-HydrationDisplayMessage -Message 'Notes:' -Style 'Section' -Emoji '📝') -InformationAction Continue
             foreach ($note in $notes) {
-                Write-Information (Format-HydrationDisplayMessage -Message $note -Style 'Info' -Emoji '•' -Indent 2) -InformationAction Continue
+                Write-Information (Format-HydrationDisplayMessage -Message $note.Message -Style 'Info' -Emoji '•' -Indent 2) -InformationAction Continue
 
-                if ($note -eq 'Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:') {
-                    foreach ($policyName in $riskBasedPolicyNames) {
+                foreach ($policyName in $note.DetailLines) {
                         Write-Information (Format-HydrationDisplayMessage -Message "'$policyName'" -Style 'Muted' -Emoji '↳' -Indent 4) -InformationAction Continue
-                    }
                 }
             }
         }
@@ -146,4 +153,3 @@
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
-
