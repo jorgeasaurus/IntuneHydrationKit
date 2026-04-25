@@ -369,7 +369,6 @@ function Invoke-IntuneHydration {
                 Platforms      = $platformFilters.Groups
                 RemoveExisting = $RemoveExisting
                 WhatIfEnabled  = $effectiveWhatIfEnabled
-                Verbose        = $effectiveVerboseEnabled
             }
             $dynamicGroupResults = @((Invoke-HydrationGroupStep @dynamicGroupStepParams) | Where-Object { $null -ne $_ })
             $allResults += $dynamicGroupResults
@@ -389,7 +388,6 @@ function Invoke-IntuneHydration {
                 Platforms      = $platformFilters.Groups
                 RemoveExisting = $RemoveExisting
                 WhatIfEnabled  = $effectiveWhatIfEnabled
-                Verbose        = $effectiveVerboseEnabled
             }
             $staticGroupResults = @((Invoke-HydrationGroupStep @staticGroupStepParams) | Where-Object { $null -ne $_ })
             $allResults += $staticGroupResults

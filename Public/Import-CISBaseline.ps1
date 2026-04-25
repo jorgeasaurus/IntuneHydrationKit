@@ -320,16 +320,26 @@ function Import-CISBaseline {
 
             # Platform filtering based on JSON platforms property
             if ($Platform -and $Platform -notcontains 'All') {
-                $policyPlatform = $policyContent.platforms
-                if ($policyPlatform) {
-                    $mappedPlatform = $platformValueMapping[$policyPlatform]
-                    if ($null -eq $mappedPlatform) {
-                        Write-Warning "Skipping $policyName - unrecognized platform value '$policyPlatform' (not in platform mapping)"
-                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unrecognized platform: $policyPlatform"
+                $policyPlatformValues = @($policyContent.platforms | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+                if ($policyPlatformValues.Count -gt 0) {
+                    $mappedPlatforms = @()
+                    foreach ($policyPlatformValue in $policyPlatformValues) {
+                        $mappedPlatform = $platformValueMapping[[string]$policyPlatformValue]
+                        if ($null -ne $mappedPlatform) {
+                            $mappedPlatforms += $mappedPlatform
+                        }
+                    }
+
+                    if ($mappedPlatforms.Count -eq 0) {
+                        $platformLabel = $policyPlatformValues -join ', '
+                        Write-Warning "Skipping $policyName - unrecognized platform value '$platformLabel' (not in platform mapping)"
+                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unrecognized platform: $platformLabel"
                         continue
                     }
-                    if ($mappedPlatform -notin $Platform) {
-                        Write-Verbose "  Skipping $policyName - platform '$policyPlatform' not in filter"
+
+                    if (-not ($mappedPlatforms | Where-Object { $_ -in $Platform })) {
+                        $platformLabel = $policyPlatformValues -join ', '
+                        Write-Verbose "  Skipping $policyName - platform '$platformLabel' not in filter"
                         continue
                     }
                 }

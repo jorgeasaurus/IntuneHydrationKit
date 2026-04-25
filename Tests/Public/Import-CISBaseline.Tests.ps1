@@ -225,6 +225,30 @@ Describe 'Import-CISBaseline' {
                 $Items.Count -eq 1 -and $Items[0].Name -like '*Windows*'
             }
         }
+
+        It 'Should import policies when any platform in a platform array matches the filter' {
+            Set-Content -Path (Join-Path $windowsDir 'WindowsArray.json') -Value (@{
+                    '@odata.type' = '#microsoft.graph.deviceManagementConfigurationPolicy'
+                    name          = 'Windows Array CIS Policy'
+                    description   = ''
+                    platforms     = @('androidEnterprise', 'windows10')
+                    technologies  = 'mdm'
+                    settings      = @()
+                } | ConvertTo-Json)
+
+            Mock Invoke-GraphBatchOperation {
+                param($Items)
+                foreach ($item in $Items) {
+                    [PSCustomObject]@{ Name = $item.Name; Type = 'CISBaselinePolicy'; Action = 'Created'; Status = 'Success' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISPlatformFilter') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001'
+
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Items.Count -eq 2 -and ($Items.Name -contains '[IHD] Windows Array CIS Policy')
+            }
+        }
     }
 
     Context 'WhatIf Support' {
