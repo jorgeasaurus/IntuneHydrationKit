@@ -1,4 +1,4 @@
-function Test-IntunePrerequisites {
+﻿function Test-IntunePrerequisites {
     <#
     .SYNOPSIS
         Validates Intune tenant prerequisites
@@ -14,7 +14,7 @@ function Test-IntunePrerequisites {
     [CmdletBinding()]
     param()
 
-    Write-Information 'Validating Intune prerequisites...' -InformationAction Continue
+    Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
 
     $issues = @()
     $notes = @()
@@ -28,7 +28,7 @@ function Test-IntunePrerequisites {
         $org = Invoke-MgGraphRequest -Method GET -Uri "beta/organization?`$select=id,displayName" -ErrorAction Stop
         $orgDetails = $org.value[0]
 
-        Write-Information "Connected to: $($orgDetails.displayName)" -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message "Connected to: $($orgDetails.displayName)" -Style 'Info' -Emoji '🏢') -InformationAction Continue
 
         # Check for Intune service plan
         $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,skuPartNumber,capabilityStatus,servicePlans" -ErrorAction Stop
@@ -102,13 +102,13 @@ function Test-IntunePrerequisites {
         }
 
         if ($notes.Count -gt 0) {
-            Write-Information 'Notes:' -InformationAction Continue
+            Write-Information (Format-HydrationDisplayMessage -Message 'Notes:' -Style 'Section' -Emoji '📝') -InformationAction Continue
             foreach ($note in $notes) {
-                Write-Information "  - $note" -InformationAction Continue
+                Write-Information (Format-HydrationDisplayMessage -Message $note -Style 'Info' -Emoji '•' -Indent 2) -InformationAction Continue
 
                 if ($note -eq 'Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:') {
                     foreach ($policyName in $riskBasedPolicyNames) {
-                        Write-Information "    - '$policyName'" -InformationAction Continue
+                        Write-Information (Format-HydrationDisplayMessage -Message "'$policyName'" -Style 'Muted' -Emoji '↳' -Indent 4) -InformationAction Continue
                     }
                 }
             }
@@ -131,7 +131,7 @@ function Test-IntunePrerequisites {
             $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
-        Write-Information 'Pre-flight checks passed' -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message 'Pre-flight checks passed' -Style 'Success' -Emoji '✅') -InformationAction Continue
         return $true
     } catch {
         if ($_.Exception.Message -match "Prerequisite checks failed") {
@@ -146,3 +146,4 @@ function Test-IntunePrerequisites {
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
+

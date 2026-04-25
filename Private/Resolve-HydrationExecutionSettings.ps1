@@ -1,4 +1,4 @@
-function Resolve-HydrationExecutionSettings {
+﻿function Resolve-HydrationExecutionSettings {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -91,7 +91,7 @@ function Resolve-HydrationExecutionSettings {
 
     if ($ParameterSetName -eq 'SettingsFile') {
         $settings = Import-HydrationSettings -Path $SettingsPath
-        Write-Information "Loaded settings from: $SettingsPath" -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message "Loaded settings from: $SettingsPath" -Style 'Info' -Emoji '📄') -InformationAction Continue
 
         if (-not $settings.options) {
             $settings['options'] = @{}
@@ -108,7 +108,7 @@ function Resolve-HydrationExecutionSettings {
         return $settings
     }
 
-    Write-Information 'Using parameter-based configuration' -InformationAction Continue
+    Write-Information (Format-HydrationDisplayMessage -Message 'Using parameter-based configuration' -Style 'Info' -Emoji '🧩') -InformationAction Continue
 
     $importsEnabled = @{
         dynamicGroups         = $All.IsPresent -or $DynamicGroups.IsPresent
@@ -164,3 +164,4 @@ function Resolve-HydrationExecutionSettings {
         platforms      = if ($Platform) { $Platform } else { @('All') }
     }
 }
+

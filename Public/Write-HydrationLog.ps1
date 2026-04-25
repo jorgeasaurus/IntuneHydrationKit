@@ -1,4 +1,4 @@
-function Write-HydrationLog {
+﻿function Write-HydrationLog {
     <#
     .SYNOPSIS
         Writes a log entry to the console and log file
@@ -33,15 +33,14 @@ function Write-HydrationLog {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
 
-    # Console output (friendly)
-    $icons = @{
-        'Info'    = '[i]'
-        'Warning' = '[!]'
-        'Error'   = '[x]'
-        'Debug'   = '[~]'
+    $styleByLevel = @{
+        'Info'    = 'Info'
+        'Warning' = 'Warning'
+        'Error'   = 'Error'
+        'Debug'   = 'Debug'
     }
 
-    $consoleMessage = "$($icons[$Level]) $Message"
+    $consoleMessage = $Message
 
     if ($Level -eq 'Debug' -and -not $script:VerboseLogging) {
         # Suppress debug unless verbose enabled
@@ -50,14 +49,15 @@ function Write-HydrationLog {
 
     if ($consoleMessage) {
         $informationMessages = @()
-        if ($Message -match '^Step \d+:') {
+        if ($Message -match '^Step \d+[a-z]?:') {
             $informationMessages += ''
-            $informationMessages += "▶ $Message"
+            $informationMessages += Format-HydrationDisplayMessage -Message $Message -Style 'Step'
         } elseif ($Message -match '^===') {
+            $bannerMessage = $Message.Trim('=', ' ')
             $informationMessages += ''
-            $informationMessages += $Message
+            $informationMessages += Format-HydrationDisplayMessage -Message $bannerMessage -Style 'Section' -Emoji '✨'
         } else {
-            $informationMessages += "  $consoleMessage"
+            $informationMessages += Format-HydrationDisplayMessage -Message $consoleMessage -Style $styleByLevel[$Level] -Indent 2
         }
 
         foreach ($informationMessage in $informationMessages) {
@@ -74,3 +74,4 @@ function Write-HydrationLog {
         }
     }
 }
+

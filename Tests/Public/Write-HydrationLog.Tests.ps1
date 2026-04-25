@@ -1,7 +1,15 @@
-#Requires -Modules Pester
+﻿#Requires -Modules Pester
 
 BeforeAll {
+    . $PSScriptRoot/../../Private/Format-HydrationDisplayMessage.ps1
     . $PSScriptRoot/../../Public/Write-HydrationLog.ps1
+
+    function Remove-AnsiFormatting {
+        param([string]$Text)
+
+        $escapePattern = [regex]::Escape([string][char]27) + '\[[0-9;]*m'
+        return ($Text -replace $escapePattern, '')
+    }
 }
 
 Describe 'Write-HydrationLog' {
@@ -16,7 +24,7 @@ Describe 'Write-HydrationLog' {
         Write-HydrationLog -Message 'Importing policies' -Level Info
 
         Should -Invoke Write-Information -Exactly 1 -ParameterFilter {
-            $MessageData -eq '  [i] Importing policies'
+            (Remove-AnsiFormatting -Text $MessageData) -eq '  ℹ️ Importing policies'
         }
     }
 
@@ -28,3 +36,4 @@ Describe 'Write-HydrationLog' {
         Should -Invoke Write-Information -Exactly 0
     }
 }
+

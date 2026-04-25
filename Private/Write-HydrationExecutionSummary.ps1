@@ -1,4 +1,4 @@
-function Write-HydrationExecutionSummary {
+﻿function Write-HydrationExecutionSummary {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -202,16 +202,15 @@ function Write-HydrationExecutionSummary {
 
     $summaryLines = @(
         ''
-        '---------------- Summary ----------------'
-        $summaryStatusLine
-        "Elapsed: $elapsedTimeDisplay"
-        "Reports: $reportPath"
+        (Format-HydrationDisplayMessage -Message 'Hydration Summary' -Style 'Section' -Emoji '📊')
+        (Format-HydrationDisplayMessage -Message $summaryStatusLine -Style $(if ($WhatIfEnabled) { 'Info' } else { 'Success' }) -Emoji $(if ($WhatIfEnabled) { '🧪' } else { '✅' }))
+        (Format-HydrationDisplayMessage -Message "Elapsed: $elapsedTimeDisplay" -Style 'Info' -Emoji '⏱️')
+        (Format-HydrationDisplayMessage -Message "Reports: $reportPath" -Style 'Info' -Emoji '📝')
     )
 
     if ($jsonReportPath) {
-        $summaryLines += "JSON:    $jsonReportPath"
+        $summaryLines += Format-HydrationDisplayMessage -Message "JSON:    $jsonReportPath" -Style 'Info' -Emoji '🧾'
     }
-    $summaryLines += '----------------------------------------'
 
     foreach ($summaryLine in $summaryLines) {
         Write-Information $summaryLine -InformationAction Continue
@@ -245,3 +244,4 @@ function Write-HydrationExecutionSummary {
         ElapsedTimeDisplay = $elapsedTimeDisplay
     }
 }
+

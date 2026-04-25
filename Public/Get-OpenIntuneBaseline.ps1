@@ -1,4 +1,4 @@
-function Get-OpenIntuneBaseline {
+﻿function Get-OpenIntuneBaseline {
     <#
     .SYNOPSIS
         Downloads OpenIntuneBaseline repository from GitHub
@@ -37,7 +37,7 @@ function Get-OpenIntuneBaseline {
     }
 
     try {
-        Write-Information "Downloading OpenIntuneBaseline from $zipUrl" -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message "Downloading OpenIntuneBaseline from $zipUrl" -Style 'Info' -Emoji '📥') -InformationAction Continue
 
         # Download the repository
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
@@ -62,7 +62,7 @@ function Get-OpenIntuneBaseline {
         # Clean up zip
         Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
 
-        Write-Information "OpenIntuneBaseline downloaded to: $DestinationPath" -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message "OpenIntuneBaseline downloaded to: $DestinationPath" -Style 'Success' -Emoji '✅') -InformationAction Continue
 
         return $DestinationPath
     } catch {
@@ -75,3 +75,4 @@ function Get-OpenIntuneBaseline {
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
+

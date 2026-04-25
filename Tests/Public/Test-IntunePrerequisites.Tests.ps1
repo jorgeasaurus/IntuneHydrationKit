@@ -1,4 +1,4 @@
-#Requires -Modules Pester
+﻿#Requires -Modules Pester
 
 BeforeAll {
     # Import the module
@@ -497,12 +497,12 @@ Describe 'Test-IntunePrerequisites' {
             Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
 
             $messageData = $messages | ForEach-Object { $_.MessageData }
-            $messageData | Should -Contain 'Notes:'
-            $messageData | Should -Contain '  - Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
-            $messageData | Should -Contain "    - 'Require multifactor authentication for risky sign-ins'"
-            $messageData | Should -Contain "    - 'Require password change for high-risk users'"
-            $messageData | Should -Contain "    - 'Block high risk agent identities'"
-            $messageData | Should -Contain "    - 'Block access to Office365 apps for users with insider risk'"
+            $messageData | Should -Contain '📝 Notes:'
+            $messageData | Should -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $messageData | Should -Contain "    ↳ 'Require multifactor authentication for risky sign-ins'"
+            $messageData | Should -Contain "    ↳ 'Require password change for high-risk users'"
+            $messageData | Should -Contain "    ↳ 'Block high risk agent identities'"
+            $messageData | Should -Contain "    ↳ 'Block access to Office365 apps for users with insider risk'"
         }
     }
 
@@ -522,3 +522,4 @@ Describe 'Test-IntunePrerequisites' {
         }
     }
 }
+

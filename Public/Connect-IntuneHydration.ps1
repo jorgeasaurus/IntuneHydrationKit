@@ -1,4 +1,4 @@
-function Connect-IntuneHydration {
+﻿function Connect-IntuneHydration {
     <#
     .SYNOPSIS
         Connects to Microsoft Graph with required scopes for Intune hydration
@@ -46,7 +46,7 @@ function Connect-IntuneHydration {
 
     $scopes = Get-HydrationGraphScopes
     $environmentInfo = Get-HydrationGraphEnvironmentInfo -Environment $Environment
-    Write-Information "Connecting to $Environment environment ($($environmentInfo.Endpoint))" -InformationAction Continue
+    Write-Information (Format-HydrationDisplayMessage -Message "Connecting to $Environment environment ($($environmentInfo.Endpoint))" -Style 'Info' -Emoji '🔐') -InformationAction Continue
 
     try {
         $connectParams = @{
@@ -68,7 +68,7 @@ function Connect-IntuneHydration {
 
         $null = Set-HydrationConnectionState -TenantId $TenantId -Environment $Environment
 
-        Write-Information "Successfully connected to tenant: $(Get-ObfuscatedTenantId -TenantId $TenantId) ($Environment)" -InformationAction Continue
+        Write-Information (Format-HydrationDisplayMessage -Message "Successfully connected to tenant: $(Get-ObfuscatedTenantId -TenantId $TenantId) ($Environment)" -Style 'Success' -Emoji '✅') -InformationAction Continue
     } catch {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
             [System.Exception]::new("Failed to connect to Microsoft Graph: $($_.Exception.Message)", $_.Exception),
@@ -79,3 +79,4 @@ function Connect-IntuneHydration {
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
+

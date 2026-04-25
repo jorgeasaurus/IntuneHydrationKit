@@ -1,7 +1,15 @@
-#Requires -Modules Pester
+﻿#Requires -Modules Pester
 
 BeforeAll {
+    . $PSScriptRoot/../../Private/Format-HydrationDisplayMessage.ps1
     . $PSScriptRoot/../../Private/Write-HydrationExecutionSummary.ps1
+
+    function Remove-AnsiFormatting {
+        param([string]$Text)
+
+        $escapePattern = [regex]::Escape([string][char]27) + '\[[0-9;]*m'
+        return ($Text -replace $escapePattern, '')
+    }
 }
 
 Describe 'Write-HydrationExecutionSummary' {
@@ -38,13 +46,13 @@ Describe 'Write-HydrationExecutionSummary' {
         $result.ReportPath | Should -Be $expectedMarkdownPath
         $result.JsonReportPath | Should -Be $expectedJsonPath
         $result.ElapsedTimeDisplay | Should -Be '01:02:03'
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '---------------- Summary ----------------' } -Times 1
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq 'Would Create: 5 | Would Update: 6 | Would Delete: 7 | Skipped: 4 | Failed: 0' } -Times 1
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq 'Elapsed: 01:02:03' } -Times 1
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq "Reports: $expectedMarkdownPath" } -Times 1
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq "JSON:    $expectedJsonPath" } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq '📊 Hydration Summary' } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq '🧪 Would Create: 5 | Would Update: 6 | Would Delete: 7 | Skipped: 4 | Failed: 0' } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq '⏱️ Elapsed: 01:02:03' } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq "📝 Reports: $expectedMarkdownPath" } -Times 1
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq "🧾 JSON:    $expectedJsonPath" } -Times 1
         Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '' } -Times 1
-        Should -Invoke Write-Information -ParameterFilter { $MessageData -eq '----------------------------------------' } -Times 1
-        Should -Invoke Write-Information -Exactly 7
+        Should -Invoke Write-Information -Exactly 6
     }
 }
+
