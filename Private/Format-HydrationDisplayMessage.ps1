@@ -78,7 +78,11 @@
         return $plainMessage
     }
 
-    if (Get-Module -Name 'Pester') {
+    if ($null -eq $script:IsPesterLoadedForHydrationDisplayFormatting) {
+        $script:IsPesterLoadedForHydrationDisplayFormatting = [bool](Get-Module -Name 'Pester')
+    }
+
+    if ($script:IsPesterLoadedForHydrationDisplayFormatting) {
         return $plainMessage
     }
 

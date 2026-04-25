@@ -105,7 +105,26 @@ function Import-CISBaseline {
 
     # Remove existing CIS baseline policies if requested
     if ($RemoveExisting) {
+        if ([string]::IsNullOrWhiteSpace($BaselinePath) -or -not (Test-Path -Path $BaselinePath)) {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("A resolvable CIS baseline template path is required when using -RemoveExisting. Unable to load templates from: $BaselinePath"),
+                'BaselinePathRequiredForDelete',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $BaselinePath
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
+        }
+
         $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -NameProperty 'name' -Recurse
+        if (-not $knownTemplateNames -or $knownTemplateNames.Count -eq 0) {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new("Unable to load CIS baseline template names from '$BaselinePath'. Deletion is blocked to avoid removing hydration-marked objects without template matching."),
+                'TemplateNamesRequiredForDelete',
+                [System.Management.Automation.ErrorCategory]::InvalidData,
+                $BaselinePath
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
+        }
 
         $deleteEndpoints = @(
             'beta/deviceManagement/configurationPolicies',
@@ -269,7 +288,8 @@ function Import-CISBaseline {
         $policyName = [System.IO.Path]::GetFileNameWithoutExtension($jsonFile.Name)
 
         try {
-            $jsonContent = Get-Content -Path $jsonFile.FullName -Raw
+            $jsonContent = Get-Content -Path $jsonFile.FullName -Raw -Encoding utf8
+            $jsonContent = $jsonContent.TrimStart([char]0xFEFF)
             $policyContent = $jsonContent | ConvertFrom-Json
             $odataType = $policyContent.'@odata.type'
             $odataContext = $policyContent.'@odata.context'

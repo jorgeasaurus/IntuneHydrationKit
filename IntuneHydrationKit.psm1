@@ -43,7 +43,10 @@ if (Test-Path -Path $privatePath) {
             . $file.FullName
             Write-Verbose "Imported private function: $($file.BaseName)"
         } catch {
-            throw "Failed to import private function '$($file.FullName)': $($_.Exception.Message)"
+            throw [System.Exception]::new(
+                "Failed to import private function '$($file.FullName)': $($_.Exception.Message)",
+                $_.Exception
+            )
         }
     }
 }
@@ -57,7 +60,10 @@ if (Test-Path -Path $publicPath) {
             . $file.FullName
             Write-Verbose "Imported public function: $($file.BaseName)"
         } catch {
-            throw "Failed to import public function '$($file.FullName)': $($_.Exception.Message)"
+            throw [System.Exception]::new(
+                "Failed to import public function '$($file.FullName)': $($_.Exception.Message)",
+                $_.Exception
+            )
         }
     }
 }

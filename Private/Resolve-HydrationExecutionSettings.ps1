@@ -125,7 +125,7 @@
     }
 
     if ($All.IsPresent) {
-        Write-Warning "The -All parameter includes CIS Baselines (728+ policies). This will significantly increase the number of imported items and import time."
+        Write-Warning 'The -All parameter includes CIS Baselines. This will significantly increase the number of imported items and import time.'
     }
 
     if (-not ($importsEnabled.Values -contains $true)) {
@@ -164,4 +164,3 @@
         platforms      = if ($Platform) { $Platform } else { @('All') }
     }
 }
-

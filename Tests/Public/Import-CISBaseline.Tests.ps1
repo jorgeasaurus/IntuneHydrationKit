@@ -321,6 +321,29 @@ Describe 'Import-CISBaseline' {
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
         }
 
+        It 'Should throw when delete mode cannot resolve a valid baseline path' {
+            InModuleScope IntuneHydrationKit {
+                $script:HydrationState = @{ TenantId = '00000000-0000-0000-0000-000000000001'; Connected = $true }
+                $script:TemplatesPath = 'TestDrive:\NonExistent'
+                $script:ModuleRoot = 'TestDrive:\NonExistent'
+            }
+
+            Mock Test-Path { return $false } -ModuleName IntuneHydrationKit
+
+            { Import-CISBaseline -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -ErrorAction Stop } | Should -Throw '*A resolvable CIS baseline template path is required when using -RemoveExisting*'
+        }
+
+        It 'Should throw when delete mode cannot load template names' {
+            Mock Get-TemplateDisplayNames {
+                [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation { } -ModuleName IntuneHydrationKit
+
+            { Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false -ErrorAction Stop } | Should -Throw '*Deletion is blocked to avoid removing hydration-marked objects without template matching*'
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
+
         It 'Should return WouldDelete in WhatIf mode' {
             Mock Get-GraphPagedResults {
                 return @(
@@ -409,6 +432,47 @@ Describe 'Import-CISBaseline' {
             $skipped = @($result | Where-Object { $_.Action -eq 'Skipped' })
             $skipped.Count | Should -BeGreaterOrEqual 1
             $skipped[0].Status | Should -BeLike '*Unsupported*'
+        }
+    }
+
+    Context 'UTF-8 BOM template handling' {
+        BeforeAll {
+            $baseDir = Join-Path 'TestDrive:' 'CISUtf8Bom'
+            $catDir = Join-Path $baseDir '1.0 - Test Category'
+            New-Item -Path $catDir -ItemType Directory -Force | Out-Null
+
+            $jsonWithBom = [char]0xFEFF + (@{
+                    '@odata.type' = '#microsoft.graph.deviceManagementConfigurationPolicy'
+                    name          = 'BOM Test Policy'
+                    description   = ''
+                    platforms     = 'windows10'
+                    technologies  = 'mdm'
+                    settings      = @()
+                } | ConvertTo-Json -Compress)
+            Set-Content -Path (Join-Path $catDir 'BomPolicy.json') -Value $jsonWithBom -Encoding utf8BOM
+
+            InModuleScope IntuneHydrationKit {
+                $script:HydrationState = @{ TenantId = '00000000-0000-0000-0000-000000000001'; Connected = $true }
+                $script:ImportPrefix = '[IHD] '
+            }
+
+            Mock Get-GraphPagedResults { return @() } -ModuleName IntuneHydrationKit
+            Mock Copy-DeepObject { param($InputObject) return $InputObject } -ModuleName IntuneHydrationKit
+            Mock Remove-ReadOnlyGraphProperties -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should import templates that begin with a UTF-8 BOM' {
+            Mock Invoke-GraphBatchOperation {
+                param($Items)
+                foreach ($item in $Items) {
+                    [PSCustomObject]@{ Name = $item.Name; Type = 'CISBaselinePolicy'; Action = 'Created'; Status = 'Success' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISUtf8Bom') -TenantId '00000000-0000-0000-0000-000000000001'
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] BOM Test Policy'
         }
     }
 
