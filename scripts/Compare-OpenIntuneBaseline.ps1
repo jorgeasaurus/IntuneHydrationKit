@@ -226,7 +226,7 @@ try {
 
     # Final verdict
     if ($modified.Count -eq 0 -and $onlyUpstream.Count -eq 0 -and $onlyLocal.Count -eq 0) {
-        Write-Host "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
+        Write-Host "  ✓ PARITY CHECK PASSED - local templates match upstream exactly." -ForegroundColor Green
     } else {
         $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
         Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found."

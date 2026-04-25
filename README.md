@@ -35,7 +35,7 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies alongside compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies alongside compliance policies, dynamic groups, and more-turning hours of manual configuration into a single command.
 
 > **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. Baselines are bundled with the module and periodically refreshed only after validation and testing, which prevents unplanned upstream changes from affecting your deployments.
 
@@ -48,11 +48,11 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 ### What Gets Created
 
 | Category | Count | Description |
-|----------|-------|-------------|
+| ---------- | ------- | ------------- |
 | Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
-| Security Baselines | 94 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) — bundled, no download required |
+| Security Baselines | 94 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
 | Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
@@ -329,10 +329,10 @@ Invoke-IntuneHydration -SettingsPath ./settings.json
 
 The kit supports two authentication methods:
 
-| Method | Use Case | Requirements |
-|--------|----------|--------------|
-| Interactive | Manual runs, testing | User with required permissions |
-| Client Secret | Automation, CI/CD | App registration with client secret |
+| Method        | Use Case             | Requirements                        |
+| ------------- | -------------------- | ----------------------------------- |
+| Interactive   | Manual runs, testing | User with required permissions      |
+| Client Secret | Automation, CI/CD    | App registration with client secret |
 
 **Interactive (recommended for testing):**
 
@@ -363,7 +363,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 **Supported Cloud Environments:**
 
 | Environment | Description |
-|-------------|-------------|
+| ------------- | ------------- |
 | `Global` | Commercial/Public cloud (default) |
 | `USGov` | US Government (GCC High) |
 | `USGovDoD` | US Government (DoD) |
@@ -373,7 +373,7 @@ Uses app registration credentials. Best for unattended/automated runs.
 #### Operation Modes
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `dryRun` | Preview changes without applying (same as `-WhatIf`) |
 | `create` | Create new configurations |
 | `delete` | Delete existing kit-created configurations |
@@ -430,6 +430,7 @@ Filter imports by platform to only import resources for specific operating syste
 **Default:** `["All"]` (imports resources for all platforms)
 
 **Affected resources:**
+
 - OpenIntuneBaseline policies
 - Compliance policies
 - App Protection policies
@@ -438,6 +439,7 @@ Filter imports by platform to only import resources for specific operating syste
 - Enrollment Profiles
 
 **Cross-platform resources (not filtered):**
+
 - Dynamic Groups
 - Static Groups
 - Conditional Access policies
@@ -473,14 +475,14 @@ These modes cannot be combined - choose one or the other.
 ### Tenant Parameters (Parameter Mode Only)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-TenantId` | String | Azure AD tenant ID (GUID). Required for parameter mode. |
 | `-TenantName` | String | Tenant name for display purposes |
 
 ### Authentication Parameters (Parameter Mode Only)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-Interactive` | Switch | Use interactive (browser-based) authentication |
 | `-ClientId` | String | Application ID for service principal auth |
 | `-ClientSecret` | SecureString | Client secret for service principal auth |
@@ -489,7 +491,7 @@ These modes cannot be combined - choose one or the other.
 ### Options Parameters (Parameter Mode Only)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-Create` | Switch | Enable creation of configurations |
 | `-Delete` | Switch | Enable deletion of kit-created objects |
 | `-Force` | Switch | Skip confirmation when running in delete mode |
@@ -499,7 +501,7 @@ These modes cannot be combined - choose one or the other.
 ### Target Parameters (Parameter Mode Only)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-All` | Switch | Enable all targets |
 | `-OpenIntuneBaseline` | Switch | Process OpenIntuneBaseline policies |
 | `-ComplianceTemplates` | Switch | Process compliance policies |
@@ -515,7 +517,7 @@ These modes cannot be combined - choose one or the other.
 ### Platform Filtering Parameter
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-Platform` | String[] | Filter imports by platform: `Windows`, `macOS`, `iOS`, `Android`, `Linux`, `All` (default: All) |
 
 Affects: OpenIntuneBaseline, ComplianceTemplates, AppProtection, DeviceFilters, MobileApps, EnrollmentProfiles. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
@@ -525,14 +527,14 @@ There are no separate baseline source or download parameters. OpenIntuneBaseline
 ### Reporting Parameters (Parameter Mode Only)
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-ReportOutputPath` | String | Output directory for reports |
 | `-ReportFormats` | String[] | Report formats: `markdown`, `json` |
 
 ### Settings File Mode Parameter
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+| ----------- | ------ | ------------- |
 | `-SettingsPath` | String | Path to settings JSON file. Required for settings file mode. |
 | `-WhatIf` | Switch | Preview mode (same as `dryRun: true` in settings) |
 
@@ -607,7 +609,7 @@ JSON:    /tmp/IntuneHydrationKit/Reports/Hydration-Summary.json
 Detailed logs are written to an OS-appropriate temp directory:
 
 | OS | Log Path |
-|----|----------|
+| ---- | ---------- |
 | Windows | `$env:TEMP\IntuneHydrationKit\Logs\` |
 | macOS | `/var/folders/.../IntuneHydrationKit/Logs/` |
 | Linux | `/tmp/IntuneHydrationKit/Logs/` |
@@ -621,7 +623,7 @@ hydration-20241127-143052.log
 After each run, reports are generated in the OS temp directory (same location as logs):
 
 | OS | Reports Path |
-|----|--------------|
+| ---- | -------------- |
 | Windows | `$env:TEMP\IntuneHydrationKit\Reports\` |
 | macOS | `/var/folders/.../IntuneHydrationKit/Reports/` |
 | Linux | `/tmp/IntuneHydrationKit/Reports/` |

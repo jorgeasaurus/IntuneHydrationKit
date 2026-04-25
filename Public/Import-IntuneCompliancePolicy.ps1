@@ -46,7 +46,7 @@ function Import-IntuneCompliancePolicy {
     # Prefetch existing compliance policies (paged) from both classic and linux endpoints
     # Store full policy objects so we can check descriptions later
     $existingPolicies = @{}
-    # Each endpoint has different property names — use endpoint-specific $select
+    # Each endpoint has different property names - use endpoint-specific $select
     $endpointsToList = @(
         @{ Uri = "beta/deviceManagement/deviceCompliancePolicies"; Select = "id,displayName,description" },
         @{ Uri = "beta/deviceManagement/compliancePolicies"; Select = "id,name,description" }
@@ -187,7 +187,7 @@ function Import-IntuneCompliancePolicy {
                     $null = Invoke-MgGraphRequest -Method GET -Uri $verifyUri -ErrorAction Stop
                 } catch {
                     if ($_.Exception.Message -match '404|NotFound') {
-                        Write-Verbose "Policy '$matchedName' returned 404 on verify — stale data, will create"
+                        Write-Verbose "Policy '$matchedName' returned 404 on verify - stale data, will create"
                         $alreadyExists = $false
                     }
                 }

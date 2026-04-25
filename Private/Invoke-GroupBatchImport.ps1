@@ -266,7 +266,7 @@ function Invoke-GroupBatchImport {
 
     #endregion
 
-    # Apply import prefix — create copies to avoid mutating caller's objects
+    # Apply import prefix - create copies to avoid mutating caller's objects
     $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
     $prefixedDefinitions = @()
     foreach ($gd in $GroupDefinitions) {
@@ -294,7 +294,7 @@ function Invoke-GroupBatchImport {
         $batchRequests = @()
         for ($i = 0; $i -lt $currentBatch.Count; $i++) {
             $groupDef = $currentBatch[$i]
-            # Escape single quotes for OData filter — both prefixed and original (legacy) names
+            # Escape single quotes for OData filter - both prefixed and original (legacy) names
             $safePrefixedName = $groupDef.displayName -replace "'", "''"
             $safeOriginalName = $groupDef._OriginalDisplayName -replace "'", "''"
 
@@ -334,7 +334,7 @@ function Invoke-GroupBatchImport {
                 }
 
                 if ($resp.status -eq 200 -and $resp.body.value.Count -gt 0) {
-                    # Group exists — prefer the prefixed name match when multiple results
+                    # Group exists - prefer the prefixed name match when multiple results
                     $matchingGroup = $resp.body.value | Where-Object { $_.displayName -eq $groupDef.displayName } | Select-Object -First 1
                     if (-not $matchingGroup) {
                         $matchingGroup = $resp.body.value[0]
