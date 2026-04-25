@@ -110,6 +110,7 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
 - **Platform Filtering** - Import resources for specific platforms only (e.g., `-Platform Windows,macOS`)
 - **Detailed Logging** - Full audit trail of all operations
+- **Elapsed Time Tracking** - Final summary output and reports include total hydration time
 - **Summary Reports** - Markdown and JSON reports of all changes
 
 ---
@@ -604,6 +605,17 @@ The script provides real-time progress with colored status indicators:
 - `Skipped:` - Object already exists
 - `Deleted:` - Object removed
 
+At the end of each run, the final summary also includes the total elapsed runtime:
+
+```plaintext
+---------------- Summary ----------------
+Created: 12 | Updated: 3 | Deleted: 0 | Skipped: 8 | Failed: 0
+Elapsed: 00:04:27
+Reports: /tmp/IntuneHydrationKit/Reports/Hydration-Summary.md
+JSON:    /tmp/IntuneHydrationKit/Reports/Hydration-Summary.json
+----------------------------------------
+```
+
 ### Log Files
 
 Detailed logs are written to an OS-appropriate temp directory:
@@ -630,6 +642,8 @@ After each run, reports are generated in the OS temp directory (same location as
 
 - `Hydration-Summary.md` - Human-readable markdown report
 - `Hydration-Summary.json` - Machine-readable JSON for automation
+
+Both report formats include the run start time, completion time, and total elapsed time.
 
 You can specify a custom output path using the `-ReportOutputPath` parameter or `reporting.outputPath` in settings.
 
