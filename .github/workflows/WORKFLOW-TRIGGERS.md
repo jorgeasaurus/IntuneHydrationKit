@@ -44,8 +44,8 @@ git checkout main
 git pull origin main
 
 # Create and push a version tag
-git tag v0.3.1
-git push origin v0.3.1
+git tag v0.7.0
+git push origin v0.7.0
 ```
 
 Annotated tag with a message:

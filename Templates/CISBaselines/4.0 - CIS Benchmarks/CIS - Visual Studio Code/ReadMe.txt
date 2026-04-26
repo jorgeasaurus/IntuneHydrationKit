@@ -1,1 +1,1 @@
-If used from Microsoft Intune, upload first the ADMX and ADML files
+If using Microsoft Intune, upload the ADMX and ADML files first.
