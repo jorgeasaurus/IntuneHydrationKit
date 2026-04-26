@@ -30,7 +30,7 @@ Describe 'Test-IntunePrerequisites' {
         BeforeAll {
             # Mock Graph API calls
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{
@@ -127,7 +127,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect INTUNE_A license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -149,7 +149,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect INTUNE_EDU license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -171,7 +171,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect EMSPREMIUM license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -193,7 +193,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should throw when no Intune license is found' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -215,7 +215,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should not count licenses with pending provisioning status' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -239,7 +239,7 @@ Describe 'Test-IntunePrerequisites' {
     Context 'Permission Scope Validation' {
         BeforeAll {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -321,7 +321,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect AAD_PREMIUM_P2 license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -350,7 +350,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect Microsoft 365 E5 license (SPE_E5)' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -379,7 +379,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect Microsoft 365 Education A5 license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -408,7 +408,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should detect Identity & Threat Protection license' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -437,7 +437,7 @@ Describe 'Test-IntunePrerequisites' {
 
         It 'Should skip disabled SKUs when checking for P2 licenses' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -469,13 +469,13 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            # Should not throw but should warn about missing P2
+            # Should not throw when Premium P2 is absent because the missing license is non-blocking
             { Test-IntunePrerequisites -WarningAction SilentlyContinue } | Should -Not -Throw
         }
 
-        It 'Should warn when Premium P2 is not detected' {
+        It 'Should emit a note when Premium P2 is not detected' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Uri)
 
                 if ($Uri -like '*organization*') {
                     return @{ value = @(@{ displayName = 'Test' }) }
@@ -493,14 +493,16 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            # Capture warnings
-            $warnings = @()
-            Test-IntunePrerequisites -WarningVariable warnings -WarningAction SilentlyContinue
+            $messages = @()
+            Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
 
-            # Check that the warning was generated (first warning message)
-            $warnings[0] | Should -BeLike '*No Azure AD Premium P2 license found*'
-            # Verify the second warning about affected policies was also generated
-            $warnings[1] | Should -BeLike '*Affected policies*'
+            $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Contain '📝 Notes:'
+            $messageData | Should -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $messageData | Should -Contain "    ↳ 'Require multifactor authentication for risky sign-ins'"
+            $messageData | Should -Contain "    ↳ 'Require password change for high-risk users'"
+            $messageData | Should -Contain "    ↳ 'Block high risk agent identities'"
+            $messageData | Should -Contain "    ↳ 'Block access to Office365 apps for users with insider risk'"
         }
     }
 
@@ -520,3 +522,4 @@ Describe 'Test-IntunePrerequisites' {
         }
     }
 }
+

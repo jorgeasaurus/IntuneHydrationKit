@@ -117,6 +117,28 @@ Describe 'Import-IntuneBaseline' {
             $resultTypes | Should -Not -Contain 'MACOS/IntuneManagement'
             $resultTypes | Should -Not -Contain 'BYOD/IntuneManagement'
         }
+
+        It 'Should log cache and preparation progress during import' {
+            Mock Invoke-GraphBatchOperation { return @() } -ModuleName IntuneHydrationKit
+
+            Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'BaselineTemplates') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001' | Out-Null
+
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Discovered * OpenIntuneBaseline templates across * folders'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Caching existing policies (*): *'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -eq 'Caching complete. Preparing OpenIntuneBaseline payloads...'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Preparing OpenIntuneBaseline folder (*): */* (* templates)'
+            }
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Message -like 'Prepared * OpenIntuneBaseline payloads. Starting batch import...'
+            }
+        }
     }
 
     Context 'WhatIf Support' {
@@ -146,6 +168,24 @@ Describe 'Import-IntuneBaseline' {
 
             $result | Should -Not -BeNullOrEmpty
             $result[0].Action | Should -Be 'WouldCreate'
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
+
+        It 'Should skip existing policies in WhatIf mode after checking the cache' {
+            Mock Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+            Mock Get-GraphPagedResults {
+                param($ProcessItems)
+                if ($ProcessItems) {
+                    & $ProcessItems @(@{ displayName = '[IHD] WhatIf Test Policy'; id = 'existing-id' })
+                }
+                return @()
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'WhatIfBaseline') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
+
+            $result | Should -HaveCount 1
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Status | Should -Be 'Already exists'
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
         }
     }
@@ -212,6 +252,55 @@ Describe 'Import-IntuneBaseline' {
 
             $result | Should -BeNullOrEmpty
         }
+
+        It 'Should delete prefixed policies when list response omits description but full GET has marker' {
+            Mock Get-GraphPagedResults {
+                return @(
+                    @{ id = 'policy-1'; displayName = '[IHD] Test Policy' }
+                )
+            } -ModuleName IntuneHydrationKit
+
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit -ParameterFilter {
+                [string]::IsNullOrWhiteSpace($Description) -and [string]::IsNullOrWhiteSpace($Notes)
+            }
+
+            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Description -like '*Imported by Intune Hydration Kit*'
+            }
+
+            Mock Invoke-MgGraphRequest {
+                return @{ id = 'policy-1'; displayName = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
+            } -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceConfigurations/policy-1'
+            }
+
+            Mock Invoke-GraphBatchOperation {
+                return @([PSCustomObject]@{ Name = '[IHD] Test Policy'; Type = 'BaselinePolicy'; Action = 'Deleted'; Status = 'Success' })
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'DeleteBaseline') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
+
+            $result | Should -Not -BeNullOrEmpty
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceConfigurations/policy-1'
+            }
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should not delete hydration-tagged policies that are not in OpenIntuneBaseline templates' {
+            Mock Get-GraphPagedResults {
+                return @(
+                    @{ id = 'cis-policy-1'; displayName = '[IHD] CIS Windows Policy'; description = 'Imported by Intune Hydration Kit' }
+                )
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation { @() } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'DeleteBaseline') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
+
+            $result | Should -BeNullOrEmpty
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
     }
 
     Context 'IntuneManagement Folder Routing' {
@@ -244,7 +333,7 @@ Describe 'Import-IntuneBaseline' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'RoutingBaseline') -TenantId '00000000-0000-0000-0000-000000000001'
+            Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'RoutingBaseline') -TenantId '00000000-0000-0000-0000-000000000001'
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Items[0].Url -like '*/deviceConfigurations*'
@@ -293,7 +382,7 @@ Describe 'Import-IntuneBaseline' {
 
         It 'Should skip policies that already exist in tenant' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(@{ displayName = '[IHD] Existing Policy'; id = 'existing-id' })
                 }

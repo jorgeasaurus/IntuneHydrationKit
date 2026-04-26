@@ -86,10 +86,21 @@ function Get-TemplateDisplayNames {
                 }
             }
         } else {
-            $name = $content.$NameProperty
-            if (-not $name -and $NameProperty -eq 'displayName') {
-                $name = $content.name
+            $candidateProperties = @($NameProperty)
+            if ($NameProperty -eq 'displayName') {
+                $candidateProperties += 'name'
+            } elseif ($NameProperty -eq 'name') {
+                $candidateProperties += 'displayName'
             }
+
+            $name = $null
+            foreach ($propertyName in $candidateProperties) {
+                $name = $content.$propertyName
+                if ($name) {
+                    break
+                }
+            }
+
             if ($name) {
                 [void]$names.Add($name)
             }

@@ -75,9 +75,6 @@ $excludedPatterns = @(
     'Scripts'
 )
 
-# File extensions to compare (only JSON policy files)
-$includeExtension = '.json'
-
 # --- Download upstream ---
 $repoName = ($UpstreamRepoUrl -split '/')[-1]
 $repoOwner = ($UpstreamRepoUrl -split '/')[-2]
@@ -212,9 +209,9 @@ try {
     }
 
     if ($onlyUpstream.Count -gt 0) {
-        Write-Host "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):" -ForegroundColor Red
+        Write-Host "  ✗ MISSING FROM LOCAL (new in upstream, consider adding):"
         foreach ($file in ($onlyUpstream | Sort-Object)) {
-            Write-Host "    + $file" -ForegroundColor Red
+            Write-Host "    + $file"
         }
         Write-Host ""
     }
@@ -229,10 +226,10 @@ try {
 
     # Final verdict
     if ($modified.Count -eq 0 -and $onlyUpstream.Count -eq 0 -and $onlyLocal.Count -eq 0) {
-        Write-Host "  ✓ PARITY CHECK PASSED — local templates match upstream exactly." -ForegroundColor Green
+        Write-Host "  ✓ PARITY CHECK PASSED - local templates match upstream exactly." -ForegroundColor Green
     } else {
         $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
-        Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found." -ForegroundColor Red
+        Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found."
         Write-Host "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
     }
     Write-Host ""

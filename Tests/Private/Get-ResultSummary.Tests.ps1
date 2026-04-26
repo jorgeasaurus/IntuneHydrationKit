@@ -40,23 +40,23 @@ Describe 'Get-ResultSummary' {
                 [PSCustomObject]@{ Action = 'WouldCreate' }
                 [PSCustomObject]@{ Action = 'WouldDelete' }
             )
-            $summary = Get-ResultSummary -Results $results
+            $script:summary = Get-ResultSummary -Results $results
         }
 
         It 'Should count Created correctly' {
-            $summary.Created | Should -Be 2
+            $script:summary.Created | Should -Be 2
         }
 
         It 'Should count Updated correctly' {
-            $summary.Updated | Should -Be 1
+            $script:summary.Updated | Should -Be 1
         }
 
         It 'Should count Deleted correctly' {
-            $summary.Deleted | Should -Be 1
+            $script:summary.Deleted | Should -Be 1
         }
 
         It 'Should count Skipped correctly' {
-            $summary.Skipped | Should -Be 3
+            $script:summary.Skipped | Should -Be 3
         }
 
         It 'Should count WouldCreate correctly' {

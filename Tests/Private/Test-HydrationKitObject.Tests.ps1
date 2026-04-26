@@ -100,4 +100,18 @@ Describe 'Test-HydrationKitObject' {
             $result | Should -BeTrue
         }
     }
+
+    Context 'Marker source consistency' {
+        It 'Should detect both primary and legacy markers from the shared helper' {
+            & (Get-Module IntuneHydrationKit) {
+                $markers = Get-HydrationMarkerSet
+                Test-HydrationKitObject -Description $markers.Primary
+            } | Should -BeTrue
+
+            & (Get-Module IntuneHydrationKit) {
+                $markers = Get-HydrationMarkerSet
+                Test-HydrationKitObject -Description $markers.Legacy
+            } | Should -BeTrue
+        }
+    }
 }

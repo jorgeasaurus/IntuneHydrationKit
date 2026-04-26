@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-22
+
+### Fixed
+
+- **Minor bug fixes and enhancements**: Included smaller reliability fixes and import-path improvements across CIS and related baseline workflows.
+
+### Changed
+
+- **CIS baseline coverage**: Added a substantial amount of new bundled CIS baseline templates across supported policy categories.
+- **General maintainability**: Included additional workflow and code-quality enhancements throughout the hydration process.
+
 ## [0.6.1] - 2026-04-16
 
 ### Changed

@@ -33,21 +33,14 @@ function Write-HydrationLog {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
 
-    # Console output (friendly)
-    $icons = @{
-        'Info'    = '[i]'
-        'Warning' = '[!]'
-        'Error'   = '[x]'
-        'Debug'   = '[~]'
-    }
-    $colors = @{
-        'Info'    = 'Cyan'
-        'Warning' = 'Yellow'
-        'Error'   = 'Red'
-        'Debug'   = 'Gray'
+    $styleByLevel = @{
+        'Info'    = 'Info'
+        'Warning' = 'Warning'
+        'Error'   = 'Error'
+        'Debug'   = 'Debug'
     }
 
-    $consoleMessage = "$($icons[$Level]) $Message"
+    $consoleMessage = $Message
 
     if ($Level -eq 'Debug' -and -not $script:VerboseLogging) {
         # Suppress debug unless verbose enabled
@@ -55,14 +48,20 @@ function Write-HydrationLog {
     }
 
     if ($consoleMessage) {
-        if ($Message -match '^Step \d+:') {
-            Write-Host ""
-            Write-Host "▶ $Message" -ForegroundColor $colors[$Level]
+        $informationMessages = @()
+        if ($Message -match '^Step \d+[a-z]?:') {
+            $informationMessages += ''
+            $informationMessages += Format-HydrationDisplayMessage -Message $Message -Style 'Step'
         } elseif ($Message -match '^===') {
-            Write-Host ""
-            Write-Host $Message -ForegroundColor $colors[$Level]
+            $bannerMessage = $Message.Trim('=', ' ')
+            $informationMessages += ''
+            $informationMessages += Format-HydrationDisplayMessage -Message $bannerMessage -Style 'Section' -Emoji '✨'
         } else {
-            Write-Host "  $consoleMessage" -ForegroundColor $colors[$Level]
+            $informationMessages += Format-HydrationDisplayMessage -Message $consoleMessage -Style $styleByLevel[$Level] -Indent 2
+        }
+
+        foreach ($informationMessage in $informationMessages) {
+            Write-Information $informationMessage -InformationAction Continue
         }
     }
 
@@ -75,3 +74,4 @@ function Write-HydrationLog {
         }
     }
 }
+

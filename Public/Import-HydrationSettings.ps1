@@ -20,23 +20,16 @@ function Import-HydrationSettings {
     )
 
     try {
+        $schema = Get-HydrationSettingsSchema
         $content = Get-Content -Path $Path -Raw -Encoding utf8
         $settings = $content | ConvertFrom-Json -AsHashtable
-
-        # Validate required fields only when loading from file
-        if (-not $settings.tenant.tenantId) {
-            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                [System.Exception]::new("Missing required field: tenant.tenantId"),
-                'MissingTenantId',
-                [System.Management.Automation.ErrorCategory]::InvalidData,
-                $Path
-            )
-            $PSCmdlet.ThrowTerminatingError($errorRecord)
-        }
+        $settings = Resolve-HydrationSettingsSchema -Settings $settings -Schema $schema
 
         Write-HydrationLog -Message "Settings loaded from: $Path" -Level Info
         return $settings
     } catch [System.Management.Automation.PipelineStoppedException] {
+        throw
+    } catch [System.OperationCanceledException] {
         throw
     } catch {
         Write-HydrationLog -Message "Failed to load settings: $_" -Level Error

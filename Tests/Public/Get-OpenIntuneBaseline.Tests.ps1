@@ -49,11 +49,17 @@ Describe 'Get-OpenIntuneBaseline' {
 
             $mandatoryParams | Should -BeNullOrEmpty
         }
+
+        It 'Should support ShouldProcess' {
+            $command = Get-Command Get-OpenIntuneBaseline
+            $cmdletBinding = $command.ScriptBlock.Attributes | Where-Object { $_ -is [System.Management.Automation.CmdletBindingAttribute] }
+
+            $cmdletBinding.SupportsShouldProcess | Should -Be $true
+        }
     }
 
     Context 'Default Values' {
         It 'Should default RepoUrl to OpenIntuneBaseline GitHub repo' {
-            $command = Get-Command Get-OpenIntuneBaseline
             # Check that the function has the expected default in its definition
             $functionDef = (Get-Command Get-OpenIntuneBaseline).ScriptBlock.ToString()
             $functionDef | Should -Match 'https://github.com/jorgeasaurus/OpenIntuneBaseline'
@@ -78,11 +84,7 @@ Describe 'Get-OpenIntuneBaseline' {
         It 'Should construct correct zip URL for default repo and branch' {
             $testPath = Join-Path ([System.IO.Path]::GetTempPath()) "OIB-Test-$(Get-Random)"
 
-            try {
-                Get-OpenIntuneBaseline -DestinationPath $testPath
-            } catch {
-                # May fail due to mocks, but we want to verify the URL construction
-            }
+            Get-OpenIntuneBaseline -DestinationPath $testPath
 
             Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Uri -eq 'https://github.com/jorgeasaurus/OpenIntuneBaseline/archive/refs/heads/main.zip'
@@ -92,11 +94,7 @@ Describe 'Get-OpenIntuneBaseline' {
         It 'Should construct correct zip URL for custom branch' {
             $testPath = Join-Path ([System.IO.Path]::GetTempPath()) "OIB-Test-$(Get-Random)"
 
-            try {
-                Get-OpenIntuneBaseline -DestinationPath $testPath -Branch 'develop'
-            } catch {
-                # May fail due to mocks
-            }
+            Get-OpenIntuneBaseline -DestinationPath $testPath -Branch 'develop'
 
             Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Uri -eq 'https://github.com/jorgeasaurus/OpenIntuneBaseline/archive/refs/heads/develop.zip'
@@ -106,11 +104,7 @@ Describe 'Get-OpenIntuneBaseline' {
         It 'Should construct correct zip URL for custom repo' {
             $testPath = Join-Path ([System.IO.Path]::GetTempPath()) "OIB-Test-$(Get-Random)"
 
-            try {
-                Get-OpenIntuneBaseline -DestinationPath $testPath -RepoUrl 'https://github.com/custom/repo'
-            } catch {
-                # May fail due to mocks
-            }
+            Get-OpenIntuneBaseline -DestinationPath $testPath -RepoUrl 'https://github.com/custom/repo'
 
             Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Uri -eq 'https://github.com/custom/repo/archive/refs/heads/main.zip'
@@ -268,28 +262,32 @@ Describe 'Get-OpenIntuneBaseline' {
     }
 
     Context 'WhatIf Behavior' {
-        BeforeAll {
+        BeforeEach {
             Mock Invoke-WebRequest { } -ModuleName IntuneHydrationKit
             Mock Expand-Archive { } -ModuleName IntuneHydrationKit
             Mock Get-ChildItem { } -ModuleName IntuneHydrationKit
             Mock Move-Item { } -ModuleName IntuneHydrationKit
             Mock Test-Path { $true } -ModuleName IntuneHydrationKit
+            Mock Remove-Item { } -ModuleName IntuneHydrationKit
         }
 
-        It 'Should execute Remove-Item regardless of WhatIf preference' {
-            # The function explicitly uses -WhatIf:$false to ensure cleanup happens
-            $functionDef = (Get-Command Get-OpenIntuneBaseline).ScriptBlock.ToString()
-            $functionDef | Should -Match 'Remove-Item.*-WhatIf:\$false'
+        It 'Should return destination path in WhatIf mode' {
+            $testPath = Join-Path ([System.IO.Path]::GetTempPath()) "OIB-Test-$(Get-Random)"
+
+            $result = Get-OpenIntuneBaseline -DestinationPath $testPath -WhatIf
+
+            $result | Should -Be $testPath
         }
 
-        It 'Should execute Expand-Archive regardless of WhatIf preference' {
-            $functionDef = (Get-Command Get-OpenIntuneBaseline).ScriptBlock.ToString()
-            $functionDef | Should -Match 'Expand-Archive.*-WhatIf:\$false'
-        }
+        It 'Should not download or mutate the filesystem in WhatIf mode' {
+            $testPath = Join-Path ([System.IO.Path]::GetTempPath()) "OIB-Test-$(Get-Random)"
 
-        It 'Should execute Move-Item regardless of WhatIf preference' {
-            $functionDef = (Get-Command Get-OpenIntuneBaseline).ScriptBlock.ToString()
-            $functionDef | Should -Match 'Move-Item.*-WhatIf:\$false'
+            Get-OpenIntuneBaseline -DestinationPath $testPath -WhatIf | Out-Null
+
+            Should -Invoke Invoke-WebRequest -ModuleName IntuneHydrationKit -Exactly 0
+            Should -Invoke Expand-Archive -ModuleName IntuneHydrationKit -Exactly 0
+            Should -Invoke Move-Item -ModuleName IntuneHydrationKit -Exactly 0
+            Should -Invoke Remove-Item -ModuleName IntuneHydrationKit -Exactly 0
         }
     }
 }

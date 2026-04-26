@@ -118,7 +118,7 @@ Describe 'New-IntuneStaticGroup' {
         It 'Should include [IHD] prefix in displayName' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 if ($Method -eq 'POST' -and $Uri -eq 'v1.0/groups') {
                     $script:capturedBody = $Body
                 }
@@ -133,7 +133,7 @@ Describe 'New-IntuneStaticGroup' {
         It 'Should include hydration kit marker in description' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 if ($Method -eq 'POST' -and $Uri -eq 'v1.0/groups') {
                     $script:capturedBody = $Body
                 }
@@ -148,7 +148,7 @@ Describe 'New-IntuneStaticGroup' {
         It 'Should not include DynamicMembership in groupTypes' {
             $script:capturedBody = $null
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 if ($Method -eq 'POST' -and $Uri -eq 'v1.0/groups') {
                     $script:capturedBody = $Body
                 }
@@ -169,7 +169,7 @@ Describe 'New-IntuneStaticGroup' {
             # Track all Invoke-MgGraphRequest calls
             $script:graphCalls = @()
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 $script:graphCalls += @{ Method = $Method; Uri = $Uri; Body = $Body }
 
                 # GET service principals
@@ -221,7 +221,7 @@ Describe 'New-IntuneStaticGroup' {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
 
                 # GET service principals
                 if ($Method -eq 'GET' -and $Uri -like '*servicePrincipals*') {
@@ -258,7 +258,7 @@ Describe 'New-IntuneStaticGroup' {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
 
                 # GET service principals
                 if ($Method -eq 'GET' -and $Uri -like '*servicePrincipals*') {

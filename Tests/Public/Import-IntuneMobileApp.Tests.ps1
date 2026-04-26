@@ -99,7 +99,7 @@ Describe 'Import-IntuneMobileApp' {
         BeforeEach {
             # Mock Graph API calls
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
@@ -140,7 +140,7 @@ Describe 'Import-IntuneMobileApp' {
         It 'Should skip apps that already exist with hydration kit tag' {
             # Mock existing app with hydration kit tag
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -365,7 +365,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should delete apps with hydration kit marker in notes' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -412,7 +412,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should skip apps without hydration kit marker' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -448,7 +448,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should skip apps with null notes' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -574,7 +574,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should handle Graph API errors during creation' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(); '@odata.nextLink' = $null }
                 }
@@ -608,7 +608,7 @@ Describe 'Import-IntuneMobileApp' {
 
         It 'Should handle Graph API errors during deletion' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
@@ -660,7 +660,7 @@ Describe 'Import-IntuneMobileApp' {
         It 'Should handle paginated results from Graph API' {
             $script:pageCount = 0
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     $script:pageCount++
                     if ($script:pageCount -eq 1) {

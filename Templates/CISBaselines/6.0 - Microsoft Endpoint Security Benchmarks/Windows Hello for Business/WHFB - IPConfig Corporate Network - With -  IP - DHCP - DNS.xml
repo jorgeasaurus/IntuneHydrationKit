@@ -1,0 +1,8 @@
+<rule schemaVersion="1.0">
+    <signal type="ipConfig">
+        <ipv4Prefix>172.16.0.0/24</ipv4Prefix>
+        <ipv4DhcpServer>172.16.0.1</ipv4DhcpServer>
+        <ipv4DnsServer>172.16.0.2</ipv4DnsServer>
+        <ipv4DnsServer>172.16.0.3</ipv4DnsServer>
+    </signal>
+</rule>

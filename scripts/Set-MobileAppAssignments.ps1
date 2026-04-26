@@ -157,7 +157,7 @@ function Set-AppAvailableToAllUsers {
                 Reason = $null
             }
         } catch {
-            Write-Host "  [Error] $AppName - $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "  [Error] $AppName - $($_.Exception.Message)"
             return @{
                 Name   = $AppName
                 Status = 'Failed'
@@ -215,7 +215,7 @@ $whatif = ($results | Where-Object { $_.Status -eq 'WhatIf' }).Count
 Write-Host "Assigned: $assigned" -ForegroundColor Green
 Write-Host "Skipped:  $skipped" -ForegroundColor DarkGray
 if ($failed -gt 0) {
-    Write-Host "Failed:   $failed" -ForegroundColor Red
+    Write-Host "Failed:   $failed"
 }
 if ($whatif -gt 0) {
     Write-Host "WhatIf:   $whatif" -ForegroundColor Yellow

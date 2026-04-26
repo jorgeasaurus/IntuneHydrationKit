@@ -20,7 +20,7 @@ foreach ($file in $files) {
         Set-Content -Path $file.FullName -Value $formatted -NoNewline
         Write-Host "  Formatted: $($file.Name)" -ForegroundColor Green
     } catch {
-        Write-Host "  Failed: $($file.Name) - $_" -ForegroundColor Red
+        Write-Host "  Failed: $($file.Name) - $_"
     }
 }
 

@@ -76,64 +76,112 @@ function Import-IntuneConditionalAccessPolicy {
 
     $results = @()
 
-    # Get template names (file names without extension become policy names with prefix)
-    $templateNames = @()
-    foreach ($templateFile in $templateFiles) {
-        $policyName = "$Prefix$([System.IO.Path]::GetFileNameWithoutExtension($templateFile.Name))"
-        $templateNames += $policyName
-    }
+    function Get-ExistingConditionalAccessPolicies {
+        $policies = @{}
 
-    # Prefetch existing CA policies
-    $existingPolicies = @{}
-    try {
-        Get-GraphPagedResults -Uri "beta/identity/conditionalAccess/policies?`$select=id,displayName,state" -ProcessItems {
-            param($items)
-            foreach ($policy in $items) {
-                if (-not $existingPolicies.ContainsKey($policy.displayName)) {
-                    $existingPolicies[$policy.displayName] = @{
-                        Id    = $policy.id
-                        State = $policy.state
+        try {
+            Get-GraphPagedResults -Uri "beta/identity/conditionalAccess/policies?`$select=id,displayName,state" -ProcessItems {
+                param($items)
+                foreach ($policy in $items) {
+                    if (-not $policies.ContainsKey($policy.displayName)) {
+                        $policies[$policy.displayName] = @{
+                            Id    = $policy.id
+                            State = $policy.state
+                        }
                     }
                 }
             }
+        } catch {
+            Write-Warning "Could not retrieve existing CA policies: $_"
         }
-    } catch {
-        Write-Warning "Could not retrieve existing CA policies: $_"
+
+        return $policies
     }
+
+    $templateNameSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($templateFile in $templateFiles) {
+        $policyName = "$Prefix$([System.IO.Path]::GetFileNameWithoutExtension($templateFile.Name))"
+        $null = $templateNameSet.Add($policyName)
+    }
+
+    $escapedPrefix = [regex]::Escape($Prefix)
+
+    function Test-IsTemplateManagedPolicyName {
+        param(
+            [Parameter(Mandatory)]
+            [string]$PolicyName
+        )
+
+        if ($templateNameSet.Contains($PolicyName)) {
+            return $true
+        }
+
+        $nameWithoutPrefix = $PolicyName -replace "^$escapedPrefix", ''
+        return $templateNameSet.Contains("$Prefix$nameWithoutPrefix")
+    }
+
+    # Prefetch existing CA policies
+    $existingPolicies = Get-ExistingConditionalAccessPolicies
 
     # Remove existing CA policies if requested
     # SAFETY: Conditional Access policies do not have a description field, so we identify
     # policies by matching template names. Additionally, we ONLY delete policies that are
     # in disabled state to prevent accidental deletion of enabled policies.
     if ($RemoveExisting) {
-        $policiesToDelete = @()
-        foreach ($policyName in $existingPolicies.Keys) {
-            $escapedPrefix = [regex]::Escape($Prefix)
-            $nameWithoutPrefix = $policyName -replace "^$escapedPrefix", ''
-            if ($policyName -notin $templateNames -and "$($Prefix)$nameWithoutPrefix" -notin $templateNames) {
-                continue
+        $loggedEnabledSkips = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $completedDeleteNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $maxDeletePasses = 5
+
+        function Get-ConditionalAccessPoliciesToDelete {
+            param(
+                [Parameter(Mandatory)]
+                [hashtable]$CurrentPolicies
+            )
+
+            $policiesToDelete = @()
+            $skipResults = @()
+
+            foreach ($policyName in $CurrentPolicies.Keys) {
+                if (-not (Test-IsTemplateManagedPolicyName -PolicyName $policyName)) {
+                    continue
+                }
+
+                if ($completedDeleteNames.Contains($policyName)) {
+                    continue
+                }
+
+                $policyInfo = $CurrentPolicies[$policyName]
+
+                if ($policyInfo.State -ne 'disabled') {
+                    if ($loggedEnabledSkips.Add($policyName)) {
+                        Write-HydrationLog -Message "  Skipped: $policyName - policy is not disabled (state: $($policyInfo.State))" -Level Warning
+                        $skipResults += New-HydrationResult -Name $policyName -Type 'ConditionalAccessPolicy' -Action 'Skipped' -Status "Not deleted: policy is $($policyInfo.State) (must be disabled)"
+                    }
+                    continue
+                }
+
+                $policiesToDelete += @{
+                    Name = $policyName
+                    Id   = $policyInfo.Id
+                }
             }
 
-            $policyInfo = $existingPolicies[$policyName]
-
-            if ($policyInfo.State -ne 'disabled') {
-                Write-HydrationLog -Message "  Skipped: $policyName - policy is not disabled (state: $($policyInfo.State))" -Level Warning
-                $results += New-HydrationResult -Name $policyName -Type 'ConditionalAccessPolicy' -Action 'Skipped' -Status "Not deleted: policy is $($policyInfo.State) (must be disabled)"
-                continue
-            }
-
-            $policiesToDelete += @{
-                Name = $policyName
-                Id   = $policyInfo.Id
+            return @{
+                PoliciesToDelete = @($policiesToDelete)
+                SkipResults      = @($skipResults)
             }
         }
+
+        $deleteCandidateState = Get-ConditionalAccessPoliciesToDelete -CurrentPolicies $existingPolicies
+        $results += $deleteCandidateState.SkipResults
+        $policiesToDelete = $deleteCandidateState.PoliciesToDelete
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No Conditional Access policies found to delete"
             return $results
         }
 
-        if (-not $PSCmdlet.ShouldProcess("$($policiesToDelete.Count) Conditional Access policies", "Delete")) {
+        if (-not $PSCmdlet.ShouldProcess('Conditional Access policies matching hydration templates', 'Delete')) {
             if ($WhatIfPreference) {
                 foreach ($policy in $policiesToDelete) {
                     Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
@@ -143,7 +191,26 @@ function Import-IntuneConditionalAccessPolicy {
             return $results
         }
 
-        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -BaseUrl '/identity/conditionalAccess/policies' -ResultType 'ConditionalAccessPolicy'
+        for ($deletePass = 0; $deletePass -lt $maxDeletePasses -and $policiesToDelete.Count -gt 0; $deletePass++) {
+            $deleteResults = @(Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -BaseUrl '/identity/conditionalAccess/policies' -ResultType 'ConditionalAccessPolicy')
+            $results += $deleteResults
+
+            foreach ($deleteResult in $deleteResults) {
+                if ($deleteResult.Name -and $deleteResult.Action -in @('Deleted', 'Skipped', 'Failed')) {
+                    $null = $completedDeleteNames.Add($deleteResult.Name)
+                }
+            }
+
+            if ($deletePass -eq ($maxDeletePasses - 1)) {
+                break
+            }
+
+            $currentPolicies = Get-ExistingConditionalAccessPolicies
+            $deleteCandidateState = Get-ConditionalAccessPoliciesToDelete -CurrentPolicies $currentPolicies
+            $results += $deleteCandidateState.SkipResults
+            $policiesToDelete = $deleteCandidateState.PoliciesToDelete
+        }
+
         return $results
     }
 

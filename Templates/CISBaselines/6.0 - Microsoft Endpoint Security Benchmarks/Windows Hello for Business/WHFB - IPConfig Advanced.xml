@@ -1,0 +1,8 @@
+<rule schemaVersion="1.0">
+    <signal type="ipConfig">
+        <ipv4Prefix>10.10.10.0/24</ipv4Prefix>
+        <ipv4DnsServer>10.10.0.1</ipv4DnsServer>
+        <ipv4DnsServer>10.10.0.2</ipv4DnsServer>
+        
+    </signal>
+</rule>

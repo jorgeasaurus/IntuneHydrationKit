@@ -6,40 +6,29 @@ function Test-IntunePrerequisites {
         Checks for Intune license availability, Azure AD Premium P2 license (for risk-based
         Conditional Access), and required Microsoft Graph permission scopes.
 
-        Warnings are issued if Premium P2 is not found, as certain Conditional Access policies
-        that use sign-in risk or user risk conditions require this license level.
+        Non-blocking notes are emitted when Premium P2 is not found, as certain Conditional
+        Access policies that use sign-in risk or user risk conditions require this license level.
     .EXAMPLE
         Test-IntunePrerequisites
     #>
     [CmdletBinding()]
     param()
 
-    Write-Host "Validating Intune prerequisites..."
+    Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
 
     $issues = @()
+    $notes = [System.Collections.Generic.List[object]]::new()
+    $riskBasedPolicyNames = @()
 
     # Required scopes from Connect-IntuneHydration
-    $requiredScopes = @(
-        "DeviceManagementConfiguration.ReadWrite.All",
-        "DeviceManagementServiceConfig.ReadWrite.All",
-        "DeviceManagementManagedDevices.ReadWrite.All",
-        "DeviceManagementScripts.ReadWrite.All",
-        "DeviceManagementApps.ReadWrite.All",
-        "Group.ReadWrite.All",
-        "Policy.Read.All",
-        "Policy.ReadWrite.ConditionalAccess",
-        "Application.Read.All",
-        "Directory.ReadWrite.All",
-        "LicenseAssignment.Read.All",
-        "Organization.Read.All"
-    )
+    $requiredScopes = Get-HydrationGraphScopes
 
     try {
         # Check organization info and licenses
         $org = Invoke-MgGraphRequest -Method GET -Uri "beta/organization?`$select=id,displayName" -ErrorAction Stop
         $orgDetails = $org.value[0]
 
-        Write-Host "Connected to: $($orgDetails.displayName)"
+        Write-Information (Format-HydrationDisplayMessage -Message "Connected to: $($orgDetails.displayName)" -Style 'Info' -Emoji '🏢') -InformationAction Continue
 
         # Check for Intune service plan
         $subscribedSkus = Invoke-MgGraphRequest -Method GET -Uri "beta/subscribedSkus?`$select=id,skuPartNumber,capabilityStatus,servicePlans" -ErrorAction Stop
@@ -66,11 +55,11 @@ function Test-IntunePrerequisites {
             foreach ($plan in $sku.servicePlans) {
                 if ($plan.servicePlanName -in $intuneServicePlans -and $plan.provisioningStatus -eq 'Success') {
                     $hasIntune = $true
-                    Write-Host "Found Intune license: $($plan.servicePlanName)"
+                    Write-Verbose "Found Intune license: $($plan.servicePlanName)"
                 }
                 if ($plan.servicePlanName -in $premiumP2ServicePlans -and $plan.provisioningStatus -eq 'Success') {
                     $hasPremiumP2 = $true
-                    Write-Host "Found Premium P2 compatible license: $($plan.servicePlanName) in SKU $($sku.skuPartNumber)"
+                    Write-Verbose "Found Premium P2 compatible license: $($plan.servicePlanName) in SKU $($sku.skuPartNumber)"
                 }
             }
         }
@@ -80,13 +69,22 @@ function Test-IntunePrerequisites {
         }
 
         if (-not $hasPremiumP2) {
-            Write-Warning "No Azure AD Premium P2 license found. Risk-based Conditional Access policies (sign-in risk, user risk) will be skipped."
-            Write-Warning "Affected policies: 'Require multifactor authentication for risky sign-ins', 'Require password change for high-risk users', 'Block high risk agent identities', 'Block access to Office365 apps for users with insider risk'"
+            $riskBasedPolicyNames = @(
+                'Require multifactor authentication for risky sign-ins'
+                'Require password change for high-risk users'
+                'Block high risk agent identities'
+                'Block access to Office365 apps for users with insider risk'
+            )
+            $notes.Add([PSCustomObject]@{
+                    Message     = 'Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+                    DetailLines = $riskBasedPolicyNames
+                })
         }
 
-        # Note about private preview features
-        Write-Host "Note: Some Conditional Access templates use private preview features that require explicit tenant authorization."
-        Write-Host "      Policies requiring preview features will be automatically skipped during import."
+        $notes.Add([PSCustomObject]@{
+                Message     = 'Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+                DetailLines = @()
+            })
 
         # Check for required permission scopes
         $context = Get-MgContext
@@ -96,22 +94,29 @@ function Test-IntunePrerequisites {
             $isAppOnly = $context.AuthType -eq 'AppOnly' -or ($context.ClientId -and -not $context.Account)
             if ($isAppOnly) {
                 # App-only auth uses app roles, so delegated scope validation does not apply
-                Write-Host "App-only authentication detected - skipping delegated scope validation"
+                $notes.Add([PSCustomObject]@{
+                        Message     = 'App-only authentication detected; delegated scope validation was skipped.'
+                        DetailLines = @()
+                    })
             } else {
                 $currentScopes = $context.Scopes
-                $missingScopes = @()
-
-                foreach ($scope in $requiredScopes) {
-                    if ($currentScopes -notcontains $scope) {
-                        $missingScopes += $scope
-                    }
-                }
+                $missingScopes = @($requiredScopes | Where-Object { $currentScopes -notcontains $_ })
 
                 if ($missingScopes.Count -gt 0) {
                     $issues += "Missing required permission scopes: $($missingScopes -join ', ')"
-                    Write-Warning "Missing scopes detected. Please reconnect using Connect-IntuneHydration."
                 } else {
-                    Write-Host "All required permission scopes are present"
+                    Write-Verbose 'All required permission scopes are present'
+                }
+            }
+        }
+
+        if ($notes.Count -gt 0) {
+            Write-Information (Format-HydrationDisplayMessage -Message 'Notes:' -Style 'Section' -Emoji '📝') -InformationAction Continue
+            foreach ($note in $notes) {
+                Write-Information (Format-HydrationDisplayMessage -Message $note.Message -Style 'Info' -Emoji '•' -Indent 2) -InformationAction Continue
+
+                foreach ($policyName in $note.DetailLines) {
+                    Write-Information (Format-HydrationDisplayMessage -Message "'$policyName'" -Style 'Muted' -Emoji '↳' -Indent 4) -InformationAction Continue
                 }
             }
         }
@@ -133,7 +138,7 @@ function Test-IntunePrerequisites {
             $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
-        Write-Host "All prerequisite checks passed"
+        Write-Information (Format-HydrationDisplayMessage -Message 'Pre-flight checks passed' -Style 'Success' -Emoji '✅') -InformationAction Continue
         return $true
     } catch {
         if ($_.Exception.Message -match "Prerequisite checks failed") {

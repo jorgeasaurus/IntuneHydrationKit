@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.6.1'
+    ModuleVersion     = '0.7.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -14,7 +14,7 @@
     CompanyName       = 'Jorgeasaurus'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2025 Jorgeasaurus. All rights reserved.'
+    Copyright         = '(c) 2026 Jorgeasaurus. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description       = 'Hydrates Microsoft Intune tenants with best-practice baseline configurations including policies, compliance packs, enrollment profiles, dynamic groups, security baselines, and conditional access starter packs.'
@@ -42,6 +42,7 @@
         'New-IntuneStaticGroup',
         'Get-OpenIntuneBaseline',
         'Import-IntuneBaseline',
+        'Import-CISBaseline',
         'Import-IntuneCompliancePolicy',
         'Import-IntuneAppProtectionPolicy',
         'Import-IntuneNotificationTemplate',
@@ -102,9 +103,10 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.6.1
+## v0.7.0
 
-- **Bundled Baselines by Default:** OpenIntuneBaseline policies now always import from the bundled `Templates/OpenIntuneBaseline/` directory instead of downloading from GitHub. Removed `BaselineRepoUrl`, `BaselineBranch`, and `BaselineDownloadPath` parameters. `Get-OpenIntuneBaseline` remains available as a standalone utility for manual downloads.
+- **CIS Baselines:** Added a substantial amount of new bundled CIS baseline templates.
+- **Minor Improvements:** Included other minor bug fixes and enhancements across the hydration workflow.
 
 '@
         }

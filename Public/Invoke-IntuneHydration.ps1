@@ -187,6 +187,10 @@ function Invoke-IntuneHydration {
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [switch]$CISBaselines,
+
+        [Parameter(ParameterSetName = 'Interactive')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [switch]$All,
 
         # Platform filter - available for all parameter sets
@@ -214,153 +218,58 @@ function Invoke-IntuneHydration {
     $moduleRoot = if ($script:ModuleRoot) {
         $script:ModuleRoot
     } else {
-        Split-Path -Path $PSScriptRoot -Parent
+        $splitPathParams = @{
+            Path   = $PSScriptRoot
+            Parent = $true
+        }
+        Split-Path @splitPathParams
     }
 
     #region Main Execution
 
+    $executionStartTime = Get-Date
+
     try {
-        # Initialize settings based on parameter set
-        $settings = $null
-
-        if ($PSCmdlet.ParameterSetName -eq 'SettingsFile') {
-            # Settings file mode - load everything from the file
-            $settings = Import-HydrationSettings -Path $SettingsPath
-            Write-Host "Loaded settings from: $SettingsPath" -InformationAction Continue
-            if (-not $settings.options) {
-                $settings['options'] = @{}
-            }
-            # Set force option from parameter, preserving any existing force setting from settings file
-            $settings.options.force = $Force.IsPresent -or ($settings.options.ContainsKey('force') -and $settings.options.force)
-
-            # Set platforms - command-line parameter takes precedence over settings file
-            if ($Platform -and $Platform -notcontains 'All') {
-                $settings['platforms'] = $Platform
-            } elseif (-not $settings.platforms) {
-                $settings['platforms'] = @('All')
-            }
-        } else {
-            # Parameter-based mode - build settings from parameters
-            Write-Host "Using parameter-based configuration" -InformationAction Continue
-
-            # Determine which targets are enabled
-            $importsEnabled = @{
-                dynamicGroups         = $All.IsPresent -or $DynamicGroups.IsPresent
-                staticGroups          = $All.IsPresent -or $StaticGroups.IsPresent
-                deviceFilters         = $All.IsPresent -or $DeviceFilters.IsPresent
-                conditionalAccess     = $All.IsPresent -or $ConditionalAccess.IsPresent
-                complianceTemplates   = $All.IsPresent -or $ComplianceTemplates.IsPresent
-                openIntuneBaseline    = $All.IsPresent -or $OpenIntuneBaseline.IsPresent
-                enrollmentProfiles    = $All.IsPresent -or $EnrollmentProfiles.IsPresent
-                appProtection         = $All.IsPresent -or $AppProtection.IsPresent
-                notificationTemplates = $All.IsPresent -or $NotificationTemplates.IsPresent
-                mobileApps            = $All.IsPresent -or $MobileApps.IsPresent
-            }
-
-            # Validate that at least one target is enabled
-            if (-not ($importsEnabled.Values -contains $true)) {
-                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                    [System.Exception]::new("At least one target must be enabled. Use -All or specify a target switch (e.g., -DynamicGroups, -DeviceFilters, etc.)."),
-                    'NoTargetsEnabled',
-                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
-                    $null
-                )
-                $PSCmdlet.ThrowTerminatingError($errorRecord)
-            }
-
-            # Build settings object from parameters
-            $settings = @{
-                tenant         = @{
-                    tenantId   = $TenantId
-                    tenantName = $TenantName
-                }
-                authentication = @{
-                    mode         = if ($Interactive) { 'interactive' } else { 'clientSecret' }
-                    clientId     = $ClientId
-                    clientSecret = if ($ClientSecret) { [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)) } else { $null }
-                    environment  = $Environment
-                }
-                options        = @{
-                    create  = $Create.IsPresent
-                    delete  = $Delete.IsPresent
-                    force   = $Force.IsPresent
-                    dryRun  = [bool]$WhatIfPreference
-                    verbose = $VerboseOutput.IsPresent
-                }
-                imports        = $importsEnabled
-                reporting      = @{
-                    outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { $null }
-                    formats    = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
-                }
-                platforms      = if ($Platform) { $Platform } else { @('All') }
-            }
+        $resolveSettingsParams = @{
+            ParameterSetName      = $PSCmdlet.ParameterSetName
+            SettingsPath          = $SettingsPath
+            Force                 = $Force
+            Platform              = $Platform
+            TenantId              = $TenantId
+            TenantName            = $TenantName
+            Interactive           = $Interactive
+            ClientId              = $ClientId
+            ClientSecret          = $ClientSecret
+            Environment           = $Environment
+            Create                = $Create
+            Delete                = $Delete
+            VerboseOutput         = $VerboseOutput
+            OpenIntuneBaseline    = $OpenIntuneBaseline
+            ComplianceTemplates   = $ComplianceTemplates
+            AppProtection         = $AppProtection
+            NotificationTemplates = $NotificationTemplates
+            EnrollmentProfiles    = $EnrollmentProfiles
+            DynamicGroups         = $DynamicGroups
+            StaticGroups          = $StaticGroups
+            DeviceFilters         = $DeviceFilters
+            ConditionalAccess     = $ConditionalAccess
+            MobileApps            = $MobileApps
+            CISBaselines          = $CISBaselines
+            All                   = $All
+            ReportOutputPath      = $ReportOutputPath
+            ReportFormats         = $ReportFormats
+            WhatIfEnabled         = [bool]$WhatIfPreference
+            CommandRuntime        = $PSCmdlet
         }
+        $settings = Resolve-HydrationExecutionSettings @resolveSettingsParams
 
-        # Display current settings
-        Write-Host "Target Tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -InformationAction Continue
-        if ($settings.tenant.tenantName) {
-            Write-Host "Tenant Name: $($settings.tenant.tenantName)" -InformationAction Continue
-        }
-        Write-Host "Authentication Mode: $($settings.authentication.mode)" -InformationAction Continue
-        Write-Host "Options:" -InformationAction Continue
-        Write-Host ($settings.options | Out-String) -InformationAction Continue
-        Write-Host "Imports Enabled:" -InformationAction Continue
-        Write-Host ($settings.imports | Out-String) -InformationAction Continue
-        Write-Host "Platform Filter: $($settings.platforms -join ', ')" -InformationAction Continue
-
-        # Build filtered platform lists for each import function based on what they support
-        # Helper function to filter platforms by valid set
-        function Get-ValidPlatforms {
-            param([string[]]$ValidSet)
-            if ($settings.platforms -contains 'All') { return @('All') }
-            $valid = $settings.platforms | Where-Object { $_ -in $ValidSet }
-            if ($valid.Count -eq 0) { return @('All') }
-            return $valid
-        }
-
-        # Helper function to load group definitions from template directory
-        function Get-GroupDefinitionsFromTemplates {
-            param(
-                [string]$TemplatePath,
-                [string[]]$Platforms
-            )
-            if (-not (Test-Path -Path $TemplatePath)) {
-                return $null
-            }
-
-            $allGroupDefs = @()
-            $templateFiles = Get-ChildItem -Path $TemplatePath -Filter "*.json" -File
-            foreach ($templateFile in $templateFiles) {
-                try {
-                    $content = Get-Content -Path $templateFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-                    $groups = if ($content.groups) { $content.groups } else { @($content) }
-                    $allGroupDefs += $groups
-                } catch {
-                    Write-Warning "[Invoke-IntuneHydration] Failed to parse group template '$($templateFile.Name)': $($_.Exception.Message)"
-                    continue
-                }
-            }
-
-            # Filter by platform
-            $filtered = $allGroupDefs | Where-Object {
-                $platform = if ($_.platform) { $_.platform } else { 'All' }
-                ($Platforms -contains 'All') -or ($platform -eq 'All') -or ($platform -in $Platforms)
-            }
-
-            return @{
-                All      = $allGroupDefs
-                Filtered = @($filtered)
-            }
-        }
-
-        $platformFilters = @{
-            Compliance         = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
-            DeviceFilters      = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
-            AppProtection      = Get-ValidPlatforms -ValidSet @('iOS', 'Android')
-            MobileApps         = Get-ValidPlatforms -ValidSet @('Windows', 'macOS')
-            EnrollmentProfiles = Get-ValidPlatforms -ValidSet @('Windows', 'macOS')
-            Baseline           = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
-            Groups             = Get-ValidPlatforms -ValidSet @('Windows', 'macOS', 'iOS', 'Android')
+        Write-HydrationExecutionSettingsSummary -Settings $settings
+        $platformFilters = Get-HydrationPlatformFilters -Platforms $settings.platforms
+        $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
+        $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
+        if ($settings.options.verbose -eq $true -and $VerbosePreference -ne 'Continue') {
+            $VerbosePreference = 'Continue'
+            Write-Verbose 'Verbose output enabled for this hydration run'
         }
 
         # Apply options from settings
@@ -369,60 +278,54 @@ function Invoke-IntuneHydration {
         $forceDelete = $settings.options.force -eq $true
         $RemoveExisting = $deleteEnabled
 
-        # Validate options - create and delete are mutually exclusive
-        if ($createEnabled -and $deleteEnabled) {
-            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                [System.Exception]::new("Only one of 'create' or 'delete' options can be true. Current settings: create=$createEnabled, delete=$deleteEnabled"),
-                'MutuallyExclusiveOptions',
-                [System.Management.Automation.ErrorCategory]::InvalidArgument,
-                $null
-            )
-            $PSCmdlet.ThrowTerminatingError($errorRecord)
+        $testOperationSettingsParams = @{
+            CreateEnabled = $createEnabled
+            DeleteEnabled = $deleteEnabled
+            ForceDelete   = $forceDelete
+            WhatIfEnabled = $effectiveWhatIfEnabled
+            PSCmdlet      = $PSCmdlet
         }
-
-        if (-not $createEnabled -and -not $deleteEnabled) {
-            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                [System.Exception]::new("At least one of 'create' or 'delete' options must be true. Current settings: create=$createEnabled, delete=$deleteEnabled"),
-                'NoOperationSelected',
-                [System.Management.Automation.ErrorCategory]::InvalidArgument,
-                $null
-            )
-            $PSCmdlet.ThrowTerminatingError($errorRecord)
-        }
-
-        if ($deleteEnabled -and -not $forceDelete -and -not $WhatIfPreference) {
-            if (-not $PSCmdlet.ShouldContinue("Proceed with delete operations?", "Delete mode will remove Intune configurations created by the hydration kit.")) {
-                Write-Warning "Delete operation cancelled by user confirmation."
-                return
-            }
-        }
-
-        # dryRun from settings enables WhatIf if not already set via command line
-        if ($settings.options.dryRun -eq $true -and -not $WhatIfPreference) {
-            $script:WhatIfPreference = $true
-        }
-
-        # verbose from settings enables verbose output
-        if ($settings.options.verbose -eq $true) {
-            $script:VerbosePreference = 'Continue'
+        if (-not (Test-HydrationOperationSettings @testOperationSettingsParams)) {
+            return
         }
 
         # Initialize logging (after applying verbose setting)
         # Uses OS temp directory by default (e.g., $env:TEMP/IntuneHydrationKit/Logs on Windows, /tmp/IntuneHydrationKit/Logs on macOS/Linux)
-        Initialize-HydrationLogging -EnableVerbose:($VerbosePreference -eq 'Continue')
+        Initialize-HydrationLogging -EnableVerbose:$effectiveVerboseEnabled
 
-        Write-HydrationLog -Message "=== Intune Hydration Kit Started ===" -Level Info
-        Write-HydrationLog -Message "Loaded settings for tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -Level Info
+        $logParams = @{
+            Message = '=== Intune Hydration Kit Started ==='
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
 
-        if ($WhatIfPreference) {
-            Write-HydrationLog -Message "Running in DRY-RUN mode - no changes will be made" -Level Warning
+        $logParams = @{
+            Message = "Loaded settings for tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)"
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
+
+        if ($effectiveWhatIfEnabled) {
+            $logParams = @{
+                Message = 'Running in DRY-RUN mode - no changes will be made'
+                Level   = 'Warning'
+            }
+            Write-HydrationLog @logParams
         }
 
         if ($RemoveExisting) {
             if (-not $createEnabled) {
-                Write-HydrationLog -Message "DELETE-ONLY mode - configurations will be deleted without recreation" -Level Warning
+                $logParams = @{
+                    Message = 'DELETE-ONLY mode - configurations will be deleted without recreation'
+                    Level   = 'Warning'
+                }
+                Write-HydrationLog @logParams
             } else {
-                Write-HydrationLog -Message "Remove existing enabled - matching configurations will be deleted before import" -Level Warning
+                $logParams = @{
+                    Message = 'Remove existing enabled - matching configurations will be deleted before import'
+                    Level   = 'Warning'
+                }
+                Write-HydrationLog @logParams
             }
         }
 
@@ -430,351 +333,270 @@ function Invoke-IntuneHydration {
         $allResults = @()
 
         # Step 1: Authenticate
-        Write-HydrationLog -Message "Step 1: Authenticating to Microsoft Graph" -Level Info
-
-        $authParams = @{
-            TenantId = $settings.tenant.tenantId
+        $logParams = @{
+            Message = 'Step 1: Authenticating to Microsoft Graph'
+            Level   = 'Info'
         }
+        Write-HydrationLog @logParams
 
-        # Add environment if specified
-        if ($settings.authentication.environment) {
-            $authParams['Environment'] = $settings.authentication.environment
+        $getAuthParams = @{
+            AuthenticationSettings = $settings.authentication
+            TenantId               = $settings.tenant.tenantId
         }
-
-        if ($settings.authentication.mode -eq 'clientSecret') {
-            $authParams['ClientId'] = $settings.authentication.clientId
-            $authParams['ClientSecret'] = $settings.authentication.clientSecret | ConvertTo-SecureString -AsPlainText -Force
-        } else {
-            $authParams['Interactive'] = $true
-        }
+        $authParams = Get-HydrationAuthParameters @getAuthParams
+        $authParams['Verbose'] = $effectiveVerboseEnabled
 
         # Always connect to Graph API (needed for dry-run to check existing policies)
         Connect-IntuneHydration @authParams
 
         # Step 2: Pre-flight checks
-        Write-HydrationLog -Message "Step 2: Running pre-flight checks" -Level Info
+        $logParams = @{
+            Message = 'Step 2: Running pre-flight checks'
+            Level   = 'Info'
+        }
+        Write-HydrationLog @logParams
 
         # Always run pre-flight checks (read-only operations)
-        Test-IntunePrerequisites | Out-Null
+        Test-IntunePrerequisites -Verbose:$effectiveVerboseEnabled | Out-Null
 
         # Step 3: Dynamic Groups
         if ($settings.imports.dynamicGroups) {
-            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
-            Write-HydrationLog -Message "Step 3: $stepAction Dynamic Groups" -Level Info
-
-            if ($RemoveExisting) {
-                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/DynamicGroups'
-                $knownNames = if (Test-Path $templatePath) { Get-TemplateDisplayNames -Path $templatePath -ArrayProperty 'groups' } else { $null }
-                $deleteResults = Invoke-GroupBatchImport -GroupType 'Dynamic' -Delete -KnownNames $knownNames -WhatIf:$WhatIfPreference
-                $allResults += $deleteResults
-                foreach ($result in $deleteResults) {
-                    if ($result.Name) {
-                        Write-HydrationLog -Message "  $($result.Action): $($result.Name)" -Level Info
-                    }
-                }
-            } else {
-                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/DynamicGroups'
-                $groupData = Get-GroupDefinitionsFromTemplates -TemplatePath $templatePath -Platforms $platformFilters.Groups
-
-                if ($null -eq $groupData) {
-                    Write-HydrationLog -Message "Dynamic Groups template directory not found" -Level Warning
-                } else {
-                    if ($groupData.Filtered.Count -lt $groupData.All.Count) {
-                        Write-HydrationLog -Message "  Filtered to $($groupData.Filtered.Count) of $($groupData.All.Count) groups based on platform selection: $($platformFilters.Groups -join ', ')" -Level Info
-                    }
-
-                    $groupResults = Invoke-GroupBatchImport -GroupDefinitions $groupData.Filtered -GroupType 'Dynamic' -WhatIf:$WhatIfPreference
-                    $allResults += $groupResults
-                    foreach ($result in $groupResults) {
-                        if ($result.Name) {
-                            Write-HydrationLog -Message "  $($result.Action): $($result.Name)" -Level Info
-                        }
-                    }
-                }
+            $joinPathParams = @{
+                Path      = $moduleRoot
+                ChildPath = 'Templates/DynamicGroups'
             }
+            $dynamicGroupTemplatePath = Join-Path @joinPathParams
+            $dynamicGroupStepParams = @{
+                StepLabel      = 'Step 3'
+                GroupType      = 'Dynamic'
+                TemplatePath   = $dynamicGroupTemplatePath
+                Platforms      = $platformFilters.Groups
+                RemoveExisting = $RemoveExisting
+                WhatIfEnabled  = $effectiveWhatIfEnabled
+            }
+            $dynamicGroupResults = @((Invoke-HydrationGroupStep @dynamicGroupStepParams) | Where-Object { $null -ne $_ })
+            $allResults += $dynamicGroupResults
         }
 
         # Step 3b: Static Groups
         if ($settings.imports.staticGroups) {
-            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
-            Write-HydrationLog -Message "Step 3b: $stepAction Static Groups" -Level Info
-
-            if ($RemoveExisting) {
-                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/StaticGroups'
-                $knownNames = if (Test-Path $templatePath) { Get-TemplateDisplayNames -Path $templatePath -ArrayProperty 'groups' } else { $null }
-                $deleteResults = Invoke-GroupBatchImport -GroupType 'Static' -Delete -KnownNames $knownNames -WhatIf:$WhatIfPreference
-                $allResults += $deleteResults
-                foreach ($result in $deleteResults) {
-                    if ($result.Name) {
-                        Write-HydrationLog -Message "  $($result.Action): $($result.Name)" -Level Info
-                    }
-                }
-            } else {
-                $templatePath = Join-Path -Path $moduleRoot -ChildPath 'Templates/StaticGroups'
-                $groupData = Get-GroupDefinitionsFromTemplates -TemplatePath $templatePath -Platforms $platformFilters.Groups
-
-                if ($null -eq $groupData) {
-                    Write-HydrationLog -Message "Static Groups template directory not found" -Level Warning
-                } else {
-                    if ($groupData.Filtered.Count -lt $groupData.All.Count) {
-                        Write-HydrationLog -Message "  Filtered to $($groupData.Filtered.Count) of $($groupData.All.Count) groups based on platform selection: $($platformFilters.Groups -join ', ')" -Level Info
-                    }
-
-                    $groupResults = Invoke-GroupBatchImport -GroupDefinitions $groupData.Filtered -GroupType 'Static' -WhatIf:$WhatIfPreference
-                    $allResults += $groupResults
-                    foreach ($result in $groupResults) {
-                        if ($result.Name) {
-                            Write-HydrationLog -Message "  $($result.Action): $($result.Name)" -Level Info
-                        }
-                    }
-                }
+            $joinPathParams = @{
+                Path      = $moduleRoot
+                ChildPath = 'Templates/StaticGroups'
             }
+            $staticGroupTemplatePath = Join-Path @joinPathParams
+            $staticGroupStepParams = @{
+                StepLabel      = 'Step 3b'
+                GroupType      = 'Static'
+                TemplatePath   = $staticGroupTemplatePath
+                Platforms      = $platformFilters.Groups
+                RemoveExisting = $RemoveExisting
+                WhatIfEnabled  = $effectiveWhatIfEnabled
+            }
+            $staticGroupResults = @((Invoke-HydrationGroupStep @staticGroupStepParams) | Where-Object { $null -ne $_ })
+            $allResults += $staticGroupResults
         }
 
         # Step 4: Device Filters
         if ($settings.imports.deviceFilters) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
-            Write-HydrationLog -Message "Step 4: $stepAction Device Filters" -Level Info
+            $logParams = @{
+                Message = "Step 4: $stepAction Device Filters"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $filterResults = Import-IntuneDeviceFilter -Platform $platformFilters.DeviceFilters -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $filterParams = @{
+                Platform       = $platformFilters.DeviceFilters
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $filterResults = @((Import-IntuneDeviceFilter @filterParams) | Where-Object { $null -ne $_ })
             $allResults += $filterResults
         }
 
         # Step 5: OpenIntuneBaseline
         if ($settings.imports.openIntuneBaseline) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 5: $stepAction OpenIntuneBaseline policies" -Level Info
+            $logParams = @{
+                Message = "Step 5: $stepAction OpenIntuneBaseline policies"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
             $baselineParams = @{}
 
             # Import function handles ShouldProcess internally for each policy
             $baselineParams['RemoveExisting'] = $RemoveExisting
-            $baselineParams['WhatIf'] = $WhatIfPreference
+            $baselineParams['WhatIf'] = $effectiveWhatIfEnabled
             $baselineParams['Platform'] = $platformFilters.Baseline
-            $baselineResults = Import-IntuneBaseline @baselineParams
+            $baselineParams['Verbose'] = $effectiveVerboseEnabled
+            $baselineResults = @((Import-IntuneBaseline @baselineParams) | Where-Object { $null -ne $_ })
             $allResults += $baselineResults
+        }
+
+        # Step 5b: CIS Baselines
+        if ($settings.imports.cisBaselines) {
+            $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
+            $logParams = @{
+                Message = "Step 5b: $stepAction CIS Baseline policies"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
+
+            $cisParams = @{
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Platform       = $platformFilters.CISBaseline
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $cisResults = @((Import-CISBaseline @cisParams) | Where-Object { $null -ne $_ })
+            $allResults += $cisResults
         }
 
         # Step 6: Compliance Templates
         if ($settings.imports.complianceTemplates) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 6: $stepAction Compliance templates" -Level Info
+            $logParams = @{
+                Message = "Step 6: $stepAction Compliance templates"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $complianceResults = Import-IntuneCompliancePolicy -Platform $platformFilters.Compliance -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $complianceParams = @{
+                Platform       = $platformFilters.Compliance
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $complianceResults = @((Import-IntuneCompliancePolicy @complianceParams) | Where-Object { $null -ne $_ })
             $allResults += $complianceResults
         }
 
         # Step 7: Notification Templates
         if ($settings.imports.notificationTemplates) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 7: $stepAction Notification Templates" -Level Info
+            $logParams = @{
+                Message = "Step 7: $stepAction Notification Templates"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $notificationResults = Import-IntuneNotificationTemplate -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $notificationParams = @{
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $notificationResults = @((Import-IntuneNotificationTemplate @notificationParams) | Where-Object { $null -ne $_ })
             $allResults += $notificationResults
         }
 
         # Step 8: App Protection Policies (MAM)
         if ($settings.imports.appProtection) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 8: $stepAction App Protection policies" -Level Info
+            $logParams = @{
+                Message = "Step 8: $stepAction App Protection policies"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $mamResults = Import-IntuneAppProtectionPolicy -Platform $platformFilters.AppProtection -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $mamParams = @{
+                Platform       = $platformFilters.AppProtection
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $mamResults = @((Import-IntuneAppProtectionPolicy @mamParams) | Where-Object { $null -ne $_ })
             $allResults += $mamResults
         }
 
         # Step 9: Enrollment Profiles
         if ($settings.imports.enrollmentProfiles) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 9: $stepAction Enrollment Profiles" -Level Info
+            $logParams = @{
+                Message = "Step 9: $stepAction Enrollment Profiles"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $enrollmentResults = Import-IntuneEnrollmentProfile -Platform $platformFilters.EnrollmentProfiles -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $enrollmentParams = @{
+                Platform       = $platformFilters.EnrollmentProfiles
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $enrollmentResults = @((Import-IntuneEnrollmentProfile @enrollmentParams) | Where-Object { $null -ne $_ })
             $allResults += $enrollmentResults
         }
 
         # Step 10: Conditional Access Starter Pack
         if ($settings.imports.conditionalAccess) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 10: $stepAction Conditional Access Starter Pack" -Level Info
+            $logParams = @{
+                Message = "Step 10: $stepAction Conditional Access Starter Pack"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $caResults = Import-IntuneConditionalAccessPolicy -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $caParams = @{
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $caResults = @((Import-IntuneConditionalAccessPolicy @caParams) | Where-Object { $null -ne $_ })
             $allResults += $caResults
         }
 
         # Step 11: Mobile Apps
         if ($settings.imports.mobileApps) {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
-            Write-HydrationLog -Message "Step 11: $stepAction Mobile Apps" -Level Info
+            $logParams = @{
+                Message = "Step 11: $stepAction Mobile Apps"
+                Level   = 'Info'
+            }
+            Write-HydrationLog @logParams
 
-            $mobileAppResults = Import-IntuneMobileApp -Platform $platformFilters.MobileApps -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $mobileAppParams = @{
+                Platform       = $platformFilters.MobileApps
+                RemoveExisting = $RemoveExisting
+                WhatIf         = $effectiveWhatIfEnabled
+                Verbose        = $effectiveVerboseEnabled
+            }
+            $mobileAppResults = @((Import-IntuneMobileApp @mobileAppParams) | Where-Object { $null -ne $_ })
             $allResults += $mobileAppResults
         }
 
-        # Step 12: Generate Summary Report
-        Write-HydrationLog -Message "Step 12: Generating Summary Report" -Level Info
-
-        # Use OS temp directory for reports if no explicit path provided
-        if ($settings.reporting.outputPath) {
-            $reportsPath = $settings.reporting.outputPath
-        } else {
-            $tempBase = [System.IO.Path]::GetTempPath()
-            $reportsPath = Join-Path -Path $tempBase -ChildPath 'IntuneHydrationKit/Reports'
+        $summaryParams = @{
+            Settings      = $settings
+            Results       = $allResults
+            StartTime     = $executionStartTime
+            WhatIfEnabled = $effectiveWhatIfEnabled
+            Verbose       = $effectiveVerboseEnabled
         }
-        if (-not (Test-Path -Path $reportsPath)) {
-            # Always create reports directory regardless of -WhatIf (reports are observational, not tenant changes)
-            New-Item -Path $reportsPath -ItemType Directory -Force -WhatIf:$false | Out-Null
-        }
-
-        $summary = Get-ResultSummary -Results $allResults
-
-        # Generate markdown report
-        $reportPath = Join-Path -Path $reportsPath -ChildPath "Hydration-Summary.md"
-        $jsonReportPath = $null
-        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-
-        $reportContent = @"
-# Intune Hydration Summary
-
-**Generated:** $timestamp
-**Tenant:** $($settings.tenant.tenantId)
-**Environment:** $($settings.authentication.environment)
-**Mode:** $(if ($WhatIfPreference) { 'Dry-Run' } else { 'Live' })
-
-## Summary
-
-| Metric | Count |
-|--------|-------|
-| Total Operations | $($allResults.Count) |
-| Created | $($summary.Created) |
-| Updated | $($summary.Updated) |
-| Skipped | $($summary.Skipped) |
-| Would Create | $($summary.WouldCreate) |
-| Would Update | $($summary.WouldUpdate) |
-| Failed | $($summary.Failed) |
-
-## Details by Type
-
-"@
-
-        # Group results by type
-        $byType = $allResults | Group-Object -Property Type
-        foreach ($typeGroup in $byType) {
-            $typeResults = $typeGroup.Group
-            $created = ($typeResults | Where-Object { $_.Action -eq 'Created' }).Count
-            $updated = ($typeResults | Where-Object { $_.Action -eq 'Updated' }).Count
-            $skipped = ($typeResults | Where-Object { $_.Action -eq 'Skipped' }).Count
-            $wouldCreate = ($typeResults | Where-Object { $_.Action -eq 'WouldCreate' }).Count
-            $failed = ($typeResults | Where-Object { $_.Action -eq 'Failed' }).Count
-
-            $wouldUpdate = ($typeResults | Where-Object { $_.Action -eq 'WouldUpdate' }).Count
-
-            $reportContent += @"
-
-### $($typeGroup.Name)
-- Created: $created
-- Updated: $updated
-- Skipped: $skipped
-- Would Create: $wouldCreate
-- Would Update: $wouldUpdate
-- Failed: $failed
-
-"@
-        }
-
-        if ($allResults.Count -gt 0) {
-            $reportContent += @"
-
-## All Operations
-
-| Timestamp | Type | Name | Action | ID | Details |
-|-----------|------|------|--------|-----|---------|
-"@
-
-            # Build table rows separately to avoid header/row formatting issues
-            # Filter out results that don't have a Name or Action (invalid/empty results)
-            $operationLines = foreach ($result in $allResults) {
-                # Skip results with no meaningful data
-                if (-not $result.Name -and -not $result.Action) {
-                    continue
-                }
-
-                $timestamp = if ($result.Timestamp) { $result.Timestamp } else { '' }
-                $type = if ($result.PSObject.Properties['Type']) { $result.Type } else { '' }
-                $name = if ($result.Name) { $result.Name } else { '' }
-                $action = if ($result.Action) { $result.Action } else { '' }
-                $id = if ($result.PSObject.Properties['Id']) { $result.Id } else { '' }
-                $status = if ($result.Status) { $result.Status } else { '' }
-
-                "| {0} | {1} | {2} | {3} | {4} | {5} |" -f $timestamp, $type, $name, $action, $id, $status
-            }
-
-            # Explicit newline between header and first row to keep the table rendering clean
-            $reportContent += "`n"
-            $reportContent += ($operationLines -join "`n")
-            $reportContent += "`n"
-        }
-
-        $reportContent += @"
-
-## Important Notes
-
-- **Conditional Access policies** were created in **DISABLED** state. Review and enable as needed.
-- Review all configurations before enabling in production.
-
-"@
-
-        # Always write reports regardless of -WhatIf (reports are observational, not tenant changes)
-        $reportContent | Out-File -FilePath $reportPath -Encoding UTF8 -WhatIf:$false
-        Write-HydrationLog -Message "Summary report written to: $reportPath" -Level Info
-
-        # Also write JSON if requested
-        if ('json' -in $settings.reporting.formats) {
-            $jsonReportPath = Join-Path -Path $reportsPath -ChildPath "Hydration-Summary.json"
-            @{
-                Timestamp   = $timestamp
-                Tenant      = $settings.tenant.tenantId
-                Environment = $settings.authentication.environment
-                Mode        = if ($WhatIfPreference) { 'DryRun' } else { 'Live' }
-                Summary     = $summary
-                Results     = $allResults
-            } | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonReportPath -Encoding UTF8 -WhatIf:$false
-            Write-HydrationLog -Message "JSON report written to: $jsonReportPath" -Level Info
-        }
-
-        Write-HydrationLog -Message "=== Intune Hydration Kit Completed ===" -Level Info
-
-        # Friendly console summary
-        Write-Host "" -InformationAction Continue
-        Write-Host "---------------- Summary ----------------" -InformationAction Continue
-        if ($WhatIfPreference) {
-            Write-Host ("Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed) -InformationAction Continue
-        } else {
-            Write-Host ("Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed) -InformationAction Continue
-        }
-        Write-Host "Reports: $reportPath" -InformationAction Continue
-        if ($jsonReportPath) {
-            Write-Host "JSON:    $jsonReportPath" -InformationAction Continue
-        }
-        Write-Host "----------------------------------------" -InformationAction Continue
-
-        # Log completion status
-        if ($summary.Failed -gt 0) {
-            Write-HydrationLog -Message "Completed with $($summary.Failed) failures" -Level Warning
-        } elseif ($WhatIfPreference) {
-            Write-HydrationLog -Message "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.WouldDelete) would delete, $($summary.Skipped) skipped" -Level Info
-        } else {
-            Write-HydrationLog -Message "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Deleted) deleted, $($summary.Skipped) skipped" -Level Info
-        }
+        $summaryOutput = Write-HydrationExecutionSummary @summaryParams
+        $summary = $summaryOutput.Summary
+        $reportPath = $summaryOutput.ReportPath
+        $jsonReportPath = $summaryOutput.JsonReportPath
+        $elapsedTime = $summaryOutput.ElapsedTime
+        $elapsedTimeDisplay = $summaryOutput.ElapsedTimeDisplay
 
         # Return summary object (functions shouldn't call exit)
         return @{
-            Success        = $summary.Failed -eq 0
-            Summary        = $summary
-            Results        = $allResults
-            ReportPath     = $reportPath
-            JsonReportPath = $jsonReportPath
+            Success            = $summary.Failed -eq 0
+            Summary            = $summary
+            Results            = $allResults
+            ReportPath         = $reportPath
+            JsonReportPath     = $jsonReportPath
+            ElapsedTime        = $elapsedTime
+            ElapsedTimeDisplay = $elapsedTimeDisplay
         }
     } catch {
-        Write-HydrationLog -Message "Fatal error: $_" -Level Error
+        $logParams = @{
+            Message = "Fatal error: $_"
+            Level   = 'Error'
+        }
+        Write-HydrationLog @logParams
         throw
     }
 

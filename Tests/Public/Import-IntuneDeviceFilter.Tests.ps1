@@ -76,7 +76,7 @@ Describe 'Import-IntuneDeviceFilter' {
 
         It 'Should prefetch existing filters' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -92,7 +92,7 @@ Describe 'Import-IntuneDeviceFilter' {
 
         It 'Should skip filter if it already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 11 Devices'; description = 'Existing filter' }) }
                 }
@@ -108,7 +108,7 @@ Describe 'Import-IntuneDeviceFilter' {
             Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = 'Windows 11 Devices'; description = 'Manually created filter' }) }
                 }
@@ -122,7 +122,7 @@ Describe 'Import-IntuneDeviceFilter' {
 
         It 'Should create filter if it does not exist' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -275,7 +275,7 @@ Describe 'Import-IntuneDeviceFilter' {
 
         It 'Should list existing filters when RemoveExisting is specified' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(
@@ -299,7 +299,7 @@ Describe 'Import-IntuneDeviceFilter' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(
@@ -321,7 +321,7 @@ Describe 'Import-IntuneDeviceFilter' {
             Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Uri)
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(

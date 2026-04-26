@@ -237,10 +237,8 @@ function Import-IntuneEnrollmentProfile {
 
                     if ($taggedMatch) {
                         # Verify the profile still exists (handles eventual consistency after deletes)
-                        $verified = $false
                         try {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles/$existingProfileId" -ErrorAction Stop
-                            $verified = $true
                         } catch {
                             $statusCode = $null
                             if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
@@ -377,10 +375,8 @@ function Import-IntuneEnrollmentProfile {
 
                     if ($taggedMatch) {
                         # Verify the ESP still exists (handles eventual consistency after deletes)
-                        $verified = $false
                         try {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations/$espId" -ErrorAction Stop
-                            $verified = $true
                         } catch {
                             $statusCode = $null
                             if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {
@@ -440,7 +436,6 @@ function Import-IntuneEnrollmentProfile {
                 #region macOS DEP Enrollment Profile
                 try {
                     # Check if macOS DEP profile exists
-                    $safeProfileName = $profileName -replace "'", "''"
                     $existingDEP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/depOnboardingSettings" -ErrorAction Stop
 
                     # Find enrollment profiles for each DEP token — prefer tagged match
@@ -503,14 +498,12 @@ function Import-IntuneEnrollmentProfile {
                     # Check if policy exists - filter by technologies (name filter not supported)
                     $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
 
-                    $existingPolicy = $null
                     $taggedMatch = $false
                     $existingPolicyId = $null
                     foreach ($pol in $existingPolicies.value) {
                         $isNameMatch = $pol.name -eq $profileName
                         $isLegacyMatch = -not [string]::IsNullOrWhiteSpace($templateBaseName) -and $templateBaseName -ne $profileName -and $pol.name -eq $templateBaseName
                         if ($isNameMatch -or $isLegacyMatch) {
-                            $existingPolicy = $pol
                             $checkName = if ($isNameMatch) { $profileName } else { $templateBaseName }
                             if (Test-HydrationKitObject -Description $pol.description -ObjectName $checkName) {
                                 $taggedMatch = $true
@@ -523,10 +516,8 @@ function Import-IntuneEnrollmentProfile {
 
                     if ($taggedMatch) {
                         # Verify the policy still exists (handles eventual consistency after deletes)
-                        $verified = $false
                         try {
                             $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies/$existingPolicyId" -ErrorAction Stop
-                            $verified = $true
                         } catch {
                             $statusCode = $null
                             if ($_.Exception.PSObject.Properties['ResponseStatusCode']) {

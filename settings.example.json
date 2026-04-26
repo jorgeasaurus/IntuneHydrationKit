@@ -27,7 +27,8 @@
         "staticGroups": true,
         "deviceFilters": true,
         "conditionalAccess": true,
-        "mobileApps": true
+        "mobileApps": true,
+        "cisBaselines": false
     },
     "platforms": [
         "All"

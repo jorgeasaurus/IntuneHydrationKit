@@ -121,7 +121,7 @@ Describe 'Import-IntuneNotificationTemplate' {
 
         It 'Should skip template that already exists (verified by targeted GET)' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'existing-id'; displayName = '[IHD] Compliance Reminder' }
@@ -145,7 +145,7 @@ Describe 'Import-IntuneNotificationTemplate' {
 
         It 'Should skip template matching legacy unprefixed name (verified by targeted GET)' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'legacy-id'; displayName = 'Compliance Reminder' }
@@ -169,7 +169,7 @@ Describe 'Import-IntuneNotificationTemplate' {
 
         It 'Should create template when prefetch returns stale data (targeted GET returns 404)' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'stale-id'; displayName = '[IHD] Compliance Reminder' }
@@ -200,6 +200,26 @@ Describe 'Import-IntuneNotificationTemplate' {
             $created = @($result | Where-Object { $_.Action -eq 'Created' })
             $created.Count | Should -Be 1
             $created[0].Name | Should -Be '[IHD] Compliance Reminder'
+        }
+
+        It 'Should report partial success when localized message creation fails' {
+            Mock Get-GraphPagedResults -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'POST' -and $Uri -eq 'beta/deviceManagement/notificationMessageTemplates') {
+                    return @{ id = 'new-template-id'; displayName = '[IHD] Compliance Reminder' }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*localizedNotificationMessages*') {
+                    throw [System.Exception]::new('Localized message failed')
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneNotificationTemplate -TemplatePath (Join-Path 'TestDrive:' 'NotifTemplates')
+
+            $created = @($result | Where-Object { $_.Action -eq 'Created' })
+            $created.Count | Should -Be 1
+            $created[0].Status | Should -BeLike 'PartialSuccess*'
         }
     }
 
@@ -257,7 +277,7 @@ Describe 'Import-IntuneNotificationTemplate' {
 
         It 'Should delete templates matching template file names' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'tmpl-1'; displayName = '[IHD] Delete Template' },
@@ -267,7 +287,7 @@ Describe 'Import-IntuneNotificationTemplate' {
             } -ModuleName IntuneHydrationKit
 
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'DELETE') { return $null }
             } -ModuleName IntuneHydrationKit
 
@@ -280,7 +300,7 @@ Describe 'Import-IntuneNotificationTemplate' {
 
         It 'Should return WouldDelete in WhatIf mode' {
             Mock Get-GraphPagedResults {
-                param($Uri, $ProcessItems)
+                param($ProcessItems)
                 if ($ProcessItems) {
                     & $ProcessItems @(
                         @{ id = 'tmpl-1'; displayName = 'Delete Template' }

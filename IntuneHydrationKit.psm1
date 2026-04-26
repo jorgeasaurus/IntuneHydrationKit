@@ -13,15 +13,6 @@ $script:TemplatesPath = Join-Path -Path $script:ModuleRoot -ChildPath 'Templates
 $script:HydrationState = @{
     Connected = $false
     TenantId  = $null
-    Results   = @{
-        Groups            = @()
-        Policies          = @()
-        Baselines         = @()
-        Profiles          = @()
-        ConditionalAccess = @()
-        Errors            = @()
-        Warnings          = @()
-    }
 }
 
 # Module-level state for logging
@@ -52,7 +43,10 @@ if (Test-Path -Path $privatePath) {
             . $file.FullName
             Write-Verbose "Imported private function: $($file.BaseName)"
         } catch {
-            Write-Error "Failed to import private function $($file.FullName): $_"
+            throw [System.Exception]::new(
+                "Failed to import private function '$($file.FullName)': $($_.Exception.Message)",
+                $_.Exception
+            )
         }
     }
 }
@@ -66,7 +60,10 @@ if (Test-Path -Path $publicPath) {
             . $file.FullName
             Write-Verbose "Imported public function: $($file.BaseName)"
         } catch {
-            Write-Error "Failed to import public function $($file.FullName): $_"
+            throw [System.Exception]::new(
+                "Failed to import public function '$($file.FullName)': $($_.Exception.Message)",
+                $_.Exception
+            )
         }
     }
 }
@@ -83,6 +80,7 @@ $publicFunctions = @(
     'New-IntuneStaticGroup',
     'Get-OpenIntuneBaseline',
     'Import-IntuneBaseline',
+    'Import-CISBaseline',
     'Import-IntuneCompliancePolicy',
     'Import-IntuneAppProtectionPolicy',
     'Import-IntuneNotificationTemplate',

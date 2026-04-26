@@ -187,9 +187,14 @@ function Invoke-GroupBatchImport {
             $batchBody = @{ requests = $batchRequests }
             try {
                 $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
+                $seenResponseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
                 # Process responses
                 foreach ($resp in $batchResponse.responses) {
+                    if ($resp.id) {
+                        $seenResponseIds.Add([string]$resp.id) | Out-Null
+                    }
+
                     $requestIndex = $null
                     $group = $null
                     if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
@@ -220,6 +225,32 @@ function Invoke-GroupBatchImport {
                         Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
                     }
                 }
+
+                foreach ($request in $batchRequests) {
+                    if ($seenResponseIds.Contains([string]$request.id)) {
+                        continue
+                    }
+
+                    $requestIndex = [int]$request.id - 1
+                    $group = $currentBatch[$requestIndex]
+                    Write-Warning "Missing batch delete response for '$($group.displayName)' - retrying directly"
+
+                    try {
+                        $null = Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
+                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Deleted' -Status 'Success'
+                        Write-Verbose "  Deleted: $($group.displayName) (direct retry)"
+                    } catch {
+                        $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
+                        if ($errorMessage -like '*404*' -or $errorMessage -like '*Not Found*') {
+                            $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Action 'Skipped' -Status 'Already deleted'
+                            Write-Verbose "  Skipped: $($group.displayName) (already deleted)"
+                            continue
+                        }
+
+                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Delete failed: $errorMessage"
+                        Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
+                    }
+                }
             } catch {
                 # Batch request failed - log individual failures
                 Write-Warning "Batch delete failed: $_"
@@ -234,7 +265,7 @@ function Invoke-GroupBatchImport {
 
     #endregion
 
-    # Apply import prefix — create copies to avoid mutating caller's objects
+    # Apply import prefix - create copies to avoid mutating caller's objects
     $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
     $prefixedDefinitions = @()
     foreach ($gd in $GroupDefinitions) {
@@ -262,7 +293,7 @@ function Invoke-GroupBatchImport {
         $batchRequests = @()
         for ($i = 0; $i -lt $currentBatch.Count; $i++) {
             $groupDef = $currentBatch[$i]
-            # Escape single quotes for OData filter — both prefixed and original (legacy) names
+            # Escape single quotes for OData filter - both prefixed and original (legacy) names
             $safePrefixedName = $groupDef.displayName -replace "'", "''"
             $safeOriginalName = $groupDef._OriginalDisplayName -replace "'", "''"
 
@@ -302,7 +333,7 @@ function Invoke-GroupBatchImport {
                 }
 
                 if ($resp.status -eq 200 -and $resp.body.value.Count -gt 0) {
-                    # Group exists — prefer the prefixed name match when multiple results
+                    # Group exists - prefer the prefixed name match when multiple results
                     $matchingGroup = $resp.body.value | Where-Object { $_.displayName -eq $groupDef.displayName } | Select-Object -First 1
                     if (-not $matchingGroup) {
                         $matchingGroup = $resp.body.value[0]
