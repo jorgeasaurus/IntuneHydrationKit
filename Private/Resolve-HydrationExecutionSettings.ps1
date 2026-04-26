@@ -1,4 +1,4 @@
-﻿function Resolve-HydrationExecutionSettings {
+function Resolve-HydrationExecutionSettings {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

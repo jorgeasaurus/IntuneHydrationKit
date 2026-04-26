@@ -1,4 +1,4 @@
-﻿function Get-OpenIntuneBaseline {
+function Get-OpenIntuneBaseline {
     <#
     .SYNOPSIS
         Downloads OpenIntuneBaseline repository from GitHub

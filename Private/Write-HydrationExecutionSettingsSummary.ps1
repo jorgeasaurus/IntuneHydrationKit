@@ -1,4 +1,4 @@
-﻿function Write-HydrationExecutionSettingsSummary {
+function Write-HydrationExecutionSettingsSummary {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

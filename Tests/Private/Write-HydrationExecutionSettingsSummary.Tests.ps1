@@ -1,4 +1,4 @@
-﻿#Requires -Modules Pester
+#Requires -Modules Pester
 
 BeforeAll {
     . $PSScriptRoot/../../Private/Format-HydrationDisplayMessage.ps1

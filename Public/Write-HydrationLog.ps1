@@ -1,4 +1,4 @@
-﻿function Write-HydrationLog {
+function Write-HydrationLog {
     <#
     .SYNOPSIS
         Writes a log entry to the console and log file

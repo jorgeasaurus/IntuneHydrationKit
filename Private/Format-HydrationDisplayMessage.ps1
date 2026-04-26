@@ -1,4 +1,4 @@
-﻿function Format-HydrationDisplayMessage {
+function Format-HydrationDisplayMessage {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

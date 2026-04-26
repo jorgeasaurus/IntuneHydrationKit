@@ -1,4 +1,4 @@
-﻿function Test-IntunePrerequisites {
+function Test-IntunePrerequisites {
     <#
     .SYNOPSIS
         Validates Intune tenant prerequisites
@@ -116,7 +116,7 @@
                 Write-Information (Format-HydrationDisplayMessage -Message $note.Message -Style 'Info' -Emoji '•' -Indent 2) -InformationAction Continue
 
                 foreach ($policyName in $note.DetailLines) {
-                        Write-Information (Format-HydrationDisplayMessage -Message "'$policyName'" -Style 'Muted' -Emoji '↳' -Indent 4) -InformationAction Continue
+                    Write-Information (Format-HydrationDisplayMessage -Message "'$policyName'" -Style 'Muted' -Emoji '↳' -Indent 4) -InformationAction Continue
                 }
             }
         }

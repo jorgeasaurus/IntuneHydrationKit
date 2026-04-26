@@ -1,4 +1,4 @@
-﻿function Connect-IntuneHydration {
+function Connect-IntuneHydration {
     <#
     .SYNOPSIS
         Connects to Microsoft Graph with required scopes for Intune hydration
