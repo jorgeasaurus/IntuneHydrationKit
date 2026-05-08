@@ -1,7 +1,5 @@
-# Intune Hydration Kit
-
 <p align="center">
-  <img src="media/IHTLogoClearLight.png" alt="Intune Hydration Kit Logo" width="500">
+  <img src="Media/SocialCard.png" alt="Intune Hydration Kit social card">
 </p>
 
 <p align="center">
