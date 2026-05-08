@@ -40,3 +40,4 @@ conference_talk/demo/2-TemplatesAndBatching.ps1
 conference_talk/demo/3-SafetyPatterns.ps1
 conference_talk/demo/4-LiveHydration.ps1
 conference_talk/slides/IntuneHydrationKit-TechTalk.pptx
+env.ps1

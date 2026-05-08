@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.7.0'
+    ModuleVersion     = '0.7.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -94,7 +94,7 @@
 Install directly from the PowerShell Gallery:
 
 ```powershell
-Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+Install-Module -Name IntuneHydrationKit
 ```
 
 To update to the latest version:
@@ -103,10 +103,9 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.7.0
+## v0.7.1
 
-- **CIS Baselines:** Added a substantial amount of new bundled CIS baseline templates.
-- **Minor Improvements:** Included other minor bug fixes and enhancements across the hydration workflow.
+- **OpenIntuneBaseline:** Updated to windows-v3.8.
 
 '@
         }
