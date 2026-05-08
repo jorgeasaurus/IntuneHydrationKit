@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Media/SocialCard.png" alt="Intune Hydration Kit social card">
+  <img src="media/SocialCard.png" alt="Intune Hydration Kit social card">
 </p>
 
 <p align="center">
