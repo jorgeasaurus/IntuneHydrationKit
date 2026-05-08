@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **OpenIntuneBaseline**: OpenIntuneBaseline Updated to windows-v3.8.
+- **OpenIntuneBaseline**: Updated to windows-v3.8.
 
 ## [0.7.0] - 2026-04-22
 
