@@ -94,7 +94,7 @@
 Install directly from the PowerShell Gallery:
 
 ```powershell
-Install-Module -Name IntuneHydrationKit
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
 ```
 
 To update to the latest version:
