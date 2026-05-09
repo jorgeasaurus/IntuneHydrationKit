@@ -21,22 +21,30 @@
     Path to local bundled templates. Default: Templates/OpenIntuneBaseline relative to repo root.
 .PARAMETER KeepDownload
     If specified, the downloaded upstream files are not cleaned up after comparison.
+.PARAMETER OutputPath
+    Optional path to write a JSON comparison summary for automation.
+.PARAMETER PassThru
+    If specified, returns the comparison summary object to the pipeline.
 .EXAMPLE
     ./scripts/Compare-OpenIntuneBaseline.ps1
     # Compare bundled templates against upstream SkipToTheEndpoint repo
 
 .EXAMPLE
-    ./scripts/Compare-OpenIntuneBaseline.ps1 -UpstreamRepoUrl "https://github.com/skiptotheendpoint/OpenIntuneBaseline"
+    ./scripts/Compare-OpenIntuneBaseline.ps1 -UpstreamRepoUrl "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline"
     # Compare against the maintained fork instead
 
 .EXAMPLE
     ./scripts/Compare-OpenIntuneBaseline.ps1 -KeepDownload
     # Keep the downloaded upstream files for manual inspection
+
+.EXAMPLE
+    ./scripts/Compare-OpenIntuneBaseline.ps1 -OutputPath ./build/openintunebaseline-comparison.json
+    # Write a JSON summary for CI automation
 #>
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$UpstreamRepoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline",
+    [string]$UpstreamRepoUrl = "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
 
     [Parameter()]
     [string]$Branch = "main",
@@ -45,7 +53,13 @@ param(
     [string]$LocalPath,
 
     [Parameter()]
-    [switch]$KeepDownload
+    [switch]$KeepDownload,
+
+    [Parameter()]
+    [string]$OutputPath,
+
+    [Parameter()]
+    [switch]$PassThru
 )
 
 $ErrorActionPreference = 'Stop'
@@ -186,6 +200,24 @@ try {
     # --- Report ---
     $totalUpstream = $upstreamFiles.Count
     $totalLocal = $localFiles.Count
+    $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
+    $comparisonResult = [PSCustomObject]@{
+        UpstreamRepository = "$repoOwner/$repoName"
+        Branch             = $Branch
+        LocalPath          = $LocalPath
+        GeneratedAt        = (Get-Date).ToUniversalTime().ToString('o')
+        TotalUpstream      = $totalUpstream
+        TotalLocal         = $totalLocal
+        IdenticalCount     = $matched.Count
+        ModifiedCount      = $modified.Count
+        OnlyUpstreamCount  = $onlyUpstream.Count
+        OnlyLocalCount     = $onlyLocal.Count
+        DifferenceCount    = $issueCount
+        HasDifferences     = ($issueCount -gt 0)
+        Modified           = @($modified | Sort-Object)
+        OnlyUpstream       = @($onlyUpstream | Sort-Object)
+        OnlyLocal          = @($onlyLocal | Sort-Object)
+    }
 
     Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Host "  RESULTS" -ForegroundColor Cyan
@@ -228,11 +260,26 @@ try {
     if ($modified.Count -eq 0 -and $onlyUpstream.Count -eq 0 -and $onlyLocal.Count -eq 0) {
         Write-Host "  ✓ PARITY CHECK PASSED - local templates match upstream exactly." -ForegroundColor Green
     } else {
-        $issueCount = $modified.Count + $onlyUpstream.Count + $onlyLocal.Count
         Write-Host "  ✗ PARITY CHECK: $issueCount difference(s) found."
         Write-Host "    Review the items above and update Templates/OpenIntuneBaseline as needed." -ForegroundColor Gray
     }
     Write-Host ""
+
+    if ($OutputPath) {
+        $outputDirectory = Split-Path -Path $OutputPath -Parent
+        if ($outputDirectory -and -not (Test-Path -Path $outputDirectory)) {
+            $null = New-Item -Path $outputDirectory -ItemType Directory -Force
+        }
+
+        $comparisonResult |
+            ConvertTo-Json -Depth 5 |
+            Set-Content -Path $OutputPath -Encoding utf8
+        Write-Host "  Wrote comparison summary to: $OutputPath" -ForegroundColor DarkGray
+    }
+
+    if ($PassThru.IsPresent) {
+        Write-Output $comparisonResult
+    }
 
 } catch {
     Write-Error "Comparison failed: $_"

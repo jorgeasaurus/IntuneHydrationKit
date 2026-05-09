@@ -76,6 +76,19 @@ gh workflow run "CI/CD Pipeline" --ref feature/my-branch
 | Release | `git tag v1.0.0 && git push origin v1.0.0` | build, publish, release |
 | Manual | `gh workflow run "CI/CD Pipeline"` | build |
 
+### 5. Weekly OpenIntuneBaseline Parity Check
+
+Runs every Monday and compares bundled `Templates/OpenIntuneBaseline/` content with the upstream OpenIntuneBaseline repository. If differences are found, the workflow creates an issue titled **Update bundled OpenIntuneBaseline templates** or comments on the existing open issue.
+
+```bash
+gh workflow run "OpenIntuneBaseline Parity Check" --ref main
+```
+
+| Scenario | Command | Jobs Run |
+|----------|---------|----------|
+| Weekly schedule | Automatic Mondays at 13:00 UTC | compare |
+| Manual parity check | `gh workflow run "OpenIntuneBaseline Parity Check"` | compare |
+
 ## Monitoring Workflow Runs
 
 ```bash
