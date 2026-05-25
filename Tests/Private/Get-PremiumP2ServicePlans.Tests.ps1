@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-PremiumP2ServicePlans.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Auth\Get-PremiumP2ServicePlans.ps1'
     . $functionPath
 }
 

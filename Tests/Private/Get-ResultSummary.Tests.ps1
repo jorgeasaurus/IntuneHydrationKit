@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-ResultSummary.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\Get-ResultSummary.ps1'
     . $functionPath
 }
 

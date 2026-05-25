@@ -1,8 +1,8 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-HydrationMarkerSet.ps1
-    . $PSScriptRoot/../../Private/New-HydrationDescription.ps1
+    . $PSScriptRoot/../../Private/Hydration/Get-HydrationMarkerSet.ps1
+    . $PSScriptRoot/../../Private/Hydration/New-HydrationDescription.ps1
 }
 
 Describe 'New-HydrationDescription' {
@@ -42,13 +42,13 @@ Describe 'New-HydrationDescription' {
 
     Context 'Tag detection compatibility' {
         It 'Should be detectable by Test-HydrationKitObject' {
-            . $PSScriptRoot/../../Private/Test-HydrationKitObject.ps1
+            . $PSScriptRoot/../../Private/Hydration/Test-HydrationKitObject.ps1
             $desc = New-HydrationDescription -ExistingText 'Test policy'
             Test-HydrationKitObject -Description $desc | Should -BeTrue
         }
 
         It 'Should be detectable without existing text' {
-            . $PSScriptRoot/../../Private/Test-HydrationKitObject.ps1
+            . $PSScriptRoot/../../Private/Hydration/Test-HydrationKitObject.ps1
             $desc = New-HydrationDescription
             Test-HydrationKitObject -Description $desc | Should -BeTrue
         }
@@ -71,7 +71,7 @@ Describe 'New-HydrationDescription' {
         }
 
         It 'Should be detectable by Test-HydrationKitObject with space separator' {
-            . $PSScriptRoot/../../Private/Test-HydrationKitObject.ps1
+            . $PSScriptRoot/../../Private/Hydration/Test-HydrationKitObject.ps1
             $desc = New-HydrationDescription -ExistingText 'Profile' -Separator ' '
             Test-HydrationKitObject -Description $desc | Should -BeTrue
         }

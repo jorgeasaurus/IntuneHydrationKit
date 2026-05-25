@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-HydrationAuthParameters.ps1
+    . $PSScriptRoot/../../Private/Auth/Get-HydrationAuthParameters.ps1
 }
 
 Describe 'Get-HydrationAuthParameters' {

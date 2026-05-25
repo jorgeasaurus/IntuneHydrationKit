@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-GraphPagedResults.ps1
+    . $PSScriptRoot/../../Private/Graph/Get-GraphPagedResults.ps1
 }
 
 Describe 'Get-GraphPagedResults' {

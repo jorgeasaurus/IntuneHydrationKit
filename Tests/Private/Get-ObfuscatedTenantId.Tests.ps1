@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-ObfuscatedTenantId.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\Get-ObfuscatedTenantId.ps1'
     . $functionPath
 }
 

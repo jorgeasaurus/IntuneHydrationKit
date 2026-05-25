@@ -2,8 +2,8 @@
 
 BeforeAll {
     # Import the functions under test
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-FilteredTemplates.ps1'
-    $hydrationTemplatesPath = Join-Path $PSScriptRoot '..\..\Private\Get-HydrationTemplates.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Templates\Get-FilteredTemplates.ps1'
+    $hydrationTemplatesPath = Join-Path $PSScriptRoot '..\..\Private\Templates\Get-HydrationTemplates.ps1'
     . $functionPath
     . $hydrationTemplatesPath
 }
