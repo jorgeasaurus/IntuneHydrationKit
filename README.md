@@ -33,7 +33,7 @@
 
 ## Overview
 
-The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with boilerplate configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies, bundled CIS benchmark-derived policies from [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines), compliance policies, dynamic groups, and more—turning hours of manual configuration into a single command.
+The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune tenants with practical baseline configurations. It includes vetted [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies, bundled CIS benchmark-derived policies from [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines), compliance policies, dynamic groups, and more, turning hours of manual setup into a single command.
 
 > **Note:** This kit uses a [maintained fork](https://github.com/jorgeasaurus/OpenIntuneBaseline) of the original [OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) repository. OpenIntuneBaseline and CIS baseline content from [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) are bundled with the module and periodically refreshed only after validation and testing, which prevents unplanned upstream changes from affecting your deployments.
 
@@ -45,16 +45,19 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 ### What Gets Created
 
+These counts reflect the bundled template set at the time of the latest validated release and may change as templates are added or revised.
+
 | Category | Count | Description |
 | ---------- | ------- | ------------- |
 | Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
 | Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
-| OpenIntuneBaseline | 94 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
-| CIS Baselines | 700+ | Bundled [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) CIS benchmark-derived policies across Windows, macOS, iOS, Android, Edge, Chrome, and related administrative template workloads |
+| OpenIntuneBaseline | 99 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
+| CIS Baselines | 728 | Bundled [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) CIS benchmark-derived policies across Windows, macOS, iOS, Android, Edge, Chrome, and related administrative template workloads |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
-| Mobile Apps | 17 | Microsoft Store apps (Company Portal, Teams, Slack, Spotify, etc.) |
+| Mobile Apps | 8 | Bundled legacy mobile app templates (macOS Edge, macOS M365 Apps, Windows M365 Apps, plus Windows Store templates for Adobe Acrobat Reader DC, Company Portal, PowerShell, Spotify, and WhatsApp) |
+| WinGet Win32 Apps | 28 | [Bundled Windows WinGet app catalog](#windows-winget-app-catalog) packaged as Intune Win32 apps |
 | Notification Templates | 1 | Notification message templates for compliance and enrollment |
 | Enrollment Profiles | 4 | Autopilot deployment profiles, Enrollment Status Page, and Autopilot device preparation |
 | Conditional Access | 21 | [Starter pack policy templates](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policy-common) (created disabled) |
@@ -75,15 +78,14 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 
 1. **Test in a non-production tenant first** - Use a dev/test tenant before running against production
 2. **Always preview changes first** - Use `-WhatIf` in parameter or settings mode
-3. **Review the configuration** - Understand what will be imported before running
-4. **Have a rollback plan** - Know how to manually remove configurations if needed
-5. **Backup existing configurations** - Export current settings before running
+3. **Review enabled targets** - Start with specific import switches before using `-All`
+4. **Have a rollback plan** - Know how to remove configurations if needed
 
 ### Deletion Safety
 
 When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
 
-- Objects are identified by the `[IHD]` name prefix and `"Imported by Intune Hydration Kit"` description marker
+- Objects are identified by the `"Imported by Intune Hydration Kit"` marker; some resource types also use the `[IHD]` name prefix
 - Conditional Access policies must also be in `disabled` state to be deleted
 - Manually created objects with the same names will NOT be deleted
 
@@ -91,18 +93,19 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 
 ## Features
 
-- **`[IHD]` Name Prefix** - All imported objects are prefixed with `[IHD]` for easy identification and filtering
+- **`[IHD]` Name Markers** - Most imported objects are prefixed with `[IHD]`; mobile apps and WinGet apps append ` - [IHD]` and also rely on hydration markers for ownership
 - **Batch API Operations** - Groups, policies, filters, and apps use batched Graph API calls (up to 10 per batch) for ~61% faster execution
 - **Retry-After Throttle Handling** - Automatic retry with `Retry-After` header support on 429/503 Graph API responses
 - **Bundled Baselines** - OpenIntuneBaseline and CIS baseline templates are included in the module (no external download required)
 - **Idempotent** - Safe to run multiple times; skips existing configurations
 - **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
-- **Safe Deletion** - Only removes objects created by this kit (identified by `[IHD]` prefix and description marker)
+- **Safe Deletion** - Only removes objects created by this kit (identified by the hydration marker, with prefixes used where applicable)
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
 - **Platform Filtering** - Import resources for specific platforms only (e.g., `-Platform Windows,macOS`)
 - **Detailed Logging** - Full audit trail of all operations
 - **Elapsed Time Tracking** - Final summary output and reports include total hydration time
 - **Summary Reports** - Markdown and JSON reports of all changes
+- **WinGet Win32 Apps** - Windows app hydration backed by bundled WinGet templates and packaged into Intune Win32 apps without requiring `IntuneWinAppUtil.exe`
 
 ---
 
@@ -122,7 +125,11 @@ Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
 
 ### Required Permissions
 
-The authenticated user/app needs these Microsoft Graph permissions:
+For interactive runs, use a Global Administrator account. Intune Graph APIs can reject PIM-elevated or non-Global Administrator accounts even when Graph consent is present.
+
+Why: Microsoft documents that Intune Graph access requires both Graph permission scopes and user role permissions. Microsoft also documents that after PIM activates a role, downstream application access can lag or remain cached depending on the application architecture. In practice, Intune's Graph backend can return 401/403 for PIM-elevated Global Administrator sessions while a permanently assigned Global Administrator works.
+
+The authenticated user/app also needs these Microsoft Graph permissions:
 
 - `DeviceManagementConfiguration.ReadWrite.All`
 - `DeviceManagementServiceConfig.ReadWrite.All`
@@ -169,396 +176,124 @@ Import-Module ./IntuneHydrationKit.psd1
 
 ## Quick Start
 
-The kit supports two invocation methods: **parameters** (recommended) or **settings file** (for complex configurations).
-
-### Using the PSGallery Module
-
-After installing from PSGallery, use the `Invoke-IntuneHydration` function directly:
+Start with the module and parameters first. Use settings files only when you want reusable configuration. The full command patterns live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
 
 ```powershell
-# Preview all targets with interactive auth
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -All `
-    -WhatIf
-
-# Run specific targets only
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -ComplianceTemplates `
-    -DynamicGroups `
-    -DeviceFilters
-
-# Import bundled CIS baseline policies only
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -CISBaselines
-
-# Filter by platform (Windows only)
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -All `
-    -Platform Windows
-
-# Filter by multiple platforms
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -All `
-    -Platform Windows, macOS
-
-# Use service principal authentication
-$secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
-Invoke-IntuneHydration -TenantId "your-tenant-id" `
-    -ClientId "app-id" `
-    -ClientSecret $secret `
-    -Create `
-    -All
-
-# Use a settings file for complex configurations
-Invoke-IntuneHydration -SettingsPath ./settings.json
-
-# Preview with settings file
-Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
-```
-
-### Using the Cloned Repository
-
-If you cloned the repository, use the wrapper script:
-
-```powershell
-# Preview all targets with interactive auth
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -All `
-    -WhatIf
-
-# Run specific targets only
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -ComplianceTemplates `
-    -DynamicGroups `
-    -DeviceFilters
-
-# Import bundled CIS baseline policies only
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -CISBaselines
-
-# Filter by platform (Windows and macOS only)
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
-    -Interactive `
-    -Create `
-    -All `
-    -Platform Windows, macOS
-
-# Use service principal authentication
-$secret = ConvertTo-SecureString "your-secret" -AsPlainText -Force
-./Invoke-IntuneHydration.ps1 -TenantId "your-tenant-id" `
-    -ClientId "app-id" `
-    -ClientSecret $secret `
-    -Create `
-    -All
-```
-
-### Using a Settings File
-
-For complex or repeated configurations, use a settings file:
-
-#### 1. Create Your Settings File
-
-```powershell
-# If using cloned repo
-Copy-Item settings.example.json settings.json
-
-# If using PSGallery module, create your own settings.json
-```
-
-Edit `settings.json` with your tenant details:
-
-```json
-{
-    "tenant": {
-        "tenantId": "your-tenant-id-here",
-        "tenantName": "yourtenant.onmicrosoft.com"
-    },
-    "authentication": {
-        "mode": "interactive"
-    },
-    "options": {
-        "dryRun": false,
-        "create": true,
-        "delete": false,
-        "force": false
-    }
-}
-```
-
-#### 2. Preview Changes (Recommended First Step)
-
-```powershell
-# PSGallery module
-Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
-
-# Cloned repo
-./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
-```
-
-#### 3. Run the Hydration
-
-```powershell
-# PSGallery module
-Invoke-IntuneHydration -SettingsPath ./settings.json
-
-# Cloned repo
-./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
-```
-
----
-
-## Configuration
-
-### Settings File Options
-
-#### Tenant Configuration
-
-```json
-"tenant": {
-    "tenantId": "00000000-0000-0000-0000-000000000000",
-    "tenantName": "contoso.onmicrosoft.com"
-}
-```
-
-#### Authentication Modes
-
-The kit supports two authentication methods:
-
-| Method        | Use Case             | Requirements                        |
-| ------------- | -------------------- | ----------------------------------- |
-| Interactive   | Manual runs, testing | User with required permissions      |
-| Client Secret | Automation, CI/CD    | App registration with client secret |
-
-**Interactive (recommended for testing):**
-
-```json
-"authentication": {
-    "mode": "interactive",
-    "environment": "Global"
-}
-```
-
-Uses browser-based login. Best for manual runs and initial testing.
-
-**Client Secret (for automation):**
-
-```json
-"authentication": {
-    "mode": "clientSecret",
-    "clientId": "00000000-0000-0000-0000-000000000000",
-    "clientSecret": "your-client-secret-value",
-    "environment": "Global"
-}
-```
-
-Uses app registration credentials. Best for unattended/automated runs.
-
-> **Security Note:** Store client secrets securely. Consider using Azure Key Vault or environment variables instead of plaintext in settings files.
-
-**Supported Cloud Environments:**
-
-| Environment | Description |
-| ------------- | ------------- |
-| `Global` | Commercial/Public cloud (default) |
-| `USGov` | US Government (GCC High) |
-| `USGovDoD` | US Government (DoD) |
-| `Germany` | Germany sovereign cloud |
-| `China` | China sovereign cloud (21Vianet) |
-
-#### Operation Modes
-
-| Option | Description |
-| -------- | ------------- |
-| `dryRun` | Preview changes without applying (same as `-WhatIf`) |
-| `create` | Create new configurations |
-| `delete` | Delete existing kit-created configurations |
-| `force` | Skip confirmation prompt when running delete mode |
-
-**Create mode (default):**
-
-```json
-"options": {
-    "create": true,
-    "delete": false
-}
-```
-
-**Delete mode (cleanup):**
-
-```json
-"options": {
-    "create": false,
-    "delete": true,
-    "force": false
-}
-```
-
-#### Selective Targets (create or delete)
-
-Enable or disable specific configuration types (used for both create and delete workflows):
-
-```json
-"imports": {
-    "openIntuneBaseline": true,
-    "cisBaselines": true,
-    "complianceTemplates": true,
-    "appProtection": true,
-    "notificationTemplates": true,
-    "enrollmentProfiles": true,
-    "dynamicGroups": true,
-    "staticGroups": true,
-    "deviceFilters": true,
-    "conditionalAccess": true,
-    "mobileApps": true
-}
-```
-
-#### Platform Filtering
-
-Filter imports by platform to only import resources for specific operating systems:
-
-```json
-"platforms": ["Windows", "macOS"]
-```
-
-**Available platforms:** `Windows`, `macOS`, `iOS`, `Android`, `Linux`, `All`
-
-**Default:** `["All"]` (imports resources for all platforms)
-
-**Affected resources:**
-
-- OpenIntuneBaseline policies
-- CIS baseline policies
-- Compliance policies
-- App Protection policies
-- Device Filters
-- Mobile Apps
-- Enrollment Profiles
-
-**Cross-platform resources (not filtered):**
-
-- Dynamic Groups
-- Static Groups
-- Conditional Access policies
-- Notification Templates
-
-**Examples:**
-
-```json
-// Windows-only deployment
-"platforms": ["Windows"]
-
-// Windows and macOS
-"platforms": ["Windows", "macOS"]
-
-// Mobile platforms only
-"platforms": ["iOS", "Android"]
-
-// All platforms (default)
-"platforms": ["All"]
+Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
 ```
 
 ---
 
 ## Command-Line Parameters
 
-The kit supports two mutually exclusive invocation modes:
+Use PowerShell help for the complete, always-current parameter list:
 
-1. **Settings File Mode**: Use `-SettingsPath` to load all configuration from a JSON file
-2. **Parameter Mode**: Use `-TenantId` with `-Interactive` or `-ClientId`/`-ClientSecret`
+```powershell
+Get-Help Invoke-IntuneHydration -Detailed
+```
 
-These modes cannot be combined - choose one or the other.
+### Parameter Reference
 
-### Tenant Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-TenantId` | String | Azure AD tenant ID (GUID). Required for parameter mode. |
-| `-TenantName` | String | Tenant name for display purposes |
-
-### Authentication Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-Interactive` | Switch | Use interactive (browser-based) authentication |
-| `-ClientId` | String | Application ID for service principal auth |
-| `-ClientSecret` | SecureString | Client secret for service principal auth |
-| `-Environment` | String | Cloud environment: `Global`, `USGov`, `USGovDoD`, `Germany`, `China` (default: Global) |
-
-### Options Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-Create` | Switch | Enable creation of configurations |
-| `-Delete` | Switch | Enable deletion of kit-created objects |
-| `-Force` | Switch | Skip confirmation when running in delete mode |
-| `-VerboseOutput` | Switch | Enable verbose logging |
-| `-WhatIf` | Switch | PowerShell built-in preview mode (applies to any parameter set) |
-
-### Target Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-All` | Switch | Enable all targets |
-| `-OpenIntuneBaseline` | Switch | Process OpenIntuneBaseline policies |
-| `-CISBaselines` | Switch | Process bundled CIS baseline policies |
-| `-ComplianceTemplates` | Switch | Process compliance policies |
-| `-AppProtection` | Switch | Process app protection policies |
-| `-NotificationTemplates` | Switch | Process notification templates |
-| `-EnrollmentProfiles` | Switch | Process Autopilot/ESP profiles |
-| `-DynamicGroups` | Switch | Process dynamic groups |
-| `-StaticGroups` | Switch | Process static (assigned) groups |
-| `-DeviceFilters` | Switch | Process device filters |
-| `-ConditionalAccess` | Switch | Process CA starter pack |
-| `-MobileApps` | Switch | Process mobile app templates |
-
-### Platform Filtering Parameter
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-Platform` | String[] | Filter imports by platform: `Windows`, `macOS`, `iOS`, `Android`, `Linux`, `All` (default: All) |
-
-Affects: OpenIntuneBaseline, CISBaselines, ComplianceTemplates, AppProtection, DeviceFilters, MobileApps, EnrollmentProfiles. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
-
-There are no separate baseline source or download parameters. OpenIntuneBaseline and CIS baseline content are bundled with the module and updated through tested module releases.
-
-### Reporting Parameters (Parameter Mode Only)
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-ReportOutputPath` | String | Output directory for reports |
-| `-ReportFormats` | String[] | Report formats: `markdown`, `json` |
-
-### Settings File Mode Parameter
-
-| Parameter | Type | Description |
-| ----------- | ------ | ------------- |
-| `-SettingsPath` | String | Path to settings JSON file. Required for settings file mode. |
-| `-WhatIf` | Switch | Preview mode (same as `dryRun: true` in settings) |
+| Parameter | Purpose |
+| ----------- | ------- |
+| `-TenantId` | Target tenant ID |
+| `-TenantName` | Optional tenant name for display |
+| `-Interactive` | Use interactive browser-based authentication |
+| `-ClientId` | Service principal application ID |
+| `-ClientSecret` | Service principal client secret |
+| `-Environment` | Cloud environment (`Global`, `USGov`, `USGovDoD`, `Germany`, `China`) |
+| `-Create` | Create configurations |
+| `-Delete` | Delete kit-created configurations |
+| `-Force` | Skip delete confirmation prompts |
+| `-OpenIntuneBaseline` | Process OpenIntuneBaseline policies |
+| `-CISBaselines` | Process bundled CIS baseline policies |
+| `-ComplianceTemplates` | Process compliance templates |
+| `-AppProtection` | Process app protection policies |
+| `-NotificationTemplates` | Process notification templates |
+| `-EnrollmentProfiles` | Process enrollment profiles |
+| `-DynamicGroups` | Process dynamic groups |
+| `-StaticGroups` | Process static groups |
+| `-DeviceFilters` | Process device filters |
+| `-ConditionalAccess` | Process Conditional Access starter pack |
+| `-MobileApps` | Process mobile apps |
+| `-All` | Enable all targets |
+| `-Platform` | Filter supported resource types by platform |
+| `-ReportOutputPath` | Write reports to a custom folder |
+| `-ReportFormats` | Select report formats (`markdown`, `json`) |
+| `-SettingsPath` | Use settings-file mode |
+| `-WhatIf` | Preview changes without applying them |
+| `-Verbose` | Emit verbose diagnostics |
 
 ---
+
+## Settings File Configuration
+
+Use a settings file only when you want reusable configuration. The full settings-file structure and examples live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
+
+#### Selective Targets
+
+Enable only the categories you need. See [docs/Invocation-Examples.md](docs/Invocation-Examples.md) for the JSON example.
+
+##### Windows WinGet App Catalog
+
+Windows mobile app hydration imports the full bundled Windows catalog by default. See [docs/Invocation-Examples.md](docs/Invocation-Examples.md) for the JSON example.
+
+- `templateIds` narrows WinGet-backed imports to specific bundled templates.
+- `remediation.enabled` defaults to `true` and creates/updates WinGet app update remediation scripts when supported.
+- Generated remediations are unassigned by design; assign after review.
+- Generated scripts are saved to a temp folder and listed in the summary report.
+- To add another app, open a request issue or submit a PR that adds a bundled template.
+
+### WinGet App Hydration Prerequisites
+
+WinGet-backed Windows app hydration has a few additional prerequisites beyond Graph access:
+
+- **App Installer / `winget.exe` on managed devices** - The generated install and uninstall wrappers call `winget.exe`. Devices need Microsoft App Installer installed so `winget.exe` can be resolved at runtime.
+- **Outbound access to app sources** - WinGet installs pull vendor installers defined in the WinGet manifest. Make sure devices can reach the package download locations required by your selected templates.
+- **No external packaging utility required** - The kit builds `.intunewin` content with the repo-owned cross-platform packager, so the operator machine does not need `IntuneWinAppUtil.exe`.
+
+| Display name | Publisher | Package identifier |
+|---|---|---|
+| 7-Zip | Igor Pavlov | `7zip.7zip` |
+| Cursor | Anysphere | `Anysphere.Cursor` |
+| Claude | Anthropic, PBC | `Anthropic.Claude` |
+| Claude Code | Anthropic PBC | `Anthropic.ClaudeCode` |
+| Docker Desktop | Docker Inc. | `Docker.DockerDesktop` |
+| Everything | voidtools | `voidtools.Everything` |
+| Foxit PDF Reader | Foxit Software Inc. | `Foxit.FoxitReader` |
+| Git for Windows | The Git Development Community | `Git.Git` |
+| GitHub Desktop | GitHub, Inc. | `GitHub.GitHubDesktop` |
+| Google Chrome | Google LLC | `Google.Chrome` |
+| Greenshot | Greenshot | `Greenshot.Greenshot` |
+| Microsoft Edge | Microsoft Corporation | `Microsoft.Edge` |
+| PowerToys | Microsoft Corporation | `Microsoft.PowerToys` |
+| Microsoft Teams | Microsoft Corporation | `Microsoft.Teams` |
+| Mozilla Firefox | Mozilla | `Mozilla.Firefox` |
+| Notepad++ | Don Ho | `Notepad++.Notepad++` |
+| Notion | Notion Labs Inc. | `Notion.Notion` |
+| Power BI Desktop | Microsoft Corporation | `Microsoft.PowerBI` |
+| PuTTY | Simon Tatham | `PuTTY.PuTTY` |
+| ShareX | ShareX Team | `ShareX.ShareX` |
+| Slack | Slack Technologies Inc. | `SlackTechnologies.Slack` |
+| TreeSize Free | JAM Software | `JAMSoftware.TreeSize.Free` |
+| Visual Studio Code | Microsoft Corporation | `Microsoft.VisualStudioCode` |
+| VLC media player | VideoLAN | `VideoLAN.VLC` |
+| Windows App | Microsoft Corp. | `Microsoft.WindowsApp` |
+| Windows Terminal | Microsoft Corporation | `Microsoft.WindowsTerminal` |
+| WinSCP | Martin Prikryl | `WinSCP.WinSCP` |
+| Zoom Workplace | Zoom Communications, Inc. | `Zoom.Zoom` |
+
+#### Platform Filtering
+
+Filter imports by platform to only import resources for specific operating systems:
+
+See [docs/Invocation-Examples.md](docs/Invocation-Examples.md) for the JSON examples and the list of affected resources.
 
 ## Safety Features
 
 ### Hydration Marker
 
-All objects created by this kit are identified by two markers:
+Most objects created by this kit are identified by two markers:
 
 1. **Name prefix:** `[IHD]` prepended to the display name (e.g., `[IHD] Windows - Default Compliance`)
 2. **Description marker:**
@@ -566,6 +301,8 @@ All objects created by this kit are identified by two markers:
 ```plaintext
 Imported by Intune Hydration Kit
 ```
+
+Mobile apps and WinGet apps are the notable exceptions to prefixing: they append ` - [IHD]` to their template display names and rely on the hydration marker (plus WinGet ownership metadata for WinGet apps) for safe cleanup.
 
 These markers are used to:
 
@@ -599,15 +336,7 @@ All operations support PowerShell `-WhatIf` preview mode in both parameter and s
 
 ### Console Output
 
-The script provides real-time progress with colored status indicators:
-
-- `[i]` Info - Operation details
-- `[!]` Warning - Non-fatal issues
-- `Created:` - New object created
-- `Skipped:` - Object already exists
-- `Deleted:` - Object removed
-
-At the end of each run, the final summary also includes the total elapsed runtime:
+The run shows real-time status (`Created`, `Skipped`, `Deleted`, warnings) and ends with an elapsed-time summary.
 
 ```plaintext
 ---------------- Summary ----------------
@@ -642,10 +371,8 @@ After each run, reports are generated in the OS temp directory (same location as
 | macOS | `/var/folders/.../IntuneHydrationKit/Reports/` |
 | Linux | `/tmp/IntuneHydrationKit/Reports/` |
 
-- `Hydration-Summary.md` - Human-readable markdown report
-- `Hydration-Summary.json` - Machine-readable JSON for automation
-
-Both report formats include the run start time, completion time, and total elapsed time.
+- `Hydration-Summary.md` - Human-readable report
+- `Hydration-Summary.json` - Machine-readable report
 
 You can specify a custom output path using the `-ReportOutputPath` parameter or `reporting.outputPath` in settings.
 
@@ -664,7 +391,7 @@ Install-Module Microsoft.Graph.Authentication -Force
 
 #### "Insufficient privileges"
 
-- Ensure you have Global Administrator or Intune Administrator role
+- Use a Global Administrator account for Intune imports; PIM-elevated or non-Global Administrator accounts can be rejected by Intune Graph APIs
 - Check that all required Graph permissions are consented
 
 #### "No active Intune license found"
@@ -674,66 +401,26 @@ Install-Module Microsoft.Graph.Authentication -Force
 
 #### Objects not being deleted
 
-- Verify the object has the `[IHD]` name prefix and "Imported by Intune Hydration Kit" in its description
+- Verify the object has the `"Imported by Intune Hydration Kit"` marker; many resource types also use the `[IHD]` name prefix, while mobile apps and WinGet apps append ` - [IHD]`
 - For CA policies, ensure the policy is in `disabled` state
-
-### Debug Mode
-
-Enable verbose logging in settings:
-
-```json
-"options": {
-    "verbose": true
-}
-```
-
-Or use PowerShell's verbose preference:
-
-```powershell
-$VerbosePreference = "Continue"
-./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
-```
-
----
 
 ## Project Structure
 
 ```plaintext
-IntuneHydrationKit/
-├── Invoke-IntuneHydration.ps1    # Wrapper script (backward compatibility)
-├── IntuneHydrationKit.psd1       # Module manifest
-├── IntuneHydrationKit.psm1       # Module loader
-├── build.ps1                      # Build bootstrap script
-├── IntuneHydrationKit.build.ps1  # InvokeBuild tasks
-├── settings.example.json          # Example configuration
-├── Public/                        # Exported functions
-│   ├── Invoke-IntuneHydration.ps1 # Main orchestrator function
-│   ├── Connect-IntuneHydration.ps1
-│   ├── Import-IntuneBaseline.ps1
-│   ├── Import-IntuneCompliancePolicy.ps1
-│   ├── Import-IntuneMobileApp.ps1
-│   └── ...
-├── Private/                       # Internal helper functions
-│   ├── Invoke-GroupBatchImport.ps1 # Batch Graph API operations
-│   ├── Get-GraphPagedResults.ps1   # Paginated Graph queries
-│   ├── Get-TemplateDisplayNames.ps1
-│   └── ...
-├── Scripts/                       # Helper scripts
-│   └── New-MobileAppTemplate.ps1  # Generate mobile app JSON templates
-├── Templates/                     # Configuration templates
-│   ├── OpenIntuneBaseline/        # Bundled OIB policies (94 templates)
-│   ├── CISBaselines/              # Bundled CIS benchmark-derived policy content
-│   ├── Compliance/
+├── Public/                        # 19 exported functions
+├── Private/                       # Internal helpers
+├── Templates/                     # Bundled import templates
+│   ├── CISBaselines/
+│   ├── OpenIntuneBaseline/
 │   ├── ConditionalAccess/
 │   ├── DynamicGroups/
 │   ├── Filters/
 │   ├── StaticGroups/
 │   ├── MobileApps/
-│   ├── Notifications/
-│   └── ...
-├── Tests/                         # Pester tests (648+)
-├── Logs/                          # Execution logs
-└── Reports/                       # Generated reports
+│   └── Notifications/
+├── Tests/                         # 67 Pester test files
+├── docs/                          # MkDocs and PlatyPS reference docs
+└── scripts/                       # Maintenance and assignment helpers
 ```
 
 ---

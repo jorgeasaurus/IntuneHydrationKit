@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-05-12
+
+### Added
+
+- **Mobile Apps**: Added bundled WinGet app templates and WinGet-backed Win32 app import support under the Mobile Apps workflow.
+
+### Changed
+
+- **Runtime permission checks**: Added selected-import access checks and clearer Global Administrator guidance for tenants where PIM-elevated roles may not be accepted by downstream Intune authorization.
+
 ## [0.7.1] - 2026-05-08
 
 ### Changed
@@ -43,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Error Handling**: Replaced bare `throw` and `Write-Error` with `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` in 9 public functions (`Connect-IntuneHydration`, `Get-OpenIntuneBaseline`, `Import-HydrationSettings`, `Import-IntuneBaseline`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Invoke-IntuneHydration`, `New-IntuneDynamicGroup`, `Test-IntunePrerequisites`) — all errors now include structured ErrorRecord objects with error IDs, categories, and target objects
+- **Error Handling**: Replaced bare `throw` and `Write-Error` with `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` in 9 public functions (`Connect-IntuneHydration`, `Get-OpenIntuneBaseline`, `Import-HydrationSettings`, `Import-IntuneBaseline`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Invoke-IntuneHydration`, `New-IntuneDynamicGroup`, `Test-IntunePrerequisites`) - all errors now include structured ErrorRecord objects with error IDs, categories, and target objects
 - **Graph API Performance**: Added `$select` query parameter to 8+ GET requests across `Import-IntuneCompliancePolicy`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Test-IntunePrerequisites`, and `Test-WindowsDriverUpdateLicense` to reduce response payload size
 - **Centralized Hydration Marker**: Marker strings (`"Imported by Intune Hydration Kit"` and hyphenated variant) consolidated into `$script:HydrationMarker` and `$script:HydrationMarkerAlt` module-scoped variables in `IntuneHydrationKit.psm1`, used by `Test-HydrationKitObject` and `New-HydrationDescription`
 
@@ -53,14 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`[IHD]` Name Prefix**: All imported objects are now prefixed with `[IHD]` for easy identification and filtering in the Intune portal
 - **Batch Graph API Operations**: Groups, policies, filters, and apps now use batched API calls (up to 10 per batch) for significantly faster execution (~61% improvement)
-- **Bundled OpenIntuneBaseline Templates**: OIB templates are now included in the module — no external download required at runtime
+- **Bundled OpenIntuneBaseline Templates**: OIB templates are now included in the module - no external download required at runtime
 - **Notification Template Support**: Import and delete notification message templates (`Templates/Notifications/`)
 
 ### Changed
 
 - **Performance**: Full hydration runs reduced from ~180s to ~70s via batch operations
 - Delete mode now identifies objects by both `[IHD]` name prefix and description marker for more reliable matching
-- `Get-TemplateDisplayNames` returns `HashSet[string]` (case-insensitive) instead of plain collection — help text updated to match
+- `Get-TemplateDisplayNames` returns `HashSet[string]` (case-insensitive) instead of plain collection - help text updated to match
 - `Import-IntuneMobileApp` now uses `-Notes` parameter (instead of `-Description`) for mobile app notes field
 - Security Baselines count corrected from 91 to 94
 
@@ -75,8 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Batch operations**: Empty batch responses now correctly marked as Failed instead of assumed success
 - **Batch operations**: Added bounds check and TryParse for batch response ID mapping to prevent null dereference
 - **Batch operations**: `Get-GraphPagedResults` uses `List[object]` instead of O(n²) array reallocation for paging
-- **Group delete safety**: Template-scoped deletes via `-KnownNames` parameter — only groups matching current templates are deleted
-- **Group batch import**: Null-safe prefix resolution defaults to `[IHD] ` when `$script:ImportPrefix` is null (dot-source safety)
+- **Group delete safety**: Template-scoped deletes via `-KnownNames` parameter - only groups matching current templates are deleted
+- **Group batch import**: Null-safe prefix resolution defaults to `[IHD] `, including the trailing space, when `$script:ImportPrefix` is null (dot-source safety)
 - **Enrollment profiles**: Dashes stripped only from original description text, not from hydration tag; uses space separator via `New-HydrationDescription -Separator ' '`
 - **JSON template parsing**: Malformed group template files no longer crash the entire hydration run (per-file try/catch)
 - **Group prefix mismatch**: Existence check now queries both prefixed and unprefixed names, preventing duplicate creation on re-runs
