@@ -89,6 +89,14 @@ Describe 'Get-HydrationWinGetAppTemplates' {
         @($result.templateId) | Should -Contain 'putty'
     }
 
+    It 'Should resolve requested template IDs case-insensitively' {
+        $result = Get-HydrationWinGetAppTemplates -TemplatePath $script:WinGetTemplatePath -TemplateId @('Google-Chrome', 'PuTTY')
+
+        $result | Should -HaveCount 2
+        @($result.templateId) | Should -Contain 'google-chrome'
+        @($result.templateId) | Should -Contain 'putty'
+    }
+
     It 'Should throw when the preset does not exist' {
         {
             Get-HydrationWinGetAppTemplates -TemplatePath $script:WinGetTemplatePath -PresetId 'missing-preset'

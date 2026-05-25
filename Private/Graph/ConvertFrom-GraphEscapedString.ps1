@@ -26,7 +26,7 @@ function ConvertFrom-GraphEscapedString {
 
     # Additional unescaping for non-nested messages (includes carriage return and backslash)
     if (-not $NestedMessage) {
-        $unescaped = $unescaped -replace '\\r', ' ' -replace '\\\\', '\'
+        $unescaped = ($unescaped -replace '\\r', ' ').Replace('\\', '\')
     }
 
     return $unescaped

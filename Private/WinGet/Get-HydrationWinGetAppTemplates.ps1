@@ -84,6 +84,27 @@ function Get-HydrationWinGetAppTemplates {
         }
     }
 
+    function Get-TemplateFileById {
+        param(
+            [Parameter(Mandatory)]
+            [string]$Id,
+
+            [Parameter(Mandatory)]
+            [System.Collections.Generic.Dictionary[string, System.IO.FileInfo]]$TemplateFileIndex
+        )
+
+        if ($TemplateFileIndex.ContainsKey($Id)) {
+            return $TemplateFileIndex[$Id]
+        }
+
+        $currentTemplatePath = Join-Path -Path $appPath -ChildPath "$Id.json"
+        $errorRecord = Get-TemplateErrorRecord -Exception ([System.IO.FileNotFoundException]::new("WinGet template file not found: $currentTemplatePath")) `
+            -ErrorId 'WinGetTemplateFileNotFound' `
+            -Category ([System.Management.Automation.ErrorCategory]::ObjectNotFound) `
+            -TargetObject $currentTemplatePath
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
+    }
+
     function Test-WinGetTemplateJson {
         param(
             [Parameter(Mandatory)]
@@ -167,13 +188,16 @@ function Get-HydrationWinGetAppTemplates {
     }
 
     if ($resolvedTemplateIds.Count -gt 0) {
-        $templateFiles = foreach ($currentTemplateId in $resolvedTemplateIds) {
-            $currentTemplatePath = Join-Path -Path $appPath -ChildPath "$currentTemplateId.json"
-            Confirm-TemplatePath -Path $currentTemplatePath `
-                -ErrorId 'WinGetTemplateFileNotFound' `
-                -Message "WinGet template file not found: $currentTemplatePath"
+        $templateFileIndex = [System.Collections.Generic.Dictionary[string, System.IO.FileInfo]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($templateFile in Get-ChildItem -Path $appPath -Filter '*.json' -File) {
+            $templateIdFromFile = [System.IO.Path]::GetFileNameWithoutExtension($templateFile.Name)
+            if (-not $templateFileIndex.ContainsKey($templateIdFromFile)) {
+                $templateFileIndex[$templateIdFromFile] = $templateFile
+            }
+        }
 
-            Get-Item -Path $currentTemplatePath
+        $templateFiles = foreach ($currentTemplateId in $resolvedTemplateIds) {
+            Get-TemplateFileById -Id $currentTemplateId -TemplateFileIndex $templateFileIndex
         }
     } else {
         $templateFiles = Get-ChildItem -Path $appPath -Filter '*.json' -File | Sort-Object -Property Name
