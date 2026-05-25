@@ -21,12 +21,14 @@ function Deduplicate-HydrationDeleteCandidates {
         [hashtable[]]$Candidates
     )
 
-    $deduplicated = @{}
+    $seenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $deduplicated = [System.Collections.Generic.List[hashtable]]::new()
+
     foreach ($candidate in $Candidates) {
-        if (-not $deduplicated.ContainsKey($candidate.Name)) {
-            $deduplicated[$candidate.Name] = $candidate
+        if ($seenNames.Add([string]$candidate.Name)) {
+            $deduplicated.Add($candidate)
         }
     }
 
-    return @($deduplicated.Values)
+    return @($deduplicated)
 }

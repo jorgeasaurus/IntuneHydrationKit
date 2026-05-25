@@ -14,7 +14,18 @@ Describe 'Deduplicate-HydrationDeleteCandidates' {
 
         $result | Should -HaveCount 2
         $result[0] | Should -BeOfType ([hashtable])
-        $result.Name | Should -Contain 'Policy A'
-        $result.Name | Should -Contain 'Policy B'
+        $result.Name | Should -Be @('Policy A', 'Policy B')
+        $result.Id | Should -Be @('1', '3')
+    }
+
+    It 'Should treat names as case-insensitive duplicates' {
+        $result = @(Deduplicate-HydrationDeleteCandidates -Candidates @(
+            @{ Name = 'Policy A'; Id = '1'; Url = '/one' }
+            @{ Name = 'policy a'; Id = '2'; Url = '/two' }
+        ))
+
+        $result | Should -HaveCount 1
+        $result[0].Name | Should -Be 'Policy A'
+        $result[0].Id | Should -Be '1'
     }
 }

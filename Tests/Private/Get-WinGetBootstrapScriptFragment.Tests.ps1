@@ -14,6 +14,9 @@ Describe 'Get-WinGetBootstrapScriptFragment' {
         $result | Should -Match "Write-TestLog -Message 'Bootstrapping WinGet for tests\.'"
         $result.Contains('$programDataRoot = if ([string]::IsNullOrWhiteSpace($env:ProgramData)) { ''C:\ProgramData'' } else { $env:ProgramData }') | Should -BeTrue
         $result.Contains('$programDataWingetRoot = Join-Path -Path $programDataRoot -ChildPath ''Microsoft.DesktopAppInstaller''') | Should -BeTrue
+        $result.Contains('$tempRoot = [System.IO.Path]::GetTempPath()') | Should -BeTrue
+        $result.Contains('$tempRoot = if ([string]::IsNullOrWhiteSpace($env:TEMP)) { ''C:\Windows\Temp'' } else { $env:TEMP }') | Should -BeTrue
+        $result.Contains('$stagingRoot = Join-Path -Path $tempRoot -ChildPath ''IntuneHydrationKit-WinGetBootstrap''') | Should -BeTrue
         $result | Should -Not -Match '7zip|7za|Install-WingetWith7Zip'
     }
 }

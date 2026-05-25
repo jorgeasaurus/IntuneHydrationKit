@@ -88,7 +88,12 @@ function Get-WinGetExecutablePath {
             Invoke-WebRequest @downloadParams
         }
 
-        `$stagingRoot = Join-Path -Path `$env:TEMP -ChildPath 'IntuneHydrationKit-WinGetBootstrap'
+        `$tempRoot = [System.IO.Path]::GetTempPath()
+        if ([string]::IsNullOrWhiteSpace(`$tempRoot)) {
+            `$tempRoot = if ([string]::IsNullOrWhiteSpace(`$env:TEMP)) { 'C:\Windows\Temp' } else { `$env:TEMP }
+        }
+
+        `$stagingRoot = Join-Path -Path `$tempRoot -ChildPath 'IntuneHydrationKit-WinGetBootstrap'
         `$bundlePath = Join-Path -Path `$stagingRoot -ChildPath 'Microsoft.DesktopAppInstaller.msixbundle'
         `$bundleExtractPath = Join-Path -Path `$stagingRoot -ChildPath 'bundle'
         `$msixExtractPath = Join-Path -Path `$stagingRoot -ChildPath 'appinstaller'
