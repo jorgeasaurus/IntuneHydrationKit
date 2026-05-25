@@ -76,7 +76,6 @@ Invoke-IntuneHydration `
     -TenantId "your-tenant-id" `
     -Interactive `
     -OpenIntuneBaseline `
-    -CISBaselines `
     -ComplianceTemplates `
     -AppProtection `
     -NotificationTemplates `
