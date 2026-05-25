@@ -35,7 +35,7 @@ function Write-WinGetDetectionLog {
         [string]`$Level = 'INFO'
     )
 
-    Write-Host "[`$Level] `$Message"
+    Write-Output "[`$Level] `$Message"
 }
 
 $bootstrapFragment
@@ -121,13 +121,13 @@ function Test-InstalledApplicationRegistry {
 `$Winget = Get-WinGetExecutablePath
 `$installed = & `$Winget list --id "`$PackageIdentifier" --exact --accept-source-agreements 2>&1
 if (`$installed -match `$PackageIdentifierPattern) {
-    Write-Host "`$PackageIdentifier is installed"
+    Write-Output "`$PackageIdentifier is installed"
     exit 0
 } elseif (Test-InstalledApplicationRegistry) {
-    Write-Host "`$PackageIdentifier is installed"
+    Write-Output "`$PackageIdentifier is installed"
     exit 0
 } else {
-    Write-Host "`$PackageIdentifier is not installed"
+    Write-Output "`$PackageIdentifier is not installed"
     exit 1
 }
 "@

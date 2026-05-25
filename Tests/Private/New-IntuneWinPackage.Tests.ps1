@@ -82,4 +82,20 @@ Describe 'New-IntuneWinPackage' {
         $result.OutputPath | Should -Be $script:outputPath
         Test-Path -Path $script:outputPath | Should -BeTrue
     }
+
+    It 'Should support filename-only relative output paths' {
+        Push-Location -Path $script:artifactRoot
+        try {
+            $relativeOutputPath = 'relative-output.intunewin'
+            $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $relativeOutputPath
+
+            $newPackage = ${function:New-IntuneWinPackage}
+            $result = & $newPackage -PackagingContext $context
+        } finally {
+            Pop-Location
+        }
+
+        $result.OutputPath | Should -Be 'relative-output.intunewin'
+        Test-Path -Path (Join-Path $script:artifactRoot 'relative-output.intunewin') | Should -BeTrue
+    }
 }

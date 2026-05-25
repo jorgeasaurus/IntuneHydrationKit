@@ -17,6 +17,10 @@ Describe 'Get-WinGetDetectionScriptContent' {
         $scriptContent | Should -Match 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\*'
         $scriptContent | Should -Match 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\*'
         $scriptContent | Should -Match 'Test-InstalledApplicationRegistry'
+        $scriptContent | Should -Match ([regex]::Escape('Write-Output "[$Level] $Message"'))
+        $scriptContent | Should -Match ([regex]::Escape('Write-Output "$PackageIdentifier is installed"'))
+        $scriptContent | Should -Match ([regex]::Escape('Write-Output "$PackageIdentifier is not installed"'))
+        $scriptContent | Should -Not -Match 'Write-Host'
 
         $parseErrors = $null
         $null = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors)

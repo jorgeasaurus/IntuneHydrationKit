@@ -256,7 +256,9 @@ function New-IntuneWinPackage {
         throw 'PackagingContext.OutputPath is required.'
     }
 
-    $outputDirectory = Split-Path -Path $PackagingContext.OutputPath -Parent
+    $outputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($PackagingContext.OutputPath)
+    $outputDirectory = Split-Path -Path $outputPath -Parent
+
     if (-not [string]::IsNullOrWhiteSpace($outputDirectory) -and -not (Test-Path -Path $outputDirectory)) {
         $null = New-Item -Path $outputDirectory -ItemType Directory -Force -ErrorAction Stop
     }
@@ -270,19 +272,19 @@ function New-IntuneWinPackage {
     Write-Debug "Creating .intunewin package for '$($PackagingContext.PackageIdentifier)' version '$($PackagingContext.PackageVersion)'. SourcePath='$($PackagingContext.SourcePath)', SetupFile='$($PackagingContext.SetupFile)', OutputPath='$($PackagingContext.OutputPath)', WorkingRoot='$workingRoot'."
 
     try {
-        if (Test-Path -Path $PackagingContext.OutputPath) {
-            if (-not $PSCmdlet.ShouldProcess($PackagingContext.OutputPath, 'Overwrite existing .intunewin package')) {
+        if (Test-Path -Path $outputPath) {
+            if (-not $PSCmdlet.ShouldProcess($outputPath, 'Overwrite existing .intunewin package')) {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(
                     [System.OperationCanceledException]::new("Refused to overwrite existing package '$($PackagingContext.OutputPath)'."),
                     'IntuneWinPackageOverwriteDeclined',
                     [System.Management.Automation.ErrorCategory]::OperationStopped,
-                    $PackagingContext.OutputPath
+                    $outputPath
                 )
                 $PSCmdlet.ThrowTerminatingError($errorRecord)
             }
 
             Write-Debug "Removing existing .intunewin output at '$($PackagingContext.OutputPath)'."
-            Remove-Item -Path $PackagingContext.OutputPath -Force -ErrorAction Stop
+            Remove-Item -Path $outputPath -Force -ErrorAction Stop
         }
 
         [System.IO.Compression.ZipFile]::CreateFromDirectory(
@@ -306,7 +308,7 @@ function New-IntuneWinPackage {
         }
         $detectionXml = Format-DetectionXml -DisplayName $displayName -InnerFileName $innerFileName -SetupFile $PackagingContext.SetupFile -UnencryptedContentSize $unencryptedContentSize -EncryptionInfo $encryptionInfo
 
-        $fileStream = [System.IO.File]::Open($PackagingContext.OutputPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        $fileStream = [System.IO.File]::Open($outputPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
         try {
             $archive = [System.IO.Compression.ZipArchive]::new($fileStream, [System.IO.Compression.ZipArchiveMode]::Create, $false)
             try {
@@ -319,7 +321,7 @@ function New-IntuneWinPackage {
             $fileStream.Dispose()
         }
 
-        $outputSize = (Get-Item -Path $PackagingContext.OutputPath).Length
+        $outputSize = (Get-Item -Path $outputPath).Length
         Write-Debug "Created final .intunewin package at '$($PackagingContext.OutputPath)' ($outputSize bytes)."
 
         return [PSCustomObject]@{
