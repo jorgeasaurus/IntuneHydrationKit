@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-GraphStatusCode.ps1
+    . $PSScriptRoot/../../Private/Graph/Get-GraphStatusCode.ps1
 }
 
 Describe 'Get-GraphStatusCode' {

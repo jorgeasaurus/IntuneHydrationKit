@@ -1,8 +1,8 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Format-HydrationDisplayMessage.ps1
-    . $PSScriptRoot/../../Private/Write-HydrationExecutionSettingsSummary.ps1
+    . $PSScriptRoot/../../Private/Hydration/Format-HydrationDisplayMessage.ps1
+    . $PSScriptRoot/../../Private/Configuration/Write-HydrationExecutionSettingsSummary.ps1
 
     function Remove-AnsiFormatting {
         param([string]$Text)

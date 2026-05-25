@@ -37,7 +37,7 @@ $script:HydrationMarkerAlt = 'Imported by Intune-Hydration-Kit'
 # Import private functions
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'
 if (Test-Path -Path $privatePath) {
-    $privateFiles = Get-ChildItem -Path $privatePath -Filter '*.ps1' -File
+    $privateFiles = Get-ChildItem -Path $privatePath -Filter '*.ps1' -File -Recurse
     foreach ($file in $privateFiles) {
         try {
             . $file.FullName
@@ -54,7 +54,7 @@ if (Test-Path -Path $privatePath) {
 # Import public functions
 $publicPath = Join-Path -Path $script:ModuleRoot -ChildPath 'Public'
 if (Test-Path -Path $publicPath) {
-    $publicFiles = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File
+    $publicFiles = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse
     foreach ($file in $publicFiles) {
         try {
             . $file.FullName

@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Test-ConditionalAccessPolicyRequiresPreview.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Auth\Test-ConditionalAccessPolicyRequiresPreview.ps1'
     . $functionPath
 }
 

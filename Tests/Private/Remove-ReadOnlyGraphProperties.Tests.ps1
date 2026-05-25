@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Remove-ReadOnlyGraphProperties.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Utilities\Remove-ReadOnlyGraphProperties.ps1'
     . $functionPath
 }
 
