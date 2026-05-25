@@ -95,7 +95,7 @@ function Invoke-IntuneWinGetAppTemplate {
 
         $currentStep = 'Create Win32 app payload'
         $payload = New-IntuneWin32AppPayload -Configuration $configuration -PackageFileName ([System.IO.Path]::GetFileName($packagePath)) -SetupFilePath 'Install-WinGetPackage.ps1' -ScriptRootPath $contentRoot -IconBase64 $iconAsset.Base64 -IconMimeType $iconAsset.MimeType
-        Write-Debug "Created Win32 app payload for '$DisplayName' with AppVersion='$($payload.appVersion)', DetectionRules=$(@($payload.detectionRules).Count), RequirementRules=$(@($payload.requirementRules).Count), ScopeTags=$(@($payload.roleScopeTagIds).Count)."
+        Write-Debug "Created Win32 app payload for '$DisplayName' with AppVersion='$($payload.appVersion)', Rules=$(@($payload.rules).Count), ScopeTags=$(@($payload.roleScopeTagIds).Count)."
 
         $currentStep = 'Create Graph mobile app'
         $createdApp = Invoke-HydrationGraphRequest -Method POST -Uri 'beta/deviceAppManagement/mobileApps' -Body $payload

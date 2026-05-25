@@ -175,6 +175,27 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         @($script:postedRemediationBodies).Count | Should -Be 0
     }
 
+    It 'Should skip WhatIf mode when proactive remediation availability is missing' {
+        Mock Get-IntuneProactiveRemediationAvailability {
+            [pscustomobject]@{
+                IsAvailable = $false
+                Status      = 'FeatureUnavailable'
+                Message     = 'Device health scripts are not available in this tenant.'
+            }
+        } -ModuleName IntuneHydrationKit
+
+        $result = & $script:TestModule {
+            param([object[]]$Templates)
+            Sync-IntuneWinGetProactiveRemediation -Templates $Templates -WhatIfEnabled $true
+        } $script:testTemplates
+
+        $result | Should -HaveCount 1
+        $result[0].Action | Should -Be 'Skipped'
+        $result[0].Status | Should -Be 'FeatureUnavailable'
+
+        Should -Invoke Invoke-HydrationGraphRequest -Exactly 0 -ModuleName IntuneHydrationKit
+    }
+
     It 'Should update an owned remediation when the package fingerprint changes' {
         Mock Invoke-HydrationGraphRequest {
             param($Method, $Uri, $Body)

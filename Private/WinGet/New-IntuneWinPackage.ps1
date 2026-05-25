@@ -258,11 +258,11 @@ function New-IntuneWinPackage {
 
     $outputDirectory = Split-Path -Path $PackagingContext.OutputPath -Parent
     if (-not [string]::IsNullOrWhiteSpace($outputDirectory) -and -not (Test-Path -Path $outputDirectory)) {
-        $null = New-Item -Path $outputDirectory -ItemType Directory -Force
+        $null = New-Item -Path $outputDirectory -ItemType Directory -Force -ErrorAction Stop
     }
 
     $workingRoot = Join-Path -Path $outputDirectory -ChildPath ('.winget-packaging-{0}' -f [guid]::NewGuid().ToString('N'))
-    $null = New-Item -Path $workingRoot -ItemType Directory -Force
+    $null = New-Item -Path $workingRoot -ItemType Directory -Force -ErrorAction Stop
 
     $sourceArchivePath = Join-Path -Path $workingRoot -ChildPath 'source-content.zip'
     $encryptedArchivePath = Join-Path -Path $workingRoot -ChildPath 'IntunePackage.intunewin'
@@ -282,7 +282,7 @@ function New-IntuneWinPackage {
             }
 
             Write-Debug "Removing existing .intunewin output at '$($PackagingContext.OutputPath)'."
-            Remove-Item -Path $PackagingContext.OutputPath -Force
+            Remove-Item -Path $PackagingContext.OutputPath -Force -ErrorAction Stop
         }
 
         [System.IO.Compression.ZipFile]::CreateFromDirectory(

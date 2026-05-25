@@ -44,14 +44,12 @@ function Sync-IntuneWinGetProactiveRemediation {
         Get-WinGetRemediationDefinition -Scope 'user' -TemplateSet $Templates
     )
 
-    if (-not $WhatIfEnabled) {
-        $availability = Get-IntuneProactiveRemediationAvailability
-        if (-not $availability.IsAvailable) {
-            Write-HydrationLog -Message "  Skipped: WinGet proactive remediations - $($availability.Message)" -Level Warning
-            return @(
-                New-HydrationResult -Name 'WinGet proactive remediations' -Type 'WinGetRemediation' -Action 'Skipped' -Status $availability.Status
-            )
-        }
+    $availability = Get-IntuneProactiveRemediationAvailability
+    if (-not $availability.IsAvailable) {
+        Write-HydrationLog -Message "  Skipped: WinGet proactive remediations - $($availability.Message)" -Level Warning
+        return @(
+            New-HydrationResult -Name 'WinGet proactive remediations' -Type 'WinGetRemediation' -Action 'Skipped' -Status $availability.Status
+        )
     }
 
     foreach ($definition in $definitions) {

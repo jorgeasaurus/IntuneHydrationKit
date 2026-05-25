@@ -43,7 +43,6 @@ function Send-IntuneWinAzureStorageChunkedUpload {
     $chunkSize = [int64]$ChunkSizeBytes
     $chunkCount = [int][Math]::Ceiling($fileSize / $chunkSize)
     $currentUploadUri = $UploadUri
-    $isoEncoding = [System.Text.Encoding]::GetEncoding('iso-8859-1')
     $chunkIds = @()
     Write-Debug "Starting Azure Storage chunked upload for '$FilePath' ($fileSize bytes) to '$(Get-UploadUriForLogging -Uri $UploadUri)' using ChunkSizeBytes=$ChunkSizeBytes across $chunkCount chunk(s)."
 
@@ -55,16 +54,12 @@ function Send-IntuneWinAzureStorageChunkedUpload {
 
             $chunkLength = Get-IntuneWinUploadChunkLength -FileSize $fileSize -ChunkIndex $index -ChunkSizeBytes $ChunkSizeBytes
             $chunkBytes = $reader.ReadBytes($chunkLength)
-            $requestBody = $isoEncoding.GetString($chunkBytes)
             $chunkUri = "$currentUploadUri&comp=block&blockid=$chunkId"
             Write-Debug "Uploading Azure Storage chunk $($index + 1)/$chunkCount for '$FilePath' (ChunkId='$chunkId', Bytes=$chunkLength)."
 
             for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
                 try {
-                    Invoke-WebRequest -Method PUT -Uri $chunkUri -Body $requestBody -Headers @{
-                        'Content-Type'   = 'text/plain; charset=iso-8859-1'
-                        'x-ms-blob-type' = 'BlockBlob'
-                    } -TimeoutSec $ChunkUploadTimeoutSec -ErrorAction Stop | Out-Null
+                    Invoke-IntuneWinAzureStorageBlockUpload -Uri $chunkUri -Body $chunkBytes -TimeoutSec $ChunkUploadTimeoutSec
                     break
                 } catch {
                     $isAuthFailure = $_.Exception.Message -match 'AuthenticationFailed|403|authorized'
