@@ -69,6 +69,25 @@ Invoke-IntuneHydration `
     -Platform Windows, macOS
 ```
 
+### All Minus CIS Baseline
+
+```powershell
+Invoke-IntuneHydration `
+    -TenantId "your-tenant-id" `
+    -Interactive `
+    -OpenIntuneBaseline `
+    -CISBaselines `
+    -ComplianceTemplates `
+    -AppProtection `
+    -NotificationTemplates `
+    -EnrollmentProfiles `
+    -DynamicGroups `
+    -StaticGroups `
+    -DeviceFilters `
+    -ConditionalAccess `
+    -MobileApps
+```
+
 ### Service Principal Authentication
 
 ```powershell
@@ -155,22 +174,22 @@ Store client secrets securely (for example, Azure Key Vault or environment-injec
 
 Supported cloud environments:
 
-| Environment | Description |
-| ------------- | ------------- |
-| `Global` | Commercial/Public cloud (default) |
-| `USGov` | US Government (GCC High) |
-| `USGovDoD` | US Government (DoD) |
-| `Germany` | Germany sovereign cloud |
-| `China` | China sovereign cloud (21Vianet) |
+| Environment | Description                       |
+| ----------- | --------------------------------- |
+| `Global`    | Commercial/Public cloud (default) |
+| `USGov`     | US Government (GCC High)          |
+| `USGovDoD`  | US Government (DoD)               |
+| `Germany`   | Germany sovereign cloud           |
+| `China`     | China sovereign cloud (21Vianet)  |
 
 Operation modes:
 
-| Option | Description |
-| -------- | ------------- |
+| Option   | Description                                          |
+| -------- | ---------------------------------------------------- |
 | `dryRun` | Preview changes without applying (same as `-WhatIf`) |
-| `create` | Create new configurations |
-| `delete` | Delete existing kit-created configurations |
-| `force` | Skip confirmation prompt when running delete mode |
+| `create` | Create new configurations                            |
+| `delete` | Delete existing kit-created configurations           |
+| `force`  | Skip confirmation prompt when running delete mode    |
 
 Create mode:
 
@@ -273,19 +292,19 @@ Only bundled WinGet templates are supported. To add another app, open a request 
 
 ```json
 {
-    "tenant": {
-        "tenantId": "your-tenant-id-here",
-        "tenantName": "yourtenant.onmicrosoft.com"
-    },
-    "authentication": {
-        "mode": "interactive"
-    },
-    "options": {
-        "dryRun": false,
-        "create": true,
-        "delete": false,
-        "force": false
-    }
+  "tenant": {
+    "tenantId": "your-tenant-id-here",
+    "tenantName": "yourtenant.onmicrosoft.com"
+  },
+  "authentication": {
+    "mode": "interactive"
+  },
+  "options": {
+    "dryRun": false,
+    "create": true,
+    "delete": false,
+    "force": false
+  }
 }
 ```
 
@@ -313,18 +332,13 @@ By default, `mobileApps` with `Windows` imports the full bundled Windows catalog
 
 ```json
 {
-    "imports": {
-        "mobileApps": true
-    },
-    "mobileApps": {
-        "templateIds": [
-            "google-chrome",
-            "visual-studio-code"
-        ]
-    },
-    "platforms": [
-        "Windows"
-    ]
+  "imports": {
+    "mobileApps": true
+  },
+  "mobileApps": {
+    "templateIds": ["google-chrome", "visual-studio-code"]
+  },
+  "platforms": ["Windows"]
 }
 ```
 
