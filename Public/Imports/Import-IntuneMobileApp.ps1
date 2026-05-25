@@ -51,13 +51,17 @@ function Import-IntuneMobileApp {
             Where-Object { -not (Test-IsWinGetTemplateFile -TemplateFile $_) }
     )
 
+    $requestedTemplateIdDisplay = $null
     if ($TemplateId) {
         $requestedTemplateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $requestedTemplateIdValues = [System.Collections.Generic.List[string]]::new()
         foreach ($currentTemplateId in @($TemplateId | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
             $trimmedTemplateId = ([string]$currentTemplateId).Trim()
+            $requestedTemplateIdValues.Add($trimmedTemplateId)
             [void]$requestedTemplateIds.Add($trimmedTemplateId)
             [void]$requestedTemplateIds.Add(($trimmedTemplateId -replace '[^a-zA-Z0-9]', ''))
         }
+        $requestedTemplateIdDisplay = $requestedTemplateIdValues -join ', '
 
         if ($requestedTemplateIds.Count -gt 0) {
             $templateFiles = @(
@@ -71,6 +75,11 @@ function Import-IntuneMobileApp {
     }
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
+        if (-not [string]::IsNullOrWhiteSpace($requestedTemplateIdDisplay)) {
+            Write-Warning "No mobile app templates matched TemplateId value(s): $requestedTemplateIdDisplay"
+            return @()
+        }
+
         Write-Warning "No mobile app templates found in: $TemplatePath"
         return @()
     }

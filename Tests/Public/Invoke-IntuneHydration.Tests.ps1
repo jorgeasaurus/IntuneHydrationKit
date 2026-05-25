@@ -669,6 +669,8 @@ Describe 'Invoke-IntuneHydration' {
         }
 
         It 'Should call WinGet and scoped legacy mobile app importers when MobileApps is enabled' {
+            $expectedWindowsFallbackTemplateIds = & $script:TestModule { Get-WindowsLegacyMobileAppTemplateId }
+
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -MobileApps -WhatIf
 
             Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
@@ -685,13 +687,7 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
                 @($Platform).Count -eq 1 -and
                 $Platform[0] -eq 'Windows' -and
-                @($TemplateId).Count -eq 6 -and
-                $TemplateId -contains 'AdobeAcrobatReaderDC' -and
-                $TemplateId -contains 'CompanyPortal' -and
-                $TemplateId -contains 'PowerShell' -and
-                $TemplateId -contains 'SpotifyMusicAndPodcasts' -and
-                $TemplateId -contains 'WhatsApp' -and
-                $TemplateId -contains 'M365Apps'
+                (Compare-Object -ReferenceObject $expectedWindowsFallbackTemplateIds -DifferenceObject $TemplateId).Count -eq 0
             }
         }
 

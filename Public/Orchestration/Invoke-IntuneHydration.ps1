@@ -596,14 +596,7 @@ function Invoke-IntuneHydration {
             if ($includeWindowsMobileApps) {
                 $windowsFallbackMobileAppParams = @{
                     Platform       = @('Windows')
-                    TemplateId     = @(
-                        'AdobeAcrobatReaderDC',
-                        'CompanyPortal',
-                        'PowerShell',
-                        'SpotifyMusicAndPodcasts',
-                        'WhatsApp',
-                        'M365Apps'
-                    )
+                    TemplateId     = Get-WindowsLegacyMobileAppTemplateId
                     RemoveExisting = $RemoveExisting
                     WhatIf         = $effectiveWhatIfEnabled
                     Verbose        = $effectiveVerboseEnabled

@@ -93,6 +93,26 @@ Describe 'Import-IntuneMobileApp' {
                 Remove-Item -Path $emptyDir -Force -ErrorAction SilentlyContinue
             }
         }
+
+        It 'Should warn when no mobile app templates match requested template IDs' {
+            $tempDir = New-TestTemplateDirectory -Templates @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Existing App'
+                    publisher     = 'Test Publisher'
+                }
+            )
+
+            try {
+                $warnings = @()
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir -TemplateId 'DoesNotExist' -WarningVariable warnings -WarningAction SilentlyContinue
+
+                $result | Should -BeNullOrEmpty
+                $warnings[0].Message | Should -Be 'No mobile app templates matched TemplateId value(s): DoesNotExist'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     Context 'App Creation' {
