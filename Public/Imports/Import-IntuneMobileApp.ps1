@@ -12,6 +12,8 @@ function Import-IntuneMobileApp {
         Filter templates by platform. Valid values: Windows, macOS, All.
         Defaults to 'All' which imports all mobile app templates regardless of platform.
         Note: Mobile app templates are organized by Windows and macOS directories.
+    .PARAMETER TemplateId
+        Optional mobile app template file names to include, without the .json extension.
     .EXAMPLE
         Import-IntuneMobileApp
     .EXAMPLE
@@ -27,6 +29,9 @@ function Import-IntuneMobileApp {
         [Parameter()]
         [ValidateSet('Windows', 'macOS', 'All')]
         [string[]]$Platform = @('All'),
+
+        [Parameter()]
+        [string[]]$TemplateId,
 
         [Parameter()]
         [switch]$RemoveExisting
@@ -45,6 +50,25 @@ function Import-IntuneMobileApp {
         Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Directory' -Recurse -ResourceType "mobile app template" |
             Where-Object { -not (Test-IsWinGetTemplateFile -TemplateFile $_) }
     )
+
+    if ($TemplateId) {
+        $requestedTemplateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($currentTemplateId in @($TemplateId | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+            $trimmedTemplateId = ([string]$currentTemplateId).Trim()
+            [void]$requestedTemplateIds.Add($trimmedTemplateId)
+            [void]$requestedTemplateIds.Add(($trimmedTemplateId -replace '[^a-zA-Z0-9]', ''))
+        }
+
+        if ($requestedTemplateIds.Count -gt 0) {
+            $templateFiles = @(
+                $templateFiles |
+                    Where-Object {
+                        $requestedTemplateIds.Contains($_.BaseName) -or
+                        $requestedTemplateIds.Contains(($_.BaseName -replace '[^a-zA-Z0-9]', ''))
+                    }
+            )
+        }
+    }
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No mobile app templates found in: $TemplatePath"

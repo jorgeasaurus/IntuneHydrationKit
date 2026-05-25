@@ -130,7 +130,7 @@
                 "mobileApps": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Import mobile app templates"
+                    "description": "Import mobile apps. Windows apps use bundled WinGet-backed Win32 apps plus selected legacy fallback templates; macOS apps use bundled mobile app templates."
                 },
                 "cisBaselines": {
                     "type": "boolean",
@@ -153,6 +153,36 @@
                 ["Windows", "macOS"],
                 ["iOS", "Android"]
             ]
+        },
+        "mobileApps": {
+            "type": "object",
+            "description": "Windows mobile app import configuration for bundled WinGet-backed Win32 apps.",
+            "properties": {
+                "presetId": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Optional preset ID from Templates/MobileApps/Windows/WinGet/Presets. Leave null to import the full bundled WinGet catalog."
+                },
+                "templateIds": {
+                    "type": "array",
+                    "default": [],
+                    "description": "Optional bundled WinGet template IDs to import in addition to the selected preset.",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remediation": {
+                    "type": "object",
+                    "description": "Proactive remediation generation for the selected WinGet app set.",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Create or update WinGet proactive remediation scripts when mobile apps are included."
+                        }
+                    }
+                }
+            }
         },
         "reporting": {
             "type": "object",
