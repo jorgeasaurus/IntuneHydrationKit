@@ -1,0 +1,101 @@
+#Requires -Modules Pester
+
+BeforeAll {
+    . $PSScriptRoot/../../Private/WinGet/Format-WinGetInstallerSummary.ps1
+    . $PSScriptRoot/../../Private/WinGet/Get-IntuneWinPackagingCapability.ps1
+    . $PSScriptRoot/../../Private/WinGet/New-IntuneWinPackagingContext.ps1
+    . $PSScriptRoot/../../Private/WinGet/New-IntuneWinPackage.ps1
+    . $PSScriptRoot/../../Private/WinGet/Get-IntuneWinPackageMetadata.ps1
+    . $PSScriptRoot/../../Private/WinGet/Expand-IntuneWinPackageEncryptedContent.ps1
+}
+
+Describe 'New-IntuneWinPackage' {
+    BeforeEach {
+        $script:artifactRoot = Join-Path $PSScriptRoot '../../build/PesterArtifacts/New-IntuneWinPackage'
+        if (Test-Path -Path $script:artifactRoot) {
+            Remove-Item -Path $script:artifactRoot -Recurse -Force
+        }
+
+        $null = New-Item -Path $script:artifactRoot -ItemType Directory -Force
+        $script:sourceRoot = Join-Path $script:artifactRoot 'source'
+        $null = New-Item -Path $script:sourceRoot -ItemType Directory -Force
+        Set-Content -Path (Join-Path $script:sourceRoot 'Install-WinGetPackage.ps1') -Value "Write-Output 'install'"
+        Set-Content -Path (Join-Path $script:sourceRoot 'support.txt') -Value 'wrapper-data'
+        $script:outputPath = Join-Path $script:artifactRoot 'contoso.intunewin'
+        $script:packageMetadata = [pscustomobject]@{
+            PackageIdentifier = 'Contoso.App'
+            PackageVersion    = '1.0.0'
+            DisplayName       = 'Contoso App'
+            Publisher         = 'Contoso'
+            SelectedInstaller = [pscustomobject]@{
+                InstallerUrl = 'https://downloads.contoso.test/app.exe'
+            }
+        }
+    }
+
+    AfterEach {
+        if (Test-Path -Path $script:artifactRoot) {
+            Remove-Item -Path $script:artifactRoot -Recurse -Force
+        }
+    }
+
+    It 'Should generate a portal-compatible intunewin package' {
+        $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $script:outputPath
+
+        $result = New-IntuneWinPackage -PackagingContext $context
+        $metadata = Get-IntuneWinPackageMetadata -IntuneWinPath $script:outputPath
+
+        $result.OutputPath | Should -Be $script:outputPath
+        $metadata.FileName | Should -Be 'IntunePackage.intunewin'
+        $metadata.SetupFile | Should -Be 'Install-WinGetPackage.ps1'
+        $metadata.UnencryptedSize | Should -BeGreaterThan 0
+        $metadata.FileDigestAlgorithm | Should -Be 'SHA256'
+    }
+
+    It 'Should include the encrypted payload in the package' {
+        $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $script:outputPath
+        $null = New-IntuneWinPackage -PackagingContext $context
+
+        $extractedPath = Join-Path $script:artifactRoot 'IntunePackage.bin'
+        $result = Expand-IntuneWinPackageEncryptedContent -IntuneWinPath $script:outputPath -FileName 'IntunePackage.intunewin' -DestinationPath $extractedPath
+
+        $result | Should -Not -BeNullOrEmpty
+        $result.Length | Should -BeGreaterThan 0
+    }
+
+    It 'Should not fail successful packaging when working directory cleanup fails' {
+        Mock Remove-Item {
+            throw 'locked working directory'
+        } -ParameterFilter { $Path -like (Join-Path $script:artifactRoot '.winget-packaging-*') }
+
+        $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $script:outputPath
+
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Stop'
+            $newPackage = ${function:New-IntuneWinPackage}
+            $result = & $newPackage -PackagingContext $context
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        $result.OutputPath | Should -Be $script:outputPath
+        Test-Path -Path $script:outputPath | Should -BeTrue
+    }
+
+    It 'Should support filename-only relative output paths' {
+        Push-Location -Path $script:artifactRoot
+        try {
+            $relativeOutputPath = 'relative-output.intunewin'
+            $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $relativeOutputPath
+
+            $newPackage = ${function:New-IntuneWinPackage}
+            $result = & $newPackage -PackagingContext $context
+        } finally {
+            Pop-Location
+        }
+
+        $result.OutputPath | Should -Be 'relative-output.intunewin'
+        Test-Path -Path (Join-Path $script:artifactRoot 'relative-output.intunewin') | Should -BeTrue
+    }
+}
