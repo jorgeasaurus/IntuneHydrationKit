@@ -184,20 +184,6 @@ Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create -All -Wha
 
 ---
 
-## Configuration
-
-### Parameter Mode
-
-Use the module directly for most runs. See [docs/Invocation-Examples.md](docs/Invocation-Examples.md) for common parameter-based patterns.
-
-```powershell
-Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
-```
-
-### Optional Settings File
-
----
-
 ## Command-Line Parameters
 
 Use PowerShell help for the complete, always-current parameter list:
@@ -240,7 +226,7 @@ Get-Help Invoke-IntuneHydration -Detailed
 
 ---
 
-## Configuration
+## Settings File Configuration
 
 Use a settings file only when you want reusable configuration. The full settings-file structure and examples live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
 

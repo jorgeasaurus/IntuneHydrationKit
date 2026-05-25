@@ -6,9 +6,9 @@
 
 .DESCRIPTION
     Queries Microsoft Intune mobile apps, filters to Windows app types, preserves any
-    existing assignments, and adds an Available assignment for All Users when one does
-    not already exist. This is intended as a development helper for quickly enabling
-    user-available Windows apps in a test tenant.
+    existing assignments, and adds an Available assignment for All Users when the app
+    does not already have an All Users assignment. This is intended as a development
+    helper for quickly enabling user-available Windows apps in a test tenant.
 
 .PARAMETER WindowsAppTypes
     Windows mobile app @odata.type values to include.

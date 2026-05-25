@@ -193,6 +193,43 @@ function Get-RequiredAssignmentSetting {
     }
 }
 
+function ConvertTo-WritableAssignmentSetting {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [AllowNull()]
+        [object]$Settings
+    )
+
+    $writableSettings = ConvertTo-PlainValue -InputObject $Settings
+    if ($writableSettings -is [System.Collections.IDictionary]) {
+        foreach ($readOnlyKey in @('id', 'lastModifiedDateTime')) {
+            if ($writableSettings.Contains($readOnlyKey)) {
+                $null = $writableSettings.Remove($readOnlyKey)
+            }
+        }
+    }
+
+    return $writableSettings
+}
+
+function ConvertTo-MobileAppAssignmentPayload {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [object]$Assignment
+    )
+
+    process {
+        @{
+            '@odata.type' = '#microsoft.graph.mobileAppAssignment'
+            intent        = [string]$Assignment.intent
+            target        = ConvertTo-PlainValue -InputObject $Assignment.target
+            settings      = ConvertTo-WritableAssignmentSetting -Settings $Assignment.settings
+        }
+    }
+}
+
 function Set-AppRequiredAssignment {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -231,12 +268,7 @@ function Set-AppRequiredAssignment {
     # Build the assignment list: preserve existing + add the new required assignment
     $assignmentPayload = [System.Collections.Generic.List[object]]::new()
     foreach ($assignment in $existingAssignments) {
-        $assignmentPayload.Add(@{
-                '@odata.type' = '#microsoft.graph.mobileAppAssignment'
-                intent        = [string]$assignment.intent
-                target        = ConvertTo-PlainValue -InputObject $assignment.target
-                settings      = ConvertTo-PlainValue -InputObject $assignment.settings
-            })
+        $assignmentPayload.Add((ConvertTo-MobileAppAssignmentPayload -Assignment $assignment))
     }
 
     $assignmentPayload.Add(@{
