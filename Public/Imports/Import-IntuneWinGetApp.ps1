@@ -49,7 +49,7 @@ function Import-IntuneWinGetApp {
     }
 
     if (-not (Test-Path -Path $WorkingDirectory)) {
-        $null = New-Item -Path $WorkingDirectory -ItemType Directory -Force
+        $null = New-Item -Path $WorkingDirectory -ItemType Directory -Force -ErrorAction Stop
     }
 
     Write-Debug "Starting WinGet Win32 import. RemoveExisting=$($RemoveExisting.IsPresent), WorkingDirectory='$WorkingDirectory', PresetId='$PresetId', TemplateIdCount=$(@($TemplateId).Count)."
@@ -109,12 +109,6 @@ function Import-IntuneWinGetApp {
         }
 
         $displayName = Get-HydrationMobileAppDisplayName -DisplayName $templateDisplayName
-        if ([string]::IsNullOrWhiteSpace($template.packageIdentifier)) {
-            Write-HydrationLog -Message "  Failed: $displayName - Missing or blank packageIdentifier for template '$($template.templateId)'" -Level Warning
-            $results += New-HydrationResult -Name $displayName -Path $template.TemplatePath -Type 'WinGetWin32App' -Action 'Failed' -Status "Missing or blank packageIdentifier for template '$($template.templateId)'"
-            continue
-        }
-
         if ($existingApps.Lookup.ContainsKey($displayName) -and $existingApps.Lookup[$displayName].IsOwned) {
             $matchedApp = $existingApps.Lookup[$displayName]
             Write-Debug "Create decision: skipping '$displayName' because matching WinGet-owned app '$($matchedApp.DisplayName)' already exists with AppId='$($matchedApp.Id)'."

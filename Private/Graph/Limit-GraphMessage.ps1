@@ -19,6 +19,7 @@ function Limit-GraphMessage {
         [string]$Message,
 
         [Parameter(Mandatory)]
+        [ValidateRange(1, [int]::MaxValue)]
         [int]$MaximumLength
     )
 

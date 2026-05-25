@@ -64,6 +64,29 @@ function Get-WinGetExecutablePath {
             throw 'Unable to locate App Installer MSIX payload inside the downloaded bundle.'
         }
 
+        function Invoke-WinGetBootstrapDownload {
+            [CmdletBinding()]
+            param(
+                [Parameter(Mandatory)]
+                [string]`$Uri,
+
+                [Parameter(Mandatory)]
+                [string]`$OutFile
+            )
+
+            `$downloadParams = @{
+                Uri        = `$Uri
+                OutFile    = `$OutFile
+                TimeoutSec = 120
+            }
+
+            if (`$PSVersionTable.PSVersion.Major -lt 6) {
+                `$downloadParams.UseBasicParsing = `$true
+            }
+
+            Invoke-WebRequest @downloadParams
+        }
+
         `$stagingRoot = Join-Path -Path `$env:TEMP -ChildPath 'IntuneHydrationKit-WinGetBootstrap'
         `$bundlePath = Join-Path -Path `$stagingRoot -ChildPath 'Microsoft.DesktopAppInstaller.msixbundle'
         `$bundleExtractPath = Join-Path -Path `$stagingRoot -ChildPath 'bundle'
@@ -83,14 +106,14 @@ function Get-WinGetExecutablePath {
         }
 
         try {
-            Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile `$vcRedistPath -UseBasicParsing -TimeoutSec 120
+            Invoke-WinGetBootstrapDownload -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile `$vcRedistPath
             `$vcRedist = Start-Process -FilePath `$vcRedistPath -ArgumentList '/q /norestart' -Wait -PassThru
             $LogFunctionName -Message "VC++ bootstrap exited with code `$(`$vcRedist.ExitCode)."
         } catch {
             $LogFunctionName -Message "VC++ bootstrap failed: `$(`$_.Exception.Message)" -Level 'WARN'
         }
 
-        Invoke-WebRequest -Uri 'https://aka.ms/getwinget' -OutFile `$bundlePath -UseBasicParsing -TimeoutSec 120
+        Invoke-WinGetBootstrapDownload -Uri 'https://aka.ms/getwinget' -OutFile `$bundlePath
         [System.IO.Compression.ZipFile]::ExtractToDirectory(`$bundlePath, `$bundleExtractPath)
         `$msixPath = Get-AppInstallerMsixPath -Path `$bundleExtractPath
 
