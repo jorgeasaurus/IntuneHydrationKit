@@ -126,7 +126,11 @@ function Invoke-IntuneWinGetAppTemplate {
     } finally {
         if (Test-Path -Path $stagingRoot) {
             Write-Debug "Removing WinGet staging directory '$stagingRoot' for template '$($Template.templateId)'."
-            Remove-Item -Path $stagingRoot -Recurse -Force
+            try {
+                Remove-Item -Path $stagingRoot -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Debug "Failed to remove WinGet staging directory '$stagingRoot'. Error='$($_.Exception.Message)'."
+            }
         }
     }
 }

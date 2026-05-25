@@ -107,7 +107,11 @@ function Publish-IntuneWin32AppContent {
     } finally {
         if (Test-Path -Path $encryptedContentPath) {
             Write-Debug "Removing temporary encrypted content file '$encryptedContentPath'."
-            Remove-Item -Path $encryptedContentPath -Force
+            try {
+                Remove-Item -Path $encryptedContentPath -Force -ErrorAction Stop
+            } catch {
+                Write-Debug "Failed to remove temporary encrypted content file '$encryptedContentPath'. Error='$($_.Exception.Message)'."
+            }
         }
     }
 }

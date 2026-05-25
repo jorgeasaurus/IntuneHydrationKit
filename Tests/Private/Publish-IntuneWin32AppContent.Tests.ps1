@@ -131,4 +131,22 @@ Describe 'Publish-IntuneWin32AppContent' {
             $DesiredState -eq 'azureStorageUriRenewalSuccess'
         }
     }
+
+    It 'Should not fail a successful publish when temporary encrypted content cleanup fails' {
+        Mock Remove-Item {
+            throw 'locked encrypted content'
+        } -ParameterFilter { $Path -eq (Join-Path $script:artifactRoot 'app.bin') }
+
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Stop'
+            $result = Publish-IntuneWin32AppContent -AppId 'app-123' -IntuneWinPath './fake.intunewin' -WorkingDirectory $script:artifactRoot
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        $result.ContentVersionId | Should -Be 'content-version-1'
+        $result.ContentFileId | Should -Be 'file-1'
+        $result.UploadedChunkCount | Should -Be 3
+    }
 }
