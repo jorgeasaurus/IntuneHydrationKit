@@ -19,6 +19,9 @@ $script:HydrationState = @{
 $script:LogPath = $null
 $script:VerboseLogging = $false
 $script:CurrentLogFile = $null
+$script:HydrationSessionId = $null
+$script:GeneratedScriptsPath = $null
+$script:GeneratedScriptsNoticeWritten = $false
 
 # Module-level state for Graph environment
 $script:GraphEnvironment = $null
@@ -88,6 +91,7 @@ $publicFunctions = @(
     'Import-IntuneDeviceFilter',
     'Import-IntuneConditionalAccessPolicy',
     'Import-IntuneMobileApp',
+    'Import-IntuneWinGetApp',
     # Helper functions
     'Initialize-HydrationLogging',
     'Write-HydrationLog',

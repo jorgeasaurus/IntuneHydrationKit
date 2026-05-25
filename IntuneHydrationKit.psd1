@@ -50,6 +50,7 @@
         'Import-IntuneDeviceFilter',
         'Import-IntuneConditionalAccessPolicy',
         'Import-IntuneMobileApp',
+        'Import-IntuneWinGetApp',
         # Helper functions
         'Initialize-HydrationLogging',
         'Write-HydrationLog',
