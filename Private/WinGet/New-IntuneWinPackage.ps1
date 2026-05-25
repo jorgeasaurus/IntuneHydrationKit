@@ -333,7 +333,11 @@ function New-IntuneWinPackage {
     } finally {
         if (Test-Path -Path $workingRoot) {
             Write-Debug "Removing packaging working directory '$workingRoot'."
-            Remove-Item -Path $workingRoot -Recurse -Force
+            try {
+                Remove-Item -Path $workingRoot -Recurse -Force -ErrorAction Stop
+            } catch {
+                Write-Debug "Failed to remove packaging working directory '$workingRoot'. Error='$($_.Exception.Message)'."
+            }
         }
     }
 }

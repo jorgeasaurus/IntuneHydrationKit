@@ -62,4 +62,24 @@ Describe 'New-IntuneWinPackage' {
         $result | Should -Not -BeNullOrEmpty
         $result.Length | Should -BeGreaterThan 0
     }
+
+    It 'Should not fail successful packaging when working directory cleanup fails' {
+        Mock Remove-Item {
+            throw 'locked working directory'
+        } -ParameterFilter { $Path -like (Join-Path $script:artifactRoot '.winget-packaging-*') }
+
+        $context = New-IntuneWinPackagingContext -PackageMetadata $script:packageMetadata -SourcePath $script:sourceRoot -SetupFile 'Install-WinGetPackage.ps1' -OutputPath $script:outputPath
+
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Stop'
+            $newPackage = ${function:New-IntuneWinPackage}
+            $result = & $newPackage -PackagingContext $context
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        $result.OutputPath | Should -Be $script:outputPath
+        Test-Path -Path $script:outputPath | Should -BeTrue
+    }
 }
