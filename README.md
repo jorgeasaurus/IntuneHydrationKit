@@ -289,50 +289,6 @@ Filter imports by platform to only import resources for specific operating syste
 
 See [docs/Invocation-Examples.md](docs/Invocation-Examples.md) for the JSON examples and the list of affected resources.
 
----
-
-## Command-Line Parameters
-
-Use PowerShell help for the complete, always-current parameter list:
-
-```powershell
-Get-Help Invoke-IntuneHydration -Detailed
-```
-
-### Parameter Reference
-
-| Parameter | Purpose |
-| ----------- | ------- |
-| `-TenantId` | Target tenant ID |
-| `-TenantName` | Optional tenant name for display |
-| `-Interactive` | Use interactive browser-based authentication |
-| `-ClientId` | Service principal application ID |
-| `-ClientSecret` | Service principal client secret |
-| `-Environment` | Cloud environment (`Global`, `USGov`, `USGovDoD`, `Germany`, `China`) |
-| `-Create` | Create configurations |
-| `-Delete` | Delete kit-created configurations |
-| `-Force` | Skip delete confirmation prompts |
-| `-OpenIntuneBaseline` | Process OpenIntuneBaseline policies |
-| `-CISBaselines` | Process bundled CIS baseline policies |
-| `-ComplianceTemplates` | Process compliance templates |
-| `-AppProtection` | Process app protection policies |
-| `-NotificationTemplates` | Process notification templates |
-| `-EnrollmentProfiles` | Process enrollment profiles |
-| `-DynamicGroups` | Process dynamic groups |
-| `-StaticGroups` | Process static groups |
-| `-DeviceFilters` | Process device filters |
-| `-ConditionalAccess` | Process Conditional Access starter pack |
-| `-MobileApps` | Process mobile apps |
-| `-All` | Enable all targets |
-| `-Platform` | Filter supported resource types by platform |
-| `-ReportOutputPath` | Write reports to a custom folder |
-| `-ReportFormats` | Select report formats (`markdown`, `json`) |
-| `-SettingsPath` | Use settings-file mode |
-| `-WhatIf` | Preview changes without applying them |
-| `-Verbose` | Emit verbose diagnostics |
-
----
-
 ## Safety Features
 
 ### Hydration Marker

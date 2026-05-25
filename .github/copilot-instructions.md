@@ -183,7 +183,7 @@ Publish to PSGallery + GitHub release on version tag push (`v*.*.*`). Tag versio
 ### Logging (`Write-HydrationLog` / `Initialize-HydrationLogging`)
 - `Initialize-HydrationLogging` sets `$script:LogPath` and `$script:CurrentLogFile`
 - Log files and reports default to an OS temp path under `IntuneHydrationKit/`; `reporting.outputPath` or `-ReportOutputPath` can override report output
-- Use `Write-HydrationLog` with levels `Info`, `Warning`, `Error`, `Success` for consistent output formatting
+- Use `Write-HydrationLog` with levels `Info`, `Warning`, `Error`, `Debug` for consistent output formatting
 
 ### Graph Scopes
 Required scopes (returned by `Get-HydrationGraphScopes`):

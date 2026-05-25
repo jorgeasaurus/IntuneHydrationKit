@@ -43,14 +43,15 @@ function Write-RemediationLog {
 $logDirectory = Get-IntuneManagementExtensionLogDirectory
 $script:logPath = Join-Path -Path $logDirectory -ChildPath "IntuneHydrationKit-WinGet-Remediation-System-Remediate.log"
 
-Write-RemediationLog -Message "Starting WinGet proactive remediation Remediation for $scopeLabel scope."
+Write-RemediationLog -Message "Starting WinGet proactive remediation for $scopeLabel scope."
 Write-RemediationLog -Message "Allowlist contains $($packageIdentifiers.Count) package identifier(s)."
 
 function Get-WinGetExecutablePath {
     [CmdletBinding()]
     param()
 
-    $programDataWingetRoot = Join-Path -Path $env:ProgramData -ChildPath 'Microsoft.DesktopAppInstaller'
+    $programDataRoot = if ([string]::IsNullOrWhiteSpace($env:ProgramData)) { 'C:\ProgramData' } else { $env:ProgramData }
+    $programDataWingetRoot = Join-Path -Path $programDataRoot -ChildPath 'Microsoft.DesktopAppInstaller'
     $programDataWingetExe = Join-Path -Path $programDataWingetRoot -ChildPath 'winget.exe'
     $isSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name -eq 'NT AUTHORITY\SYSTEM'
 
@@ -96,7 +97,12 @@ function Get-WinGetExecutablePath {
             throw 'Unable to locate App Installer MSIX payload inside the downloaded bundle.'
         }
 
-        $stagingRoot = Join-Path -Path $env:TEMP -ChildPath 'IntuneHydrationKit-WinGetBootstrap'
+        $tempRoot = [System.IO.Path]::GetTempPath()
+        if ([string]::IsNullOrWhiteSpace($tempRoot)) {
+            $tempRoot = if ([string]::IsNullOrWhiteSpace($env:TEMP)) { 'C:\Windows\Temp' } else { $env:TEMP }
+        }
+
+        $stagingRoot = Join-Path -Path $tempRoot -ChildPath 'IntuneHydrationKit-WinGetBootstrap'
         $bundlePath = Join-Path -Path $stagingRoot -ChildPath 'Microsoft.DesktopAppInstaller.msixbundle'
         $bundleExtractPath = Join-Path -Path $stagingRoot -ChildPath 'bundle'
         $msixExtractPath = Join-Path -Path $stagingRoot -ChildPath 'appinstaller'
