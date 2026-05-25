@@ -43,14 +43,14 @@ function Send-IntuneWinAzureStorageChunkedUpload {
     $chunkSize = [int64]$ChunkSizeBytes
     $chunkCount = [int][Math]::Ceiling($fileSize / $chunkSize)
     $currentUploadUri = $UploadUri
-    $chunkIds = @()
+    $chunkIds = [System.Collections.Generic.List[string]]::new([Math]::Max($chunkCount, 0))
     Write-Debug "Starting Azure Storage chunked upload for '$FilePath' ($fileSize bytes) to '$(Get-UploadUriForLogging -Uri $UploadUri)' using ChunkSizeBytes=$ChunkSizeBytes across $chunkCount chunk(s)."
 
     $reader = [System.IO.BinaryReader]::new([System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read))
     try {
         for ($index = 0; $index -lt $chunkCount; $index++) {
             $chunkId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($index.ToString('0000')))
-            $chunkIds += $chunkId
+            $chunkIds.Add($chunkId)
 
             $chunkLength = Get-IntuneWinUploadChunkLength -FileSize $fileSize -ChunkIndex $index -ChunkSizeBytes $ChunkSizeBytes
             $chunkBytes = $reader.ReadBytes($chunkLength)

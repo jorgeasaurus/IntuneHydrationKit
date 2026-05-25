@@ -21,7 +21,7 @@ function ConvertTo-IntuneWinDetectionRule {
             }
         }
         'Registry' {
-            $operationSource = [string]($Rule.RegistryDetectionType ?? $Rule.DetectionMethod ?? $Rule.DetectionType ?? 'existence')
+            $operationSource = [string]($Rule.RegistryDetectionType ?? $Rule.DetectionMethod ?? 'existence')
             $normalizedOperation = $operationSource.ToLowerInvariant()
             $registryRule = @{
                 '@odata.type'        = '#microsoft.graph.win32LobAppRegistryRule'
@@ -68,7 +68,7 @@ function ConvertTo-IntuneWinDetectionRule {
             return $registryRule
         }
         'File' {
-            $operationSource = [string]($Rule.FileDetectionType ?? $Rule.DetectionMethod ?? $Rule.DetectionType ?? 'exists')
+            $operationSource = [string]($Rule.FileDetectionType ?? $Rule.DetectionMethod ?? 'exists')
             $normalizedOperation = $operationSource.ToLowerInvariant()
             $fileRule = @{
                 '@odata.type'        = '#microsoft.graph.win32LobAppFileSystemRule'

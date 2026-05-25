@@ -54,4 +54,24 @@ Describe 'Resolve-WinGetAppIcon' {
         $result.MimeType | Should -Be 'image/png'
         $result.Source | Should -Be $fallbackIconPath
     }
+
+    It 'Should treat no icon as an expected fallback path' {
+        $fallbackIconPath = Join-Path $script:ModuleRoot 'media/IHTLogoClearLight.png'
+        $fallbackBytes = [System.IO.File]::ReadAllBytes($fallbackIconPath)
+
+        $template = [pscustomobject]@{
+            templateId        = 'no-icon-app'
+            packageIdentifier = 'Contoso.NoIcon'
+            displayName       = 'No Icon App'
+            TemplatePath      = Join-Path $script:testRoot 'no-icon-app.json'
+            icon              = [pscustomobject]@{
+                sourceType = 'none'
+            }
+        }
+
+        $result = Resolve-WinGetAppIcon -Template $template
+
+        $result.Base64 | Should -Be ([Convert]::ToBase64String($fallbackBytes))
+        $result.Source | Should -Be $fallbackIconPath
+    }
 }

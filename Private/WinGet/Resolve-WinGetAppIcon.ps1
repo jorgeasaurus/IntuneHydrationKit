@@ -87,6 +87,9 @@ function Resolve-WinGetAppIcon {
     }
 
     $iconResult = switch ($sourceType) {
+        'none' {
+            $null
+        }
         'file' {
             $filePath = [string]$iconConfig.fileName
 

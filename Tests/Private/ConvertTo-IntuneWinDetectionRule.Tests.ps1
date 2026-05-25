@@ -51,6 +51,16 @@ Describe 'ConvertTo-IntuneWinDetectionRule' {
         $result.check32BitOn64System | Should -BeTrue
     }
 
+    It 'Should default registry rules to existence when no operation is specified' {
+        $result = ConvertTo-IntuneWinDetectionRule -Rule ([pscustomobject]@{
+                DetectionType = 'Registry'
+                KeyPath       = 'HKLM:\Software\Contoso'
+            })
+
+        $result.operationType | Should -Be 'exists'
+        $result.operator | Should -Be 'notConfigured'
+    }
+
     It 'Should map file existence rules' {
         $result = ConvertTo-IntuneWinDetectionRule -Rule ([pscustomobject]@{
                 DetectionType     = 'File'
@@ -60,6 +70,17 @@ Describe 'ConvertTo-IntuneWinDetectionRule' {
             })
 
         $result['@odata.type'] | Should -Be '#microsoft.graph.win32LobAppFileSystemRule'
+        $result.operationType | Should -Be 'exists'
+        $result.operator | Should -Be 'notConfigured'
+    }
+
+    It 'Should default file rules to existence when no operation is specified' {
+        $result = ConvertTo-IntuneWinDetectionRule -Rule ([pscustomobject]@{
+                DetectionType    = 'File'
+                Path             = 'C:\Program Files\Contoso'
+                FileOrFolderName = 'Contoso.exe'
+            })
+
         $result.operationType | Should -Be 'exists'
         $result.operator | Should -Be 'notConfigured'
     }
