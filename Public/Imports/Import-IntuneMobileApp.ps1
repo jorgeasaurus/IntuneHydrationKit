@@ -120,19 +120,7 @@ function Import-IntuneMobileApp {
 
     # Remove existing apps if requested
     if ($RemoveExisting) {
-        # Load template names to scope deletes to only apps this kit would create
-        $knownTemplateNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($templateFile in $templateFiles) {
-            try {
-                $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -ErrorAction Stop
-                $templateName = if ($template.displayName) { $template.displayName } else { $template.name }
-                if ($templateName) {
-                    [void]$knownTemplateNames.Add([string]$templateName)
-                }
-            } catch {
-                Write-Verbose "Failed to parse template: $($templateFile.Name)"
-            }
-        }
+        $knownTemplateNames = Get-MobileAppTemplateNameSet -TemplateFiles $templateFiles
 
         $appsToDelete = @()
         foreach ($appName in $existingApps.Keys) {
@@ -143,9 +131,7 @@ function Import-IntuneMobileApp {
                 continue
             }
 
-            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-            $nameForLookup = $appName -replace "^$escapedPrefix", ''
-            if (-not ($knownTemplateNames.Contains($appName) -or $knownTemplateNames.Contains($nameForLookup))) {
+            if (-not (Test-HydrationMobileAppNameInSet -DisplayName $appName -NameSet $knownTemplateNames)) {
                 Write-Verbose "Skipping '$appName' - not in this kit's templates (may be from another tool)"
                 continue
             }
@@ -179,19 +165,16 @@ function Import-IntuneMobileApp {
     foreach ($templateFile in $templateFiles) {
         try {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-            $displayName = "$($script:ImportPrefix)$($template.displayName)"
             if (-not $template.displayName) {
                 Write-Warning "Template missing displayName: $($templateFile.FullName)"
                 $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'MobileApp' -Action 'Failed' -Status 'Missing displayName'
                 continue
             }
 
-            # Check both prefixed and unprefixed names (backward compat with pre-prefix apps)
             $originalName = $template.displayName
-            $hasLegacyMatch = -not [string]::IsNullOrWhiteSpace($originalName) -and $originalName -ne $displayName -and
-            $existingApps.ContainsKey($originalName) -and $existingApps[$originalName].IsTagged
-            if (($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) -or $hasLegacyMatch) {
-                $matchedName = if ($existingApps.ContainsKey($displayName) -and $existingApps[$displayName].IsTagged) { $displayName } else { $originalName }
+            $displayName = Get-HydrationMobileAppDisplayName -DisplayName $originalName
+            $matchedName = Get-HydrationMobileAppExistingMatch -ExistingApps $existingApps -DisplayName $originalName
+            if ($matchedName) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Id $existingApps[$matchedName].Id -Path $templateFile.FullName -Type 'MobileApp' -Action 'Skipped' -Status 'Already exists'
                 continue

@@ -365,4 +365,41 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         $script:deletedRemediationUris | Should -Contain 'beta/deviceManagement/deviceHealthScripts/system-id'
         $script:deletedRemediationUris | Should -Contain 'beta/deviceManagement/deviceHealthScripts/user-id'
     }
+
+    It 'Should return failed remediation results instead of throwing when delete is unauthorized' {
+        Mock Invoke-HydrationGraphRequest {
+            param($Method, $Uri)
+
+            switch ($Method) {
+                'GET' {
+                    if ($Uri -like '*System*') {
+                        return @{
+                            value = @(
+                                @{
+                                    id          = 'system-id'
+                                    displayName = 'WinGet App Updates (System)'
+                                    description = "Imported by Intune Hydration Kit`nImported from WinGet`nWinGetRemediationScope: system"
+                                }
+                            )
+                        }
+                    }
+
+                    return @{ value = @() }
+                }
+                'DELETE' {
+                    throw 'HTTP/2.0 403 Forbidden {"error":{"code":"UnknownError","message":"User is not authorized to perform this operation"}}'
+                }
+            }
+        } -ModuleName IntuneHydrationKit
+
+        $result = & $script:TestModule {
+            param([object[]]$Templates)
+            Sync-IntuneWinGetProactiveRemediation -Templates $Templates -RemoveExisting
+        } $script:testTemplates
+
+        $result | Should -HaveCount 1
+        $result[0].Action | Should -Be 'Failed'
+        $result[0].Type | Should -Be 'WinGetRemediation'
+        $result[0].Status | Should -Match '403|not authorized|UnknownError'
+    }
 }

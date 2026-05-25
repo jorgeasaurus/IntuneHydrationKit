@@ -57,14 +57,13 @@ function Connect-IntuneHydration {
         }
 
         if ($Interactive) {
-            $connectParams['Scopes'] = $scopes
+            Connect-HydrationGraphViaBrowser -TenantId $TenantId -Scopes $scopes -Environment $Environment
         } else {
             # Create credential object for client secret auth
             $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
             $connectParams['ClientSecretCredential'] = $credential
+            Connect-MgGraph @connectParams
         }
-
-        Connect-MgGraph @connectParams
 
         $null = Set-HydrationConnectionState -TenantId $TenantId -Environment $Environment
 
@@ -79,4 +78,3 @@ function Connect-IntuneHydration {
         $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 }
-

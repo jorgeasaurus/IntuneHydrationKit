@@ -357,7 +357,14 @@ function Invoke-IntuneHydration {
         Write-HydrationLog @logParams
 
         # Always run pre-flight checks (read-only operations)
-        Test-IntunePrerequisites -Verbose:$effectiveVerboseEnabled | Out-Null
+        $preflightMobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
+        $preflightMobileAppPlatforms = @($platformFilters.MobileApps)
+        $preflightMobileAppsIncludeWinGet = $preflightMobileAppPlatforms -contains 'All' -or $preflightMobileAppPlatforms -contains 'Windows'
+        Test-IntunePrerequisites `
+            -Imports $settings.imports `
+            -MobileAppsRemediationEnabled $preflightMobileAppConfiguration.remediationEnabled `
+            -MobileAppsIncludeWinGet $preflightMobileAppsIncludeWinGet `
+            -Verbose:$effectiveVerboseEnabled | Out-Null
 
         # Step 3: Dynamic Groups
         if ($settings.imports.dynamicGroups) {

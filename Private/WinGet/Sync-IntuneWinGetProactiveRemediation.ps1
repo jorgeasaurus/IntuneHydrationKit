@@ -60,9 +60,15 @@ function Sync-IntuneWinGetProactiveRemediation {
         }
 
         foreach ($existingRemediation in $OwnedExisting) {
-            Invoke-HydrationGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceHealthScripts/$($existingRemediation.id)" | Out-Null
-            Write-HydrationLog -Message "  Deleted: $($Definition.DisplayName)" -Level Info
-            $results.Add((New-HydrationResult -Name $Definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation' -Action 'Deleted' -Status 'Removed'))
+            try {
+                Invoke-HydrationGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceHealthScripts/$($existingRemediation.id)" | Out-Null
+                Write-HydrationLog -Message "  Deleted: $($Definition.DisplayName)" -Level Info
+                $results.Add((New-HydrationResult -Name $Definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation' -Action 'Deleted' -Status 'Removed'))
+            } catch {
+                $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
+                Write-HydrationLog -Message "  Failed: $($Definition.DisplayName) - $errorMessage" -Level Warning
+                $results.Add((New-HydrationResult -Name $Definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation' -Action 'Failed' -Status $errorMessage))
+            }
         }
 
         return $true

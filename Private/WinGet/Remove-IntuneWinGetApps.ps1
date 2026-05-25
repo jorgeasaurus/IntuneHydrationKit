@@ -40,7 +40,7 @@ function Remove-IntuneWinGetApps {
             continue
         }
 
-        if (-not $KnownTemplateNames.Contains($existingApp.DisplayName)) {
+        if (-not (Test-HydrationMobileAppNameInSet -DisplayName $existingApp.DisplayName -NameSet $KnownTemplateNames)) {
             Write-Verbose "Skipping '$($existingApp.DisplayName)' - not in current WinGet templates"
             Write-Debug "Delete decision: skipping '$($existingApp.DisplayName)' because it is WinGet-owned but not in the current template set."
             continue

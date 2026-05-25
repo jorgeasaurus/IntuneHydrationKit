@@ -10,6 +10,7 @@ BeforeAll {
     $getGraphStatusCodePath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphStatusCode.ps1'
     $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\Test-HydrationKitObject.ps1'
     $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphPagedResults.ps1'
+    $getHydrationGraphEnvironmentInfoPath = Join-Path $PSScriptRoot '..\..\Private\Auth\Get-HydrationGraphEnvironmentInfo.ps1'
     . $functionPath
     . $newHydrationResultPath
     . $getHydrationMarkerSetPath
@@ -18,6 +19,7 @@ BeforeAll {
     . $getGraphErrorMessagePath
     . $testHydrationKitObjectPath
     . $getGraphPagedResultsPath
+    . $getHydrationGraphEnvironmentInfoPath
 }
 
 Describe 'Invoke-GroupBatchImport' {
@@ -284,6 +286,35 @@ Describe 'Invoke-GroupBatchImport' {
             Invoke-GroupBatchImport -GroupDefinitions $script:spOwnerGroupDefs -GroupType 'Static'
 
             Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -eq 'v1.0/servicePrincipals' } -Times 1
+        }
+
+        It 'Should use canonical Graph environment endpoint for owner references' {
+            Mock Get-MgContext {
+                return @{
+                    Environment = 'USGovDoD'
+                    TenantId    = '00000000-0000-0000-0000-000000000000'
+                }
+            }
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*$batch*' } {
+                return @{ responses = @(@{ id = '1'; status = 200; body = @{ value = @() } }) }
+            }
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'GET' -and $Uri -like '*servicePrincipals*' } {
+                return @{ value = @(@{ id = 'sp-id-123' }) }
+            }
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -eq 'v1.0/groups' } {
+                return @{ id = 'new-group-id'; displayName = 'Windows Autopilot device preparation' }
+            }
+            Mock Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*owners*' } {
+                return @{}
+            }
+
+            Invoke-GroupBatchImport -GroupDefinitions $script:spOwnerGroupDefs -GroupType 'Static'
+
+            Should -Invoke Invoke-MgGraphRequest -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*owners*' -and
+                $Body.'@odata.id' -eq 'https://dod-graph.microsoft.us/v1.0/servicePrincipals/sp-id-123'
+            } -Times 1
         }
     }
 

@@ -23,7 +23,9 @@ function Get-MobileAppTemplateNameSet {
             $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
             if (-not [string]::IsNullOrWhiteSpace($template.displayName)) {
                 $templateDisplayName = [string]$template.displayName
-                [void]$displayNames.Add((Get-HydrationMobileAppDisplayName -DisplayName $templateDisplayName))
+                foreach ($nameVariant in Get-HydrationMobileAppNameVariant -DisplayName $templateDisplayName) {
+                    [void]$displayNames.Add($nameVariant)
+                }
             }
         } catch {
             Write-Verbose "Skipping template display-name lookup for '$($templateFile.FullName)': $($_.Exception.Message)"

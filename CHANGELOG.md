@@ -5,15 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - 2026-05-12
+## [0.8.1] - 2026-05-25
 
 ### Added
 
+- **Authentication**: Added a themed browser PKCE interactive sign-in flow.
 - **Mobile Apps**: Added bundled WinGet app templates and WinGet-backed Win32 app import support under the Mobile Apps workflow.
+- **Pre-flight checks**: Added selected-workload access probing for Device Filters.
 
 ### Changed
 
+- **Authentication**: Interactive auth retries with a fresh browser token and does not persist refresh tokens.
 - **Runtime permission checks**: Added selected-import access checks and clearer Global Administrator guidance for tenants where PIM-elevated roles may not be accepted by downstream Intune authorization.
+- **Sovereign clouds**: Centralized Graph environment metadata for consistent GCC High and DoD endpoint handling.
+
+### Fixed
+
+- **Mobile Apps**: Fixed new mobile app names to append ` - [IHD]` after the app name instead of prefixing `[IHD]`.
+- **Mobile Apps**: Fixed legacy Windows `TemplateId` matching for nested Store and M365 templates.
 
 ## [0.7.1] - 2026-05-08
 
