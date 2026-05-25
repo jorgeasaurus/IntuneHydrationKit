@@ -64,14 +64,55 @@ function ConvertTo-PlainValue {
     param(
         [Parameter()]
         [AllowNull()]
-        [object]$InputObject
+        [object]$InputObject,
+
+        [Parameter()]
+        [System.Collections.Generic.HashSet[object]]$Seen = [System.Collections.Generic.HashSet[object]]::new()
     )
 
     if ($null -eq $InputObject) {
         return $null
     }
 
-    return ($InputObject | ConvertTo-Json -Depth 20 | ConvertFrom-Json -AsHashtable)
+    $type = $InputObject.GetType()
+    if ($type.IsValueType -or $InputObject -is [string]) {
+        return $InputObject
+    }
+
+    if ($Seen.Contains($InputObject)) {
+        return $null
+    }
+    $null = $Seen.Add($InputObject)
+
+    try {
+        if ($InputObject -is [System.Collections.IDictionary]) {
+            $hash = @{}
+            foreach ($key in $InputObject.Keys) {
+                $hash[$key] = ConvertTo-PlainValue -InputObject $InputObject[$key] -Seen $Seen
+            }
+            return $hash
+        }
+
+        if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+            $hash = @{}
+            foreach ($prop in $InputObject.PSObject.Properties) {
+                $hash[$prop.Name] = ConvertTo-PlainValue -InputObject $prop.Value -Seen $Seen
+            }
+            return $hash
+        }
+
+        if ($InputObject -is [System.Collections.IEnumerable]) {
+            $list = [System.Collections.Generic.List[object]]::new()
+            foreach ($item in $InputObject) {
+                $list.Add((ConvertTo-PlainValue -InputObject $item -Seen $Seen))
+            }
+            return [object[]]$list.ToArray()
+        }
+
+        return $InputObject
+    } finally {
+        $null = $Seen.Remove($InputObject)
+    }
 }
 
 function Get-MobileApp {
@@ -110,7 +151,7 @@ function Get-MobileAppAssignment {
     return @($response.value)
 }
 
-function Get-RequiredAssignmentSettings {
+function Get-RequiredAssignmentSetting {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -152,7 +193,7 @@ function Get-RequiredAssignmentSettings {
     }
 }
 
-function Set-AppRequiredOnAllDevices {
+function Set-AppRequiredAssignment {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
@@ -204,7 +245,7 @@ function Set-AppRequiredOnAllDevices {
             target        = @{
                 '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
             }
-            settings      = Get-RequiredAssignmentSettings -MobileAppType $MobileAppType -ExistingAssignments $existingAssignments
+            settings      = Get-RequiredAssignmentSetting -MobileAppType $MobileAppType -ExistingAssignments $existingAssignments
         })
 
     if (-not $PSCmdlet.ShouldProcess($AppName, 'Assign as Required on All Devices')) {
@@ -242,7 +283,7 @@ if ($apps.Count -eq 0) {
 
 $results = foreach ($app in $apps) {
     try {
-        Set-AppRequiredOnAllDevices -AppId $app.id -AppName $app.displayName -MobileAppType $app.'@odata.type'
+        Set-AppRequiredAssignment -AppId $app.id -AppName $app.displayName -MobileAppType $app.'@odata.type'
     } catch {
         [PSCustomObject]@{
             Name   = [string]$app.displayName

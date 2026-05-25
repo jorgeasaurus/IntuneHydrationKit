@@ -47,3 +47,31 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - toc:
       permalink: true
+
+nav:
+  - Home: index.md
+  - Invocation Examples: Invocation-Examples.md
+  - Command Reference:
+      - Orchestration:
+          - Invoke-IntuneHydration: platyps/Invoke-IntuneHydration.md
+          - Import-HydrationSettings: platyps/Import-HydrationSettings.md
+          - Test-IntunePrerequisites: platyps/Test-IntunePrerequisites.md
+      - Connection:
+          - Connect-IntuneHydration: platyps/Connect-IntuneHydration.md
+      - Import Commands:
+          - Import-IntuneBaseline: platyps/Import-IntuneBaseline.md
+          - Import-CISBaseline: platyps/Import-CISBaseline.md
+          - Import-IntuneCompliancePolicy: platyps/Import-IntuneCompliancePolicy.md
+          - Import-IntuneDeviceFilter: platyps/Import-IntuneDeviceFilter.md
+          - Import-IntuneAppProtectionPolicy: platyps/Import-IntuneAppProtectionPolicy.md
+          - Import-IntuneNotificationTemplate: platyps/Import-IntuneNotificationTemplate.md
+          - Import-IntuneEnrollmentProfile: platyps/Import-IntuneEnrollmentProfile.md
+          - Import-IntuneConditionalAccessPolicy: platyps/Import-IntuneConditionalAccessPolicy.md
+          - Import-IntuneMobileApp: platyps/Import-IntuneMobileApp.md
+          - Import-IntuneWinGetApp: platyps/Import-IntuneWinGetApp.md
+      - Helpers:
+          - Initialize-HydrationLogging: platyps/Initialize-HydrationLogging.md
+          - Write-HydrationLog: platyps/Write-HydrationLog.md
+          - New-IntuneDynamicGroup: platyps/New-IntuneDynamicGroup.md
+          - New-IntuneStaticGroup: platyps/New-IntuneStaticGroup.md
+          - Get-OpenIntuneBaseline: platyps/Get-OpenIntuneBaseline.md
