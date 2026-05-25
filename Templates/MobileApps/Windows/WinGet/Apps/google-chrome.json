@@ -1,0 +1,93 @@
+{
+    "$schema": "../Schemas/winGetAppTemplate.schema.json",
+    "schemaVersion": "1.0.0",
+    "templateId": "google-chrome",
+    "packageIdentifier": "Google.Chrome",
+    "displayName": "Google Chrome",
+    "publisher": "Google LLC",
+    "description": "Starter-pack WinGet template for Google Chrome Win32 packaging.",
+    "package": {
+        "source": "WinGet",
+        "match": {
+            "packageIdentifier": "Google.Chrome",
+            "architectures": [
+                "x64"
+            ],
+            "installerTypes": [
+                "msi",
+                "exe"
+            ],
+            "scope": "machine",
+            "locale": "en-US",
+            "channel": null
+        }
+    },
+    "install": {
+        "command": "winget install --id Google.Chrome --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
+        "experience": "system",
+        "restartBehavior": "suppress"
+    },
+    "uninstall": {
+        "command": "winget uninstall --id Google.Chrome --exact --scope machine --silent",
+        "behavior": "allow"
+    },
+    "detection": {
+        "strategy": "generated"
+    },
+    "requirements": {
+        "minimumSupportedWindowsRelease": "W10_22H2",
+        "architectures": [
+            "x64"
+        ],
+        "minimumFreeDiskSpaceInMB": null,
+        "minimumMemoryInMB": null
+    },
+    "icon": {
+        "sourceType": "file",
+        "fileName": "../Icons/google-chrome.png",
+        "notes": "Bundled from IntuneGet public icons."
+    },
+    "metadata": {
+        "categories": [
+            "StarterPack",
+            "Browsers"
+        ],
+        "tags": [
+            "starter-pack",
+            "browser"
+        ],
+        "notes": [],
+        "placeholders": {
+            "customNotes": [],
+            "owner": "",
+            "scopeTagIds": []
+        },
+        "markers": {
+            "hydration": "Imported by Intune Hydration Kit",
+            "source": "Imported from WinGet"
+        }
+    },
+    "resolvedPackage": {
+        "packageVersion": "latest",
+        "manifestSource": {
+            "repository": "microsoft/winget-pkgs",
+            "ref": "master",
+            "packagePath": "manifests/g/Google/Chrome",
+            "versionPath": "manifests/g/Google/Chrome",
+            "installerFile": null,
+            "localeFile": null
+        },
+        "selectedInstaller": {
+            "Architecture": "x64",
+            "Scope": "machine",
+            "InstallerLocale": "en-US",
+            "InstallerType": "msi",
+            "InstallerUrl": null,
+            "InstallerSha256": null,
+            "ProductCode": null,
+            "PackageFamilyName": null,
+            "NestedInstallerType": null,
+            "AppsAndFeaturesEntry": []
+        }
+    }
+}

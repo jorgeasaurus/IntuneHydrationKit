@@ -1,0 +1,96 @@
+{
+    "$schema": "../Schemas/winGetAppTemplate.schema.json",
+    "schemaVersion": "1.0.0",
+    "templateId": "microsoft-powertoys",
+    "packageIdentifier": "Microsoft.PowerToys",
+    "displayName": "PowerToys",
+    "publisher": "Microsoft Corporation",
+    "description": "Starter-pack WinGet template for PowerToys Win32 packaging.",
+    "package": {
+        "source": "WinGet",
+        "match": {
+            "packageIdentifier": "Microsoft.PowerToys",
+            "architectures": [
+                "x64"
+            ],
+            "installerTypes": [
+                "burn",
+                "exe"
+            ],
+            "scope": "machine",
+            "locale": "en-US",
+            "channel": null
+        }
+    },
+    "install": {
+        "command": "winget install --id Microsoft.PowerToys --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
+        "experience": "system",
+        "restartBehavior": "suppress"
+    },
+    "uninstall": {
+        "command": "winget uninstall --id Microsoft.PowerToys --exact --scope machine --silent",
+        "behavior": "allow"
+    },
+    "detection": {
+        "strategy": "generated"
+    },
+    "requirements": {
+        "minimumSupportedWindowsRelease": "W10_22H2",
+        "architectures": [
+            "x64"
+        ],
+        "minimumFreeDiskSpaceInMB": null,
+        "minimumMemoryInMB": null
+    },
+    "icon": {
+        "sourceType": "file",
+        "fileName": "../Icons/microsoft-powertoys.png",
+        "notes": "Bundled from IntuneGet public icons."
+    },
+    "metadata": {
+        "categories": [
+            "StarterPack",
+            "Utilities",
+            "Productivity"
+        ],
+        "tags": [
+            "starter-pack",
+            "productivity",
+            "utilities",
+            "microsoft"
+        ],
+        "notes": [],
+        "placeholders": {
+            "customNotes": [],
+            "owner": "",
+            "scopeTagIds": []
+        },
+        "markers": {
+            "hydration": "Imported by Intune Hydration Kit",
+            "source": "Imported from WinGet"
+        }
+    },
+    "resolvedPackage": {
+        "packageVersion": "latest",
+        "manifestSource": {
+            "repository": "microsoft/winget-pkgs",
+            "ref": "master",
+            "packagePath": "manifests/m/Microsoft/PowerToys",
+            "versionPath": "manifests/m/Microsoft/PowerToys",
+            "installerFile": null,
+            "localeFile": null
+        },
+        "selectedInstaller": {
+            "Architecture": "x64",
+            "Scope": "machine",
+            "InstallerLocale": "en-US",
+            "InstallerType": "burn",
+            "InstallerUrl": null,
+            "InstallerSha256": null,
+            "ProductCode": null,
+            "PackageFamilyName": null,
+            "NestedInstallerType": null,
+            "AppsAndFeaturesEntry": []
+        }
+    }
+}

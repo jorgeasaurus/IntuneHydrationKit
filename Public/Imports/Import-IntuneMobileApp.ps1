@@ -41,7 +41,10 @@ function Import-IntuneMobileApp {
         return @()
     }
 
-    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Directory' -Recurse -ResourceType "mobile app template"
+    $templateFiles = @(
+        Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Directory' -Recurse -ResourceType "mobile app template" |
+            Where-Object { -not (Test-IsWinGetTemplateFile -TemplateFile $_) }
+    )
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
         Write-Warning "No mobile app templates found in: $TemplatePath"
@@ -85,7 +88,18 @@ function Import-IntuneMobileApp {
     # Remove existing apps if requested
     if ($RemoveExisting) {
         # Load template names to scope deletes to only apps this kit would create
-        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+        $knownTemplateNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($templateFile in $templateFiles) {
+            try {
+                $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -ErrorAction Stop
+                $templateName = if ($template.displayName) { $template.displayName } else { $template.name }
+                if ($templateName) {
+                    [void]$knownTemplateNames.Add([string]$templateName)
+                }
+            } catch {
+                Write-Verbose "Failed to parse template: $($templateFile.Name)"
+            }
+        }
 
         $appsToDelete = @()
         foreach ($appName in $existingApps.Keys) {

@@ -1,0 +1,25 @@
+{
+    "$schema": "../Schemas/winGetAppPreset.schema.json",
+    "schemaVersion": "1.0.0",
+    "presetId": "mobile-apps",
+    "displayName": "Windows Mobile Apps",
+    "description": "WinGet-backed Windows mobile app equivalents used by the mobileApps hydration path.",
+    "selectionCriteria": {
+        "candidateSource": "Templates/MobileApps/Windows",
+        "selectionBiases": [
+            "Prefer WinGet-backed equivalents for existing Windows mobile app templates.",
+            "Keep unresolved Windows template fallbacks in the legacy mobile app path."
+        ]
+    },
+    "appIds": [
+        "microsoft-edge",
+        "microsoft-teams",
+        "notion",
+        "power-bi-desktop",
+        "slack",
+        "visual-studio-code",
+        "vlc-media-player",
+        "windows-app",
+        "windows-terminal"
+    ]
+}
