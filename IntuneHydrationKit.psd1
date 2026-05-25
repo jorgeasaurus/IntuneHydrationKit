@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.7.1'
+    ModuleVersion     = '0.8.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -32,36 +32,25 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
-        # Main entry point
-        'Invoke-IntuneHydration',
-        # Core hydration functions
         'Connect-IntuneHydration',
-        'Test-IntunePrerequisites',
-        # Import functions
+        'Get-OpenIntuneBaseline',
+        'Import-CISBaseline',
+        'Import-HydrationSettings',
+        'Import-IntuneAppProtectionPolicy',
+        'Import-IntuneBaseline',
+        'Import-IntuneCompliancePolicy',
+        'Import-IntuneConditionalAccessPolicy',
+        'Import-IntuneDeviceFilter',
+        'Import-IntuneEnrollmentProfile',
+        'Import-IntuneMobileApp',
+        'Import-IntuneNotificationTemplate',
+        'Import-IntuneWinGetApp',
+        'Initialize-HydrationLogging',
+        'Invoke-IntuneHydration',
         'New-IntuneDynamicGroup',
         'New-IntuneStaticGroup',
-        'Get-OpenIntuneBaseline',
-        'Import-IntuneBaseline',
-        'Import-CISBaseline',
-        'Import-IntuneCompliancePolicy',
-        'Import-IntuneAppProtectionPolicy',
-        'Import-IntuneNotificationTemplate',
-        'Import-IntuneEnrollmentProfile',
-        'Import-IntuneDeviceFilter',
-        'Import-IntuneConditionalAccessPolicy',
-        'Import-IntuneMobileApp',
-        # Helper functions
-        'Initialize-HydrationLogging',
-        'Write-HydrationLog',
-        'Import-HydrationSettings',
-        # Result helpers (used by orchestrator)
-        'New-HydrationResult',
-        'Get-ResultSummary',
-        'Get-GraphErrorMessage',
-        # Safety helpers (used by orchestrator for deletion safety checks)
-        'Test-HydrationKitObject',
-        # Utility helpers
-        'Get-ObfuscatedTenantId'
+        'Test-IntunePrerequisites',
+        'Write-HydrationLog'
     )
 
     # Cmdlets to export from this module
@@ -80,13 +69,13 @@
             Tags         = @('Intune', 'Microsoft365', 'Graph', 'Baseline', 'Compliance', 'Security', 'Autopilot', 'MDM', 'Endpoint', 'MEM', 'Azure', 'EntraID', 'ConditionalAccess', 'DeviceManagement', 'PSEdition_Core')
 
             # License URI for this module
-            LicenseUri   = 'https://github.com/jorgeasaurus/Intune-Hydration-Kit/blob/main/LICENSE'
+            LicenseUri   = 'https://github.com/jorgeasaurus/IntuneHydrationKit/blob/main/LICENSE'
 
             # Project URI for this module
             ProjectUri   = 'https://intunehydrationkit.com'
 
             # Icon URI for the module (used in PSGallery)
-            IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/Intune-Hydration-Kit/main/media/IHTLogoClearLight.png'
+            IconUri = 'https://raw.githubusercontent.com/jorgeasaurus/IntuneHydrationKit/main/media/IHKLogoClearLight.png'
 
             # Release notes for this module
             ReleaseNotes = @'
@@ -103,9 +92,10 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.7.1
+## v0.8.0
 
-- **OpenIntuneBaseline:** Updated to windows-v3.8.
+- **Mobile Apps:** Added bundled WinGet app templates and WinGet-backed Win32 app import support under the Mobile Apps workflow.
+- **Runtime permission checks:** Added selected-import access checks and clearer Global Administrator guidance for tenants where PIM-elevated roles may not be accepted by downstream Intune authorization.
 
 '@
         }

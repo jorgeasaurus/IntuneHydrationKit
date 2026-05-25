@@ -1,0 +1,219 @@
+function Import-IntuneAppProtectionPolicy {
+    <#
+    .SYNOPSIS
+        Imports app protection (MAM) policies from templates
+    .DESCRIPTION
+        Reads app protection templates and upserts Android/iOS managed app protection policies via Graph.
+    .PARAMETER TemplatePath
+        Path to the app protection template directory (defaults to Templates/AppProtection)
+    .PARAMETER Platform
+        Filter templates by platform. Valid values: iOS, Android, All.
+        Defaults to 'All' which imports all app protection templates regardless of platform.
+        Note: App protection policies only apply to iOS and Android platforms.
+    .EXAMPLE
+        Import-IntuneAppProtectionPolicy
+    .EXAMPLE
+        Import-IntuneAppProtectionPolicy -Platform iOS
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter()]
+        [string]$TemplatePath,
+
+        [Parameter()]
+        [ValidateSet('iOS', 'Android', 'All')]
+        [string[]]$Platform = @('All'),
+
+        [Parameter()]
+        [switch]$RemoveExisting
+    )
+
+    if (-not $TemplatePath) {
+        $TemplatePath = Join-Path -Path $script:TemplatesPath -ChildPath "AppProtection"
+    }
+
+    if (-not (Test-Path -Path $TemplatePath)) {
+        Write-Warning "App protection template directory not found: $TemplatePath"
+        return @()
+    }
+
+    $templateFiles = Get-FilteredTemplates -Path $TemplatePath -Platform $Platform -FilterMode 'Suffix' -Recurse -ResourceType "app protection template"
+
+    if (-not $templateFiles -or $templateFiles.Count -eq 0) {
+        Write-Warning "No app protection templates found in: $TemplatePath"
+        return @()
+    }
+
+    $typeToEndpoint = @{
+        '#microsoft.graph.androidManagedAppProtection' = 'beta/deviceAppManagement/androidManagedAppProtections'
+        '#microsoft.graph.iosManagedAppProtection'     = 'beta/deviceAppManagement/iosManagedAppProtections'
+    }
+
+    $results = @()
+
+    # Remove existing app protection policies if requested
+    # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
+    if ($RemoveExisting) {
+        # Load template names to scope deletes to only policies this kit would create
+        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+        $deleteCandidates = Get-HydrationDeleteCandidates -Endpoint $typeToEndpoint.Values -KnownTemplateNames $knownTemplateNames -RequireTemplateMatch
+        $policiesToDelete = Deduplicate-HydrationDeleteCandidates -Candidates $deleteCandidates
+
+        if ($policiesToDelete.Count -eq 0) {
+            Write-Verbose "No app protection policies found to delete"
+            return $results
+        }
+
+        if (-not $PSCmdlet.ShouldProcess("$($policiesToDelete.Count) app protection policy/policies", "Delete")) {
+            if ($WhatIfPreference) {
+                foreach ($policy in $policiesToDelete) {
+                    Write-HydrationLog -Message "  WouldDelete: $($policy.Name)" -Level Info
+                    $results += New-HydrationResult -Name $policy.Name -Type 'AppProtection' -Action 'WouldDelete' -Status 'DryRun'
+                }
+            }
+            return $results
+        }
+
+        $results += Invoke-GraphBatchOperation -Items $policiesToDelete -Operation 'DELETE' -ResultType 'AppProtection'
+
+        return $results
+    }
+
+    # Prefetch existing policies from both endpoints
+    # Note: App protection policies don't support $select for description, so we fetch all properties
+    $existingPolicies = @{}
+    foreach ($endpoint in $typeToEndpoint.Values) {
+        try {
+            $listUri = $endpoint
+            $visitedUris = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $pageCount = 0
+            $maxPages = 1000
+            do {
+                $pageCount++
+                if ($pageCount -gt $maxPages) {
+                    throw "Graph pagination exceeded the maximum page limit of $maxPages for '$endpoint'."
+                }
+                if (-not $visitedUris.Add($listUri)) {
+                    throw "Graph pagination returned a repeated nextLink for '$endpoint'."
+                }
+
+                $existing = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
+                foreach ($policy in $existing.value) {
+                    if ($policy.displayName) {
+                        $isTagged = Test-HydrationKitObject -Description $policy.description
+                        if (-not $existingPolicies.ContainsKey($policy.displayName)) {
+                            $existingPolicies[$policy.displayName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $endpoint
+                                IsTagged    = $isTagged
+                            }
+                        } elseif ($isTagged -and -not $existingPolicies[$policy.displayName].IsTagged) {
+                            $existingPolicies[$policy.displayName] = @{
+                                Id          = $policy.id
+                                Description = $policy.description
+                                Endpoint    = $endpoint
+                                IsTagged    = $true
+                            }
+                        }
+                    }
+                }
+                $listUri = $existing.'@odata.nextLink'
+            } while ($listUri)
+        } catch {
+            Write-Warning "Could not retrieve existing policies from $endpoint`: $_"
+        }
+    }
+
+    # Collect policies to create
+    $policiesToCreate = @()
+    foreach ($templateFile in $templateFiles) {
+        try {
+            $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
+            $odataType = $template.'@odata.type'
+
+            if (-not $template.displayName -or -not $odataType) {
+                Write-Warning "Template missing displayName or @odata.type: $($templateFile.FullName)"
+                $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'AppProtection' -Action 'Failed' -Status 'Missing displayName or @odata.type'
+                continue
+            }
+
+            $endpoint = $typeToEndpoint[$odataType]
+            if (-not $endpoint) {
+                Write-Warning "Unsupported @odata.type '$odataType' in $($templateFile.FullName) - skipping"
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status "Unsupported @odata.type: $odataType"
+                continue
+            }
+
+            # Check for existing policy using prefetched list - only skip if tagged by kit
+            if ($existingPolicies.ContainsKey($displayName) -and $existingPolicies[$displayName].IsTagged) {
+                Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
+                $results += New-HydrationResult -Name $displayName -Id $existingPolicies[$displayName].Id -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status 'Already exists'
+                continue
+            }
+
+            # Prepare body (remove read-only properties)
+            $importBody = Copy-DeepObject -InputObject $template
+            Remove-ReadOnlyGraphProperties -InputObject $importBody -AdditionalProperties @(
+                'apps',
+                'assignments',
+                'targetedAppManagementLevels'
+            )
+
+            # Add hydration kit tag to description
+            $importBody.description = New-HydrationDescription -ExistingText $importBody.description
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
+
+            # Remove empty manufacturer/model allowlists
+            if ($importBody.allowedAndroidDeviceManufacturers -eq "") {
+                $importBody.PSObject.Properties.Remove('allowedAndroidDeviceManufacturers') | Out-Null
+            }
+            if ($importBody.allowedIosDeviceModels -eq "") {
+                $importBody.PSObject.Properties.Remove('allowedIosDeviceModels') | Out-Null
+            }
+
+            # Store as JSON string to avoid serialization issues
+            $policiesToCreate += @{
+                Name     = $displayName
+                Path     = $templateFile.FullName
+                Endpoint = $endpoint
+                BodyJson = ($importBody | ConvertTo-Json -Depth 100 -Compress)
+            }
+        } catch {
+            $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+            Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
+            $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'AppProtection' -Action 'Failed' -Status $errMessage
+        }
+    }
+
+    if (-not $PSCmdlet.ShouldProcess("$($policiesToCreate.Count) app protection policy/policies", "Create")) {
+        if ($WhatIfPreference) {
+            foreach ($policy in $policiesToCreate) {
+                Write-HydrationLog -Message "  WouldCreate: $($policy.Name)" -Level Info
+                $results += New-HydrationResult -Name $policy.Name -Path $policy.Path -Type 'AppProtection' -Action 'WouldCreate' -Status 'DryRun'
+            }
+        }
+        return $results
+    }
+
+    if ($policiesToCreate.Count -gt 0) {
+        # Group policies by endpoint for batch creation
+        $policiesByEndpoint = @{}
+        foreach ($policy in $policiesToCreate) {
+            $relativePath = $policy.Endpoint -replace '^beta/', ''
+            if (-not $policiesByEndpoint.ContainsKey($relativePath)) {
+                $policiesByEndpoint[$relativePath] = @()
+            }
+            $policiesByEndpoint[$relativePath] += $policy
+        }
+
+        foreach ($endpoint in $policiesByEndpoint.Keys) {
+            $results += Invoke-GraphBatchOperation -Items $policiesByEndpoint[$endpoint] -Operation 'POST' -BaseUrl "/$endpoint" -ResultType 'AppProtection'
+        }
+    }
+
+    return $results
+}

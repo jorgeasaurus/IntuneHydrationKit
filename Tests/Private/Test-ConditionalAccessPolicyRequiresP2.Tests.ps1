@@ -1,7 +1,11 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Test-ConditionalAccessPolicyRequiresP2.ps1'
+    $arrayHelperPath = Join-Path $PSScriptRoot '..\..\Private\Utilities\Test-HydrationNonEmptyArrayValue.ps1'
+    $stringHelperPath = Join-Path $PSScriptRoot '..\..\Private\Utilities\Test-HydrationNonEmptyStringValue.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Auth\Test-ConditionalAccessPolicyRequiresP2.ps1'
+    . $arrayHelperPath
+    . $stringHelperPath
     . $functionPath
 }
 

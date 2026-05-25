@@ -3,69 +3,65 @@
 
 <#
 .SYNOPSIS
-    Wrapper script for Intune tenant hydration (backward compatibility)
+    Wrapper script for Intune tenant hydration.
 .DESCRIPTION
-    This script provides backward compatibility for users who clone the repository
-    and run the script directly. It imports the IntuneHydrationKit module and calls
-    the Invoke-IntuneHydration function with all provided parameters.
-
-    For new users, consider installing from PSGallery:
-        Install-Module IntuneHydrationKit
-        Invoke-IntuneHydration -SettingsPath ./settings.json
+    Provides backward compatibility for users who clone the repository and run the
+    script directly. The script imports the local IntuneHydrationKit module and
+    forwards parameters to the module's Invoke-IntuneHydration function.
 .PARAMETER SettingsPath
     Path to the settings JSON file. Use this for settings file-based invocation.
 .PARAMETER TenantId
     Azure AD tenant ID (GUID). Required for parameter-based invocation.
 .PARAMETER TenantName
-    Tenant name for display purposes (e.g., contoso.onmicrosoft.com)
+    Tenant name for display purposes.
 .PARAMETER Interactive
-    Use interactive authentication (browser-based login).
+    Use interactive authentication.
 .PARAMETER ClientId
-    Application (client) ID for service principal authentication.
+    Application client ID for service principal authentication.
 .PARAMETER ClientSecret
-    Client secret for service principal authentication (SecureString).
+    Client secret for service principal authentication.
 .PARAMETER Environment
-    Azure cloud environment. Valid values: Global, USGov, USGovDoD, Germany, China
+    Azure cloud environment.
 .PARAMETER Create
-    Enable creation of configurations
+    Enable creation of configurations.
 .PARAMETER Delete
-    Enable deletion of kit-created configurations
+    Enable deletion of kit-created configurations.
 .PARAMETER Force
-    Skip confirmation prompt when running in delete mode
-.PARAMETER VerboseOutput
-    Enable verbose logging output
+    Skip confirmation prompt when running in delete mode.
 .PARAMETER OpenIntuneBaseline
-    Process OpenIntuneBaseline policies
+    Process OpenIntuneBaseline policies.
 .PARAMETER ComplianceTemplates
-    Process compliance policy templates
+    Process compliance policy templates.
 .PARAMETER AppProtection
-    Process app protection policies
+    Process app protection policies.
 .PARAMETER NotificationTemplates
-    Process notification templates
+    Process notification templates.
 .PARAMETER EnrollmentProfiles
-    Process enrollment profiles (Autopilot, ESP)
+    Process enrollment profiles.
 .PARAMETER DynamicGroups
-    Process dynamic groups
+    Process dynamic groups.
+.PARAMETER StaticGroups
+    Process static groups.
 .PARAMETER DeviceFilters
-    Process device filters
+    Process device filters.
 .PARAMETER ConditionalAccess
-    Process Conditional Access starter pack policies
+    Process Conditional Access starter pack policies.
+.PARAMETER MobileApps
+    Process mobile app templates.
+.PARAMETER CISBaselines
+    Process CIS baseline policies.
 .PARAMETER All
-    Enable all targets
+    Enable all targets.
+.PARAMETER Platform
+    Filter imports by platform.
 .PARAMETER ReportOutputPath
-    Output directory for reports
+    Output directory for reports.
 .PARAMETER ReportFormats
-    Report formats to generate (markdown, json)
-.PARAMETER WhatIf
-    Run in dry-run mode without making changes to Intune
+    Report formats to generate.
 .EXAMPLE
-    ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
-
-    Run using settings from a JSON file.
+    ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json -WhatIf
 .EXAMPLE
     ./Invoke-IntuneHydration.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -Interactive -Create -All
-
-    Run with all imports enabled using interactive authentication.
 #>
 [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'SettingsFile')]
 param(
@@ -112,10 +108,6 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
-    [switch]$VerboseOutput,
-
-    [Parameter(ParameterSetName = 'Interactive')]
-    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$OpenIntuneBaseline,
 
     [Parameter(ParameterSetName = 'Interactive')]
@@ -140,6 +132,10 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$StaticGroups,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$DeviceFilters,
 
     [Parameter(ParameterSetName = 'Interactive')]
@@ -148,7 +144,21 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$MobileApps,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$CISBaselines,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$All,
+
+    [Parameter(ParameterSetName = 'SettingsFile')]
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'Linux', 'All')]
+    [string[]]$Platform = @('All'),
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
@@ -162,35 +172,49 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Import the module from the same directory as this script
 $modulePath = Join-Path -Path $PSScriptRoot -ChildPath 'IntuneHydrationKit.psd1'
-if (Test-Path -Path $modulePath) {
-    Import-Module -Name $modulePath -Force
-} else {
+if (-not (Test-Path -Path $modulePath -PathType Leaf)) {
     throw "Module not found at: $modulePath. Ensure IntuneHydrationKit.psd1 is in the same directory as this script."
 }
 
-# Build parameters to pass to the function
-$invokeParams = @{}
+Import-Module -Name $modulePath -Force
 
-# Add all bound parameters except common parameters
-$PSBoundParameters.GetEnumerator() | ForEach-Object {
-    if ($_.Key -notin @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'WhatIf', 'Confirm')) {
-        $invokeParams[$_.Key] = $_.Value
+$commonParameters = @(
+    'Verbose'
+    'Debug'
+    'ErrorAction'
+    'WarningAction'
+    'InformationAction'
+    'ErrorVariable'
+    'WarningVariable'
+    'InformationVariable'
+    'OutVariable'
+    'OutBuffer'
+    'PipelineVariable'
+    'ProgressAction'
+    'WhatIf'
+    'Confirm'
+)
+
+$invokeParams = @{}
+foreach ($parameter in $PSBoundParameters.GetEnumerator()) {
+    if ($parameter.Key -notin $commonParameters) {
+        $invokeParams[$parameter.Key] = $parameter.Value
     }
 }
 
-# Handle WhatIf separately to ensure it's passed correctly
-if ($WhatIfPreference) {
-    $invokeParams['WhatIf'] = $true
+if ($PSBoundParameters.ContainsKey('WhatIf')) {
+    $invokeParams['WhatIf'] = [bool]$PSBoundParameters['WhatIf']
 }
 
-# Call the module function
+if ($PSBoundParameters.ContainsKey('Confirm')) {
+    $invokeParams['Confirm'] = [bool]$PSBoundParameters['Confirm']
+}
+
 $result = Invoke-IntuneHydration @invokeParams
 
-# Exit with appropriate code based on result
 if ($result.Success) {
     exit 0
-} else {
-    exit 1
 }
+
+exit 1

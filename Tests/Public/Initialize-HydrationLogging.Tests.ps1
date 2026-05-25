@@ -71,6 +71,15 @@ Describe 'Initialize-HydrationLogging' {
             $logFiles.Count | Should -BeGreaterThan 0
         }
 
+        It 'Should use OS temp directory when LogPath is whitespace' {
+            $expectedTempBase = [System.IO.Path]::GetTempPath()
+            $expectedLogPath = Join-Path -Path $expectedTempBase -ChildPath 'IntuneHydrationKit/Logs'
+
+            Initialize-HydrationLogging -LogPath '   '
+
+            Test-Path -Path $expectedLogPath | Should -Be $true
+        }
+
         It 'Should work on different OS platforms' {
             # This test verifies the cross-platform temp path resolution
             $tempPath = [System.IO.Path]::GetTempPath()

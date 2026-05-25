@@ -1,8 +1,9 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Format-HydrationDisplayMessage.ps1
-    . $PSScriptRoot/../../Private/Write-HydrationExecutionSummary.ps1
+    . $PSScriptRoot/../../Private/Hydration/Format-HydrationDisplayMessage.ps1
+    . $PSScriptRoot/../../Private/Hydration/Get-ResultSummary.ps1
+    . $PSScriptRoot/../../Private/Hydration/Write-HydrationExecutionSummary.ps1
 
     function Remove-AnsiFormatting {
         param([string]$Text)
@@ -29,6 +30,9 @@ Describe 'Write-HydrationExecutionSummary' {
             }
         }
         Mock Write-Information { }
+        $script:GeneratedScriptsPath = $null
+        $script:ModuleRoot = 'TestDrive:\ModuleRoot'
+        New-Item -Path (Join-Path -Path $script:ModuleRoot -ChildPath 'Reference') -ItemType Directory -Force | Out-Null
     }
 
     It 'Should emit summary lines through the information stream in dry-run mode' {
@@ -36,6 +40,7 @@ Describe 'Write-HydrationExecutionSummary' {
             tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
             authentication = @{ environment = 'Global' }
             reporting      = @{ outputPath = 'TestDrive:\Reports'; formats = @('markdown', 'json') }
+            imports        = @{ mobileApps = $false }
         }
         $startTime = [datetime]'2026-04-24T21:00:00'
         $expectedMarkdownPath = Join-Path -Path 'TestDrive:\Reports' -ChildPath 'Hydration-Summary.md'
@@ -57,5 +62,37 @@ Describe 'Write-HydrationExecutionSummary' {
         $reportContent = Get-Content -Path $expectedMarkdownPath -Raw
         $reportContent | Should -Match '\| Deleted \| 3 \|'
         $reportContent | Should -Match '\| Would Delete \| 7 \|'
+    }
+
+    It 'Should include the generated script review path when scripts were exported' {
+        $settings = @{
+            tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+            authentication = @{ environment = 'Global' }
+            reporting      = @{ outputPath = 'TestDrive:\Reports'; formats = @('markdown') }
+            imports        = @{ mobileApps = $false }
+        }
+        $startTime = [datetime]'2026-04-24T21:00:00'
+        $script:GeneratedScriptsPath = 'TestDrive:\GeneratedScripts'
+
+        $null = Write-HydrationExecutionSummary -Settings $settings -Results @() -StartTime $startTime -WhatIfEnabled $false
+
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq '📂 Scripts: TestDrive:\GeneratedScripts' } -Times 1
+        (Get-Content -Path (Join-Path -Path 'TestDrive:\Reports' -ChildPath 'Hydration-Summary.md') -Raw) | Should -Match 'Generated PowerShell scripts were saved to: TestDrive:\\GeneratedScripts'
+    }
+
+    It 'Should include the mobile app example script path when mobile apps are enabled' {
+        $settings = @{
+            tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+            authentication = @{ environment = 'Global' }
+            reporting      = @{ outputPath = 'TestDrive:\Reports'; formats = @('markdown') }
+            imports        = @{ mobileApps = $true }
+        }
+        $startTime = [datetime]'2026-04-24T21:00:00'
+        $expectedExamplesPath = Join-Path -Path $script:ModuleRoot -ChildPath 'Reference'
+
+        $null = Write-HydrationExecutionSummary -Settings $settings -Results @() -StartTime $startTime -WhatIfEnabled $false
+
+        Should -Invoke Write-Information -ParameterFilter { (Remove-AnsiFormatting -Text $MessageData) -eq "🧩 Examples: $expectedExamplesPath" } -Times 1
+        (Get-Content -Path (Join-Path -Path 'TestDrive:\Reports' -ChildPath 'Hydration-Summary.md') -Raw) | Should -Match ([regex]::Escape("Example WinGet wrapper and remediation scripts are available under: $expectedExamplesPath"))
     }
 }

@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-GraphPagedResults.ps1
+    . $PSScriptRoot/../../Private/Graph/Get-GraphPagedResults.ps1
 }
 
 Describe 'Get-GraphPagedResults' {
@@ -103,6 +103,28 @@ Describe 'Get-GraphPagedResults' {
         It 'Should return empty array' {
             $result = Get-GraphPagedResults -Uri 'beta/test'
             $result | Should -HaveCount 0
+        }
+    }
+
+    Context 'When pagination is unsafe' {
+        It 'Should throw when MaxPages is exceeded' {
+            Mock Invoke-MgGraphRequest {
+                @{ value = @(@{ id = '1' }); '@odata.nextLink' = 'beta/test?page=next' }
+            }
+
+            { Get-GraphPagedResults -Uri 'beta/test' -MaxPages 1 } | Should -Throw '*maximum page limit*'
+        }
+
+        It 'Should throw when nextLink repeats' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+                @{
+                    value             = @(@{ id = '1' })
+                    '@odata.nextLink' = $Uri
+                }
+            }
+
+            { Get-GraphPagedResults -Uri 'beta/test' } | Should -Throw '*repeated nextLink*'
         }
     }
 }

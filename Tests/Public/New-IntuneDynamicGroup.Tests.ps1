@@ -3,10 +3,11 @@
 BeforeAll {
     # Import the module
     $modulePath = Join-Path $PSScriptRoot '..\..\'
+    Get-Module -Name IntuneHydrationKit | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
 
     # Get reference to the module
-    $script:TestModule = Get-Module -Name IntuneHydrationKit
+    $script:TestModule = Get-Module -Name IntuneHydrationKit | Select-Object -First 1
 
     if (-not $script:TestModule) {
         throw "Failed to import IntuneHydrationKit module"

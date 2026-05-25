@@ -63,6 +63,14 @@ Describe 'Import-IntuneMobileApp' {
             $command.Parameters.ContainsKey('WhatIf') | Should -Be $true
         }
 
+        It 'Should have TemplateId parameter' {
+            $command = Get-Command Import-IntuneMobileApp
+            $param = $command.Parameters['TemplateId']
+
+            $param | Should -Not -BeNullOrEmpty
+            $param.ParameterType | Should -Be ([string[]])
+        }
+
         It 'Should not require any mandatory parameters' {
             $command = Get-Command Import-IntuneMobileApp
             $mandatoryParams = $command.Parameters.Values | Where-Object {
@@ -131,7 +139,141 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be '[IHD] Test WinGet App'
+                $result[0].Name | Should -Be 'Test WinGet App - [IHD]'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should filter to requested template IDs' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'selected-app-id'; displayName = 'Selected App' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "MobileAppsTemplateFilter-$(Get-Random)"
+            $windowsDir = Join-Path $tempDir 'Windows'
+            New-Item -Path $windowsDir -ItemType Directory -Force | Out-Null
+
+            @{
+                '@odata.type' = '#microsoft.graph.winGetApp'
+                displayName   = 'Selected App'
+                publisher     = 'Test Publisher'
+            } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $windowsDir 'SelectedApp.json') -Encoding UTF8
+
+            @{
+                '@odata.type' = '#microsoft.graph.winGetApp'
+                displayName   = 'Ignored App'
+                publisher     = 'Test Publisher'
+            } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $windowsDir 'IgnoredApp.json') -Encoding UTF8
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir -Platform Windows -TemplateId 'SelectedApp'
+
+                $result | Should -HaveCount 1
+                $result[0].Name | Should -Be 'Selected App - [IHD]'
+                $script:capturedBatchBody.requests | Should -HaveCount 1
+                $script:capturedBatchBody.requests[0].body.displayName | Should -Be 'Selected App - [IHD]'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should ignore WinGet template files under the Windows WinGet subdirectory' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'selected-app-id'; displayName = 'Selected App' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "MobileAppsWinGetIgnore-$(Get-Random)"
+            $windowsDir = Join-Path $tempDir 'Windows'
+            $winGetDir = Join-Path $windowsDir 'WinGet/Apps'
+            New-Item -Path $windowsDir -ItemType Directory -Force | Out-Null
+            New-Item -Path $winGetDir -ItemType Directory -Force | Out-Null
+
+            @{
+                '@odata.type' = '#microsoft.graph.winGetApp'
+                displayName   = 'Selected App'
+                publisher     = 'Test Publisher'
+            } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $windowsDir 'SelectedApp.json') -Encoding UTF8
+
+            @{
+                displayName = 'Ignored WinGet Metadata'
+                templateId  = 'ignored-winget-template'
+            } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $winGetDir 'IgnoredWinGetTemplate.json') -Encoding UTF8
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir -Platform Windows
+
+                $result | Should -HaveCount 1
+                $result[0].Name | Should -Be 'Selected App - [IHD]'
+                $script:capturedBatchBody.requests | Should -HaveCount 1
+                $script:capturedBatchBody.requests[0].body.displayName | Should -Be 'Selected App - [IHD]'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should preserve largeIcon when it is present in the template' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'large-icon-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $templates = @(
+                [PSCustomObject]@{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Icon Preserved App'
+                    publisher     = 'Test Publisher'
+                    largeIcon     = [PSCustomObject]@{
+                        '@odata.type' = '#microsoft.graph.mimeContent'
+                        type          = 'image/png'
+                        value         = 'ZmFrZS1pY29u'
+                    }
+                }
+            )
+            $tempDir = New-TestTemplateDirectory -Templates $templates
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $script:capturedBatchBody.requests[0].body.largeIcon.value | Should -Be 'ZmFrZS1pY29u'
+                $script:capturedBatchBody.requests[0].body.largeIcon.type | Should -Be 'image/png'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -144,7 +286,7 @@ Describe 'Import-IntuneMobileApp' {
                 if ($Method -eq 'GET') {
                     return @{
                         value             = @(
-                            @{ id = 'existing-id'; displayName = '[IHD] Existing App'; notes = 'Imported by Intune Hydration Kit' }
+                            @{ id = 'existing-id'; displayName = 'Existing App - [IHD]'; notes = 'Imported by Intune Hydration Kit' }
                         )
                         '@odata.nextLink' = $null
                     }
@@ -166,6 +308,7 @@ Describe 'Import-IntuneMobileApp' {
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Skipped'
                 $result[0].Status | Should -Be 'Already exists'
+                $result[0].Name | Should -Be 'Existing App - [IHD]'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -207,7 +350,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be '[IHD] PowerShell'
+                $result[0].Name | Should -Be 'PowerShell - [IHD]'
                 $script:capturedBatchBody.requests[0].body.notes | Should -BeLike '*Imported by Intune Hydration Kit*'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -250,7 +393,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Created'
-                $result[0].Name | Should -Be '[IHD] Slack'
+                $result[0].Name | Should -Be 'Slack - [IHD]'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -371,7 +514,7 @@ Describe 'Import-IntuneMobileApp' {
                         value             = @(
                             @{
                                 id          = 'app-to-delete'
-                                displayName = 'Hydration Kit App'
+                                displayName = 'Hydration Kit App - [IHD]'
                                 notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
@@ -391,7 +534,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 [PSCustomObject]@{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'Hydration Kit App'
                     publisher     = 'Test'
                 }
             )
@@ -404,7 +547,7 @@ Describe 'Import-IntuneMobileApp' {
 
                 $result | Should -HaveCount 1
                 $result[0].Action | Should -Be 'Deleted'
-                $result[0].Name | Should -Be 'Hydration Kit App'
+                $result[0].Name | Should -Be 'Hydration Kit App - [IHD]'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
@@ -523,7 +666,7 @@ Describe 'Import-IntuneMobileApp' {
                         value             = @(
                             @{
                                 id          = 'app-id'
-                                displayName = 'App To Delete'
+                                displayName = 'App To Delete - [IHD]'
                                 notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
@@ -532,17 +675,11 @@ Describe 'Import-IntuneMobileApp' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            Mock Get-TemplateDisplayNames {
-                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                [void]$names.Add('App To Delete')
-                return $names
-            } -ModuleName IntuneHydrationKit
-
             # Create a template file so the function doesn't exit early
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'App To Delete'
                     publisher     = 'Test'
                 }
             )
@@ -564,12 +701,6 @@ Describe 'Import-IntuneMobileApp' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
             Mock Get-GraphErrorMessage { return 'Graph API error' } -ModuleName IntuneHydrationKit
-            # Return a HashSet that contains all test app names for delete tests
-            Mock Get-TemplateDisplayNames {
-                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                @('Delete Error App') | ForEach-Object { [void]$names.Add($_) }
-                return $names
-            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should handle Graph API errors during creation' {
@@ -614,7 +745,7 @@ Describe 'Import-IntuneMobileApp' {
                         value             = @(
                             @{
                                 id          = 'app-id'
-                                displayName = 'Delete Error App'
+                                displayName = 'Delete Error App - [IHD]'
                                 notes       = 'Imported by Intune Hydration Kit'
                             }
                         )
@@ -634,7 +765,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'Delete Error App'
                     publisher     = 'Test'
                 }
             )
@@ -666,14 +797,14 @@ Describe 'Import-IntuneMobileApp' {
                     if ($script:pageCount -eq 1) {
                         return @{
                             value             = @(
-                                @{ id = 'app1'; displayName = '[IHD] App 1'; notes = 'Imported by Intune Hydration Kit' }
+                                @{ id = 'app1'; displayName = 'App 1 - [IHD]'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = 'https://graph.microsoft.com/beta/next-page'
                         }
                     } else {
                         return @{
                             value             = @(
-                                @{ id = 'app2'; displayName = '[IHD] App 2'; notes = 'Imported by Intune Hydration Kit' }
+                                @{ id = 'app2'; displayName = 'App 2 - [IHD]'; notes = 'Imported by Intune Hydration Kit' }
                             )
                             '@odata.nextLink' = $null
                         }

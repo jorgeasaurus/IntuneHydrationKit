@@ -3,6 +3,10 @@
 BeforeAll {
     $modulePath = Join-Path $PSScriptRoot '..\..\'
     Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
+    $script:TestModule = Get-Module -Name IntuneHydrationKit
+
+    . $PSScriptRoot/../../Private/Hydration/Get-HydrationMarkerSet.ps1
+    . $PSScriptRoot/../../Private/Hydration/Test-HydrationKitObject.ps1
 }
 
 Describe 'Test-HydrationKitObject' {
@@ -103,12 +107,12 @@ Describe 'Test-HydrationKitObject' {
 
     Context 'Marker source consistency' {
         It 'Should detect both primary and legacy markers from the shared helper' {
-            & (Get-Module IntuneHydrationKit) {
+            & $script:TestModule {
                 $markers = Get-HydrationMarkerSet
                 Test-HydrationKitObject -Description $markers.Primary
             } | Should -BeTrue
 
-            & (Get-Module IntuneHydrationKit) {
+            & $script:TestModule {
                 $markers = Get-HydrationMarkerSet
                 Test-HydrationKitObject -Description $markers.Legacy
             } | Should -BeTrue

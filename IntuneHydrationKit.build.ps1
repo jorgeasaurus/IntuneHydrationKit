@@ -25,7 +25,74 @@ $ModuleFolders = @(
     'Public'
     'Private'
     'Templates'
+    'Media'
 )
+
+function Test-PublicFunctionExportSync {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$RepositoryRoot
+    )
+
+    $psm1Path = Join-Path -Path $RepositoryRoot -ChildPath 'IntuneHydrationKit.psm1'
+    $psd1Path = Join-Path -Path $RepositoryRoot -ChildPath 'IntuneHydrationKit.psd1'
+    $publicPath = Join-Path -Path $RepositoryRoot -ChildPath 'Public'
+
+    if (-not (Test-Path -Path $psm1Path -PathType Leaf)) {
+        throw "Missing module file: $psm1Path"
+    }
+
+    if (-not (Test-Path -Path $psd1Path -PathType Leaf)) {
+        throw "Missing manifest file: $psd1Path"
+    }
+
+    if (-not (Test-Path -Path $publicPath -PathType Container)) {
+        throw "Missing public folder: $publicPath"
+    }
+
+    $manifestData = Import-PowerShellDataFile -Path $psd1Path
+    $manifestFunctions = @($manifestData.FunctionsToExport | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    $psm1Content = Get-Content -Path $psm1Path -Raw -Encoding utf8
+    $publicFunctionsMatch = [regex]::Match($psm1Content, '(?s)\$publicFunctions\s*=\s*@\((.*?)\)\s*# Export functions')
+    if (-not $publicFunctionsMatch.Success) {
+        throw "Could not locate `$publicFunctions array in $psm1Path"
+    }
+
+    $moduleFunctions = @(
+        [regex]::Matches($publicFunctionsMatch.Groups[1].Value, "'([^']+)'") |
+            ForEach-Object { $_.Groups[1].Value }
+    )
+
+    $publicFiles = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse
+    $publicFileFunctionNames = @($publicFiles.BaseName)
+
+    $moduleOnly = @($moduleFunctions | Where-Object { $_ -notin $manifestFunctions })
+    $manifestOnly = @($manifestFunctions | Where-Object { $_ -notin $moduleFunctions })
+    $missingPublicFiles = @($moduleFunctions | Where-Object { $_ -notin $publicFileFunctionNames })
+
+    if ($moduleOnly.Count -gt 0 -or $manifestOnly.Count -gt 0 -or $missingPublicFiles.Count -gt 0) {
+        $messageLines = [System.Collections.Generic.List[string]]::new()
+        [void]$messageLines.Add('Public export synchronization check failed:')
+
+        if ($moduleOnly.Count -gt 0) {
+            [void]$messageLines.Add("- In `$publicFunctions only: $($moduleOnly -join ', ')")
+        }
+
+        if ($manifestOnly.Count -gt 0) {
+            [void]$messageLines.Add("- In FunctionsToExport only: $($manifestOnly -join ', ')")
+        }
+
+        if ($missingPublicFiles.Count -gt 0) {
+            [void]$messageLines.Add("- Missing Public/**/*.ps1 files for: $($missingPublicFiles -join ', ')")
+        }
+
+        throw ($messageLines -join [Environment]::NewLine)
+    }
+
+    Write-Build Green 'Public function export synchronization check passed'
+}
 
 # Synopsis: Remove build artifacts
 Task Clean {
@@ -38,6 +105,8 @@ Task Clean {
 # Synopsis: Run PSScriptAnalyzer
 Task Analyze {
     Write-Build White "Running PSScriptAnalyzer..."
+
+    Test-PublicFunctionExportSync -RepositoryRoot $SourcePath
 
     $analyzerParams = @{
         Path        = $SourcePath
@@ -104,6 +173,7 @@ Task Test {
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.Run.Path = Join-Path -Path $SourcePath -ChildPath 'Tests'
     $pesterConfig.Run.Exit = $false
+    $pesterConfig.Run.PassThru = $true
     $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.TestResult.Enabled = $true
     $pesterConfig.TestResult.OutputPath = Join-Path -Path $TestResultsPath -ChildPath 'TestResults.xml'

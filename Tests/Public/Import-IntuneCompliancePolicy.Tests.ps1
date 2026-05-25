@@ -101,6 +101,40 @@ Describe 'Import-IntuneCompliancePolicy' {
             $result[0].Action | Should -Be 'Skipped'
         }
 
+        It 'Should create policy when verify GET returns 404 for prefetched policy' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceCompliancePolicies/existing-id') {
+                    throw '404 NotFound'
+                }
+                if ($Method -eq 'GET') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Existing policy' }) }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneCompliancePolicy -Platform Windows -WhatIf
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'WouldCreate'
+        }
+
+        It 'Should return a failed result when verify GET fails with a non-404 error' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/deviceCompliancePolicies/existing-id') {
+                    throw 'HTTP 403 Forbidden'
+                }
+                if ($Method -eq 'GET') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = '[IHD] Windows 10 Compliance Policy'; description = 'Existing policy' }) }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneCompliancePolicy -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
+        }
+
         It 'Should create policy when existing object with same name is not tagged by kit' {
             Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
 

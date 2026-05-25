@@ -2,14 +2,14 @@
 
 BeforeAll {
     # Import the function under test and its dependencies
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Invoke-GroupBatchImport.ps1'
-    $newHydrationResultPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationResult.ps1'
-    $newHydrationDescriptionPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationDescription.ps1'
-    $getHydrationMarkerSetPath = Join-Path $PSScriptRoot '..\..\Private\Get-HydrationMarkerSet.ps1'
-    $getGraphErrorMessagePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphErrorMessage.ps1'
-    $getGraphStatusCodePath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphStatusCode.ps1'
-    $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Test-HydrationKitObject.ps1'
-    $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphPagedResults.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Groups\Invoke-GroupBatchImport.ps1'
+    $newHydrationResultPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\New-HydrationResult.ps1'
+    $newHydrationDescriptionPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\New-HydrationDescription.ps1'
+    $getHydrationMarkerSetPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\Get-HydrationMarkerSet.ps1'
+    $getGraphErrorMessagePath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphErrorMessage.ps1'
+    $getGraphStatusCodePath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphStatusCode.ps1'
+    $testHydrationKitObjectPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\Test-HydrationKitObject.ps1'
+    $getGraphPagedResultsPath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphPagedResults.ps1'
     . $functionPath
     . $newHydrationResultPath
     . $getHydrationMarkerSetPath

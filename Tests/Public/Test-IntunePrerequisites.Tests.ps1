@@ -3,6 +3,7 @@
 BeforeAll {
     # Import the module
     $modulePath = Join-Path $PSScriptRoot '..\..\'
+    Get-Module -Name IntuneHydrationKit | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
 }
 
@@ -210,7 +211,7 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            { Test-IntunePrerequisites } | Should -Throw '*Intune*'
+            { Test-IntunePrerequisites } | Should -Throw '*Pre-flight checks failed*'
         }
 
         It 'Should not count licenses with pending provisioning status' {
@@ -232,7 +233,7 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            { Test-IntunePrerequisites } | Should -Throw '*Intune*'
+            { Test-IntunePrerequisites } | Should -Throw '*Pre-flight checks failed*'
         }
     }
 
@@ -260,7 +261,7 @@ Describe 'Test-IntunePrerequisites' {
         It 'Should throw when not connected to Graph' {
             Mock Get-MgContext { return $null } -ModuleName IntuneHydrationKit
 
-            { Test-IntunePrerequisites } | Should -Throw '*not connected*'
+            { Test-IntunePrerequisites } | Should -Throw '*Pre-flight checks failed*'
         }
 
         It 'Should throw when missing required scopes' {
@@ -270,7 +271,7 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            { Test-IntunePrerequisites } | Should -Throw '*Missing*scope*'
+            { Test-IntunePrerequisites } | Should -Throw '*Pre-flight checks failed*'
         }
 
         It 'Should pass when all required scopes are present' {
@@ -294,6 +295,253 @@ Describe 'Test-IntunePrerequisites' {
             } -ModuleName IntuneHydrationKit
 
             { Test-IntunePrerequisites } | Should -Not -Throw
+        }
+    }
+
+    Context 'Target Access Validation' {
+        BeforeAll {
+            Mock Get-MgContext {
+                return @{
+                    Scopes = @(
+                        'DeviceManagementConfiguration.ReadWrite.All',
+                        'DeviceManagementServiceConfig.ReadWrite.All',
+                        'DeviceManagementManagedDevices.ReadWrite.All',
+                        'DeviceManagementScripts.ReadWrite.All',
+                        'DeviceManagementApps.ReadWrite.All',
+                        'Group.ReadWrite.All',
+                        'Policy.Read.All',
+                        'Policy.ReadWrite.ConditionalAccess',
+                        'Application.Read.All',
+                        'Directory.ReadWrite.All',
+                        'LicenseAssignment.Read.All',
+                        'Organization.Read.All'
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should validate selected workload access before returning success' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                servicePlans     = @(@{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    })
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGraphRequest {
+                return @{ value = @() }
+            } -ModuleName IntuneHydrationKit
+
+            $checks = @(
+                [PSCustomObject]@{
+                    Name          = 'Mobile Apps'
+                    Workload      = 'MobileApps'
+                    Uri           = 'beta/deviceAppManagement/mobileApps?$select=id,displayName&$top=1'
+                }
+            )
+
+            { Test-IntunePrerequisites -RequiredAccessChecks $checks } | Should -Not -Throw
+
+            Should -Invoke Invoke-HydrationGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Uri -like '*deviceAppManagement/mobileApps*'
+            } -Times 1
+        }
+
+        It 'Should throw a concise prerequisite error when selected workload access is denied' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                servicePlans     = @(@{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    })
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*deviceAppManagement/mobileApps*') {
+                    throw [System.Net.Http.HttpRequestException]::new(
+                        'Response status code does not indicate success: Unauthorized (Unauthorized). {"Message":"An error has occurred - Activity ID: 8d674684-71cb-41b4-aba8-869da4d41ac2 - Url: https://proxy.msua08.manage.microsoft.com/..."}',
+                        $null,
+                        [System.Net.HttpStatusCode]::Unauthorized
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $checks = @(
+                [PSCustomObject]@{
+                    Name          = 'Mobile Apps'
+                    Workload      = 'MobileApps'
+                    Uri           = 'beta/deviceAppManagement/mobileApps?$select=id,displayName&$top=1'
+                }
+            )
+
+            $exceptionMessage = $null
+            $targetObject = 'not cleared'
+            $messages = @()
+            try {
+                Test-IntunePrerequisites -RequiredAccessChecks $checks -InformationVariable messages -InformationAction Continue
+            } catch {
+                $exceptionMessage = $_.Exception.Message
+                $targetObject = $_.TargetObject
+            }
+
+            $messageText = ($messages | ForEach-Object { $_.MessageData }) -join "`n"
+            $exceptionMessage | Should -Be 'Pre-flight checks failed. Resolve the prerequisite warning(s) above and retry.'
+            $targetObject | Should -BeNullOrEmpty
+            $messageText | Should -Match 'Access denied for selected imports: Mobile Apps\.'
+            $messageText | Should -Match 'Global Administrator account required for selected imports\.'
+            $messageText | Should -Not -Match 'Graph scope present'
+            $messageText | Should -Not -Match 'Access guidance'
+            $messageText | Should -Not -Match 'Mobile Apps access denied'
+            $messageText | Should -Not -Match 'Activity ID'
+            $messageText | Should -Not -Match 'proxy\.msua'
+            $exceptionMessage | Should -Not -Match 'Activity ID'
+            $exceptionMessage | Should -Not -Match 'proxy\.msua'
+        }
+
+        It 'Should summarize repeated access-denied checks in one role warning' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                servicePlans     = @(@{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    })
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*deviceAppManagement*') {
+                    throw [System.Net.Http.HttpRequestException]::new(
+                        'Response status code does not indicate success: Unauthorized (Unauthorized).',
+                        $null,
+                        [System.Net.HttpStatusCode]::Unauthorized
+                    )
+                } elseif ($Uri -like '*conditionalAccess*') {
+                    throw [System.Net.Http.HttpRequestException]::new(
+                        'Response status code does not indicate success: Forbidden (Forbidden).',
+                        $null,
+                        [System.Net.HttpStatusCode]::Forbidden
+                    )
+                } elseif ($Uri -like '*groups*') {
+                    throw [System.Net.Http.HttpRequestException]::new(
+                        'Response status code does not indicate success: Forbidden (Forbidden).',
+                        $null,
+                        [System.Net.HttpStatusCode]::Forbidden
+                    )
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $checks = @(
+                [PSCustomObject]@{
+                    Name          = 'Mobile Apps'
+                    Workload      = 'MobileApps'
+                    Uri           = 'beta/deviceAppManagement/mobileApps?$select=id,displayName&$top=1'
+                }
+                [PSCustomObject]@{
+                    Name          = 'App Protection'
+                    Workload      = 'AppProtection'
+                    Uri           = 'beta/deviceAppManagement/managedAppPolicies?$select=id,displayName&$top=1'
+                }
+                [PSCustomObject]@{
+                    Name          = 'Conditional Access'
+                    Workload      = 'ConditionalAccess'
+                    Uri           = 'beta/identity/conditionalAccess/policies?$select=id,displayName&$top=1'
+                }
+                [PSCustomObject]@{
+                    Name          = 'Groups'
+                    Workload      = 'Groups'
+                    Uri           = 'v1.0/groups?$select=id,displayName&$top=1'
+                }
+            )
+
+            $messages = @()
+            try {
+                Test-IntunePrerequisites -RequiredAccessChecks $checks -InformationVariable messages -InformationAction Continue
+            } catch {
+                $_.Exception.Message | Should -Be 'Pre-flight checks failed. Resolve the prerequisite warning(s) above and retry.'
+            }
+
+            $messageText = ($messages | ForEach-Object { $_.MessageData }) -join "`n"
+            $messageText | Should -Match 'Access denied for selected imports: App Protection, Conditional Access, Groups, Mobile Apps\.'
+            $messageText | Should -Match 'Global Administrator account required for selected imports\.'
+            $messageText | Should -Not -Match 'Graph scope present'
+            $messageText | Should -Not -Match 'Conditional Access Administrator'
+            $messageText | Should -Not -Match 'Groups Administrator'
+            $messageText | Should -Not -Match 'Mobile Apps access denied'
+            $messageText | Should -Not -Match 'App Protection access denied'
+        }
+
+        It 'Should not classify transient Graph probe failures as missing permissions' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                servicePlans     = @(@{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    })
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGraphRequest {
+                throw [System.Net.Http.HttpRequestException]::new(
+                    'Response status code does not indicate success: ServiceUnavailable (ServiceUnavailable).',
+                    $null,
+                    [System.Net.HttpStatusCode]::ServiceUnavailable
+                )
+            } -ModuleName IntuneHydrationKit
+
+            $checks = @(
+                [PSCustomObject]@{
+                    Name          = 'Mobile Apps'
+                    Workload      = 'MobileApps'
+                    Uri           = 'beta/deviceAppManagement/mobileApps?$select=id,displayName&$top=1'
+                }
+            )
+
+            $messages = @()
+            { Test-IntunePrerequisites -RequiredAccessChecks $checks -InformationVariable messages -InformationAction Continue } |
+                Should -Throw '*Failed to validate prerequisites: Failed to validate Graph access for Mobile Apps*'
+
+            $messageText = ($messages | ForEach-Object { $_.MessageData }) -join "`n"
+            $messageText | Should -Not -Match 'Access denied for selected imports'
+            $messageText | Should -Not -Match 'Access guidance:'
         }
     }
 
@@ -473,7 +721,7 @@ Describe 'Test-IntunePrerequisites' {
             { Test-IntunePrerequisites -WarningAction SilentlyContinue } | Should -Not -Throw
         }
 
-        It 'Should emit a note when Premium P2 is not detected' {
+        It 'Should not emit Conditional Access notes when Conditional Access is not selected' {
             Mock Invoke-MgGraphRequest {
                 param($Uri)
 
@@ -497,12 +745,51 @@ Describe 'Test-IntunePrerequisites' {
             Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
 
             $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Not -Contain '📝 Notes:'
+            $messageData | Should -Not -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $messageData | Should -Not -Contain '  • Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+        }
+
+        It 'Should emit Conditional Access notes when Conditional Access is selected and Premium P2 is not detected' {
+            Mock Invoke-MgGraphRequest {
+                param($Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                skuPartNumber    = 'ENTERPRISEPACK'
+                                servicePlans     = @(@{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    })
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Invoke-HydrationGraphRequest {
+                return @{ value = @() }
+            } -ModuleName IntuneHydrationKit
+
+            $conditionalAccessCheck = [PSCustomObject]@{
+                Name          = 'Conditional Access'
+                Workload      = 'ConditionalAccess'
+                Uri           = 'beta/identity/conditionalAccess/policies?$select=id,displayName&$top=1'
+            }
+
+            $messages = @()
+            Test-IntunePrerequisites -RequiredAccessChecks @($conditionalAccessCheck) -InformationVariable messages -InformationAction Continue | Out-Null
+
+            $messageData = $messages | ForEach-Object { $_.MessageData }
             $messageData | Should -Contain '📝 Notes:'
             $messageData | Should -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
             $messageData | Should -Contain "    ↳ 'Require multifactor authentication for risky sign-ins'"
             $messageData | Should -Contain "    ↳ 'Require password change for high-risk users'"
             $messageData | Should -Contain "    ↳ 'Block high risk agent identities'"
             $messageData | Should -Contain "    ↳ 'Block access to Office365 apps for users with insider risk'"
+            $messageData | Should -Contain '  • Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
         }
     }
 
@@ -522,4 +809,3 @@ Describe 'Test-IntunePrerequisites' {
         }
     }
 }
-

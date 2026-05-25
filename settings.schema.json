@@ -130,7 +130,7 @@
                 "mobileApps": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Import mobile app templates"
+                    "description": "Import mobile apps. macOS apps use the bundled mobile app templates; Windows apps prefer the bundled WinGet-backed equivalents and fall back to Microsoft Store templates when no supported WinGet mapping is bundled."
                 },
                 "cisBaselines": {
                     "type": "boolean",
@@ -153,6 +153,36 @@
                 ["Windows", "macOS"],
                 ["iOS", "Android"]
             ]
+        },
+        "mobileApps": {
+            "type": "object",
+            "description": "Windows mobile app import configuration. Imports the full bundled WinGet-backed Windows mobile app catalog by default, falls back to the remaining Microsoft Store and Microsoft 365 app templates when needed, and expects App Installer/winget.exe on managed Windows devices.",
+            "properties": {
+                "presetId": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Optional bundled preset ID resolved from Templates/MobileApps/Windows/WinGet/Presets. Leave unset to import the full bundled Windows WinGet mobile app catalog."
+                },
+                "templateIds": {
+                    "type": "array",
+                    "default": [],
+                    "description": "Optional bundled WinGet template IDs to merge with the selected preset from Templates/MobileApps/Windows/WinGet/Apps. New apps must be added to the bundled templates by issue or PR.",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remediation": {
+                    "type": "object",
+                    "description": "Automatic proactive remediation generation for the selected WinGet apps. Creates repo-owned deviceHealthScripts only when the tenant licensing allows it.",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Create or update WinGet proactive remediation scripts for the selected Windows app set. Enabled by default when mobile apps are included."
+                        }
+                    }
+                }
+            }
         },
         "reporting": {
             "type": "object",

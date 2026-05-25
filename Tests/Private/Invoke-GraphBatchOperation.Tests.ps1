@@ -1,16 +1,16 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Invoke-GraphBatchOperation.ps1
-    . $PSScriptRoot/../../Private/New-HydrationResult.ps1
-    . $PSScriptRoot/../../Private/New-HydrationDescription.ps1
-    . $PSScriptRoot/../../Public/Write-HydrationLog.ps1
+    . $PSScriptRoot/../../Private/Graph/Invoke-GraphBatchOperation.ps1
+    . $PSScriptRoot/../../Private/Hydration/New-HydrationResult.ps1
+    . $PSScriptRoot/../../Private/Hydration/New-HydrationDescription.ps1
+    . $PSScriptRoot/../../Public/Logging/Write-HydrationLog.ps1
 }
 
 Describe 'Invoke-GraphBatchOperation' {
 
     BeforeAll {
-        # Default mocks — overridden per-context as needed
+        # Default mocks - overridden per-context as needed
         Mock Write-HydrationLog {}
         Mock Start-Sleep {}
     }

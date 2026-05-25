@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\New-HydrationResult.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Hydration\New-HydrationResult.ps1'
     . $functionPath
 }
 
@@ -98,6 +98,20 @@ Describe 'New-HydrationResult' {
             $result = New-HydrationResult -Name 'Test' -Action 'Created' -Status 'OK' -Platform 'macOS'
             $result.PSObject.Properties['Platform'] | Should -Not -BeNullOrEmpty
             $result.Platform | Should -Be 'macOS'
+            $result.PSObject.Properties['Path'] | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'Optional property edge values' {
+        It 'Should include string zero as an explicit optional value' {
+            $result = New-HydrationResult -Name 'Test' -Action 'Created' -Status 'OK' -Id '0'
+
+            $result.Id | Should -Be '0'
+        }
+
+        It 'Should not include whitespace-only optional values' {
+            $result = New-HydrationResult -Name 'Test' -Action 'Created' -Status 'OK' -Path '   '
+
             $result.PSObject.Properties['Path'] | Should -BeNullOrEmpty
         }
     }

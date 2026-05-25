@@ -52,6 +52,16 @@ Describe 'Connect-IntuneHydration' {
             $command.ParameterSets.Name | Should -Contain 'Interactive'
         }
 
+        It 'Should require Interactive switch in Interactive parameter set' {
+            $command = Get-Command Connect-IntuneHydration
+            $interactiveParam = $command.Parameters['Interactive']
+
+            $interactiveSet = $interactiveParam.Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.ParameterSetName -eq 'Interactive' }
+
+            $interactiveSet.Mandatory | Should -Be $true
+        }
+
         It 'Should have ClientSecret parameter set' {
             $command = Get-Command Connect-IntuneHydration
             $command.ParameterSets.Name | Should -Contain 'ClientSecret'
@@ -84,6 +94,15 @@ Describe 'Connect-IntuneHydration' {
             $validateSet.ValidValues | Should -Contain 'USGovDoD'
             $validateSet.ValidValues | Should -Contain 'Germany'
             $validateSet.ValidValues | Should -Contain 'China'
+        }
+
+        It 'Should validate ScopeProfile parameter values' {
+            $command = Get-Command Connect-IntuneHydration
+            $scopeProfileParam = $command.Parameters['ScopeProfile']
+
+            $validateSet = $scopeProfileParam.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Hydration'
+            $validateSet.ValidValues | Should -Contain 'ConditionalAccess'
         }
 
         It 'Should default Environment to Global' {
@@ -148,6 +167,16 @@ Describe 'Connect-IntuneHydration' {
 
             Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Scopes -ne $null -and $Scopes.Count -gt 0
+            }
+        }
+
+        It 'Should request conditional-access scope profile when specified' {
+            Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -ScopeProfile ConditionalAccess
+
+            Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Scopes -contains 'Policy.ReadWrite.ConditionalAccess' -and
+                $Scopes -contains 'Organization.Read.All' -and
+                $Scopes -notcontains 'DeviceManagementApps.ReadWrite.All'
             }
         }
 

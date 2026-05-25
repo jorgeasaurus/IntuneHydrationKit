@@ -155,8 +155,71 @@ Describe 'Import-HydrationSettings' {
             $result.options.dryRun | Should -Be $false
             $result.imports.mobileApps | Should -Be $true
             $result.imports.cisBaselines | Should -Be $false
+            $result.mobileApps.presetId | Should -Be $null
+            $result.mobileApps.templateIds | Should -Be @()
+            $result.mobileApps.remediation.enabled | Should -Be $true
             $result.platforms | Should -Be @('All')
             $result.reporting.formats | Should -Be @('markdown')
+        }
+
+        It 'Should preserve mobile app settings overrides' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    mobileApps = $true
+                }
+                mobileApps     = @{
+                    presetId    = 'mobile-apps'
+                    templateIds = @('google-chrome', 'visual-studio-code')
+                    remediation = @{
+                        enabled = $true
+                    }
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'winget-settings.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            $result = Import-HydrationSettings -Path $settingsPath
+
+            $result.imports.mobileApps | Should -Be $true
+            $result.mobileApps.presetId | Should -Be 'mobile-apps'
+            $result.mobileApps.templateIds | Should -Be @('google-chrome', 'visual-studio-code')
+            $result.mobileApps.remediation.enabled | Should -Be $true
+        }
+
+        It 'Should throw when mobile app templateIds is not an array' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    mobileApps = $true
+                }
+                mobileApps     = @{
+                    presetId    = 'mobile-apps'
+                    templateIds = 'google-chrome'
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'winget-templateids-string.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*root.mobileApps.templateIds*must be an array*'
         }
 
         It 'Should throw when a required top-level section is missing' {

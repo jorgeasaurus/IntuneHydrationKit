@@ -2,11 +2,13 @@
 
 BeforeAll {
     $modulePath = Join-Path $PSScriptRoot '..\..\'
+    Get-Module -Name IntuneHydrationKit | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
-    $script:HydrationModule = Get-Module IntuneHydrationKit
+    $script:HydrationModule = Get-Module IntuneHydrationKit | Select-Object -First 1
 
     $script:OpenIntuneTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/OpenIntuneBaseline') -Filter '*.json' -File -Recurse
     $script:CisTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/CISBaselines') -Filter '*.json' -File -Recurse
+    $script:WindowsStoreAppTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/MobileApps/Windows/Store') -Filter '*.json' -File
 }
 
 AfterAll {
@@ -159,5 +161,30 @@ Describe 'Bundled template contracts' {
                 Test-ContainsInvalidGraphMetadata -Node $cleanTemplate | Should -BeFalse -Because $templateFile.FullName
             }
         } $templateFiles
+    }
+
+    It 'Should keep Windows Store app templates on PNG large icons' {
+        $script:WindowsStoreAppTemplates.Count | Should -BeGreaterThan 0
+
+        foreach ($templateFile in $script:WindowsStoreAppTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 100
+
+            $template.largeIcon | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
+            $template.largeIcon.type | Should -Be 'image/png' -Because $templateFile.FullName
+            $template.largeIcon.value | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
+
+            $iconBytes = [Convert]::FromBase64String($template.largeIcon.value)
+            $iconBytes[0..7] | Should -Be @(137, 80, 78, 71, 13, 10, 26, 10) -Because $templateFile.FullName
+        }
+    }
+
+    It 'Should keep gallery metadata URLs aligned to the canonical repository' {
+        $manifest = Import-PowerShellDataFile -Path (Join-Path $modulePath 'IntuneHydrationKit.psd1')
+        $psData = $manifest.PrivateData.PSData
+
+        $psData.LicenseUri | Should -Be 'https://github.com/jorgeasaurus/IntuneHydrationKit/blob/main/LICENSE'
+        $psData.IconUri | Should -Be 'https://raw.githubusercontent.com/jorgeasaurus/IntuneHydrationKit/main/media/IHKLogoClearLight.png'
+        $psData.LicenseUri | Should -Not -Match 'Intune-Hydration-Kit'
+        $psData.IconUri | Should -Not -Match 'Intune-Hydration-Kit'
     }
 }

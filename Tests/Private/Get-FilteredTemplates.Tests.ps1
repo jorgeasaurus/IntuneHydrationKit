@@ -2,17 +2,16 @@
 
 BeforeAll {
     # Import the functions under test
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-FilteredTemplates.ps1'
-    $hydrationTemplatesPath = Join-Path $PSScriptRoot '..\..\Private\Get-HydrationTemplates.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Templates\Get-FilteredTemplates.ps1'
+    $hydrationTemplatesPath = Join-Path $PSScriptRoot '..\..\Private\Templates\Get-HydrationTemplates.ps1'
     . $functionPath
     . $hydrationTemplatesPath
 }
 
 Describe 'Get-FilteredTemplates' {
     BeforeAll {
-        # Use cross-platform temp path for mock directories
-        $script:TestBasePath = '/mock/templates'
-        $script:BaselinePath = '/mock/baseline'
+        $script:TestBasePath = Join-Path $TestDrive 'templates'
+        $script:BaselinePath = Join-Path $TestDrive 'baseline'
 
         # Helper function to create mock FileInfo objects
         # Uses string concatenation to avoid path validation
@@ -24,7 +23,7 @@ Describe 'Get-FilteredTemplates' {
             [PSCustomObject]@{
                 Name          = $Name
                 DirectoryName = $DirectoryName
-                FullName      = "$DirectoryName/$Name"
+                FullName      = Join-Path -Path $DirectoryName -ChildPath $Name
             }
         }
     }
@@ -560,7 +559,7 @@ Describe 'Get-FilteredTemplates' {
             $result.Name | Should -Be 'Windows-Policy.json'
         }
 
-        It 'Should handle deeply nested directory paths' {
+        It 'Should not match arbitrary nested platform directories outside the platform root' {
             $mockTemplates = @(
                 New-MockFileInfo -Name 'Policy.json' -DirectoryName "$script:TestBasePath/Level1/Level2/Level3/Windows"
             )
@@ -569,7 +568,25 @@ Describe 'Get-FilteredTemplates' {
 
             $result = Get-FilteredTemplates -Path $script:TestBasePath -Platform 'Windows' -FilterMode 'Directory'
 
-            $result | Should -HaveCount 1
+            $result | Should -HaveCount 0
         }
+
+        It 'Should match nested platform directories below the platform root' {
+            $mockTemplates = @(
+                New-MockFileInfo -Name 'WindowsStoreApp.json' -DirectoryName "$script:TestBasePath/Windows/Store"
+                New-MockFileInfo -Name 'WindowsM365App.json' -DirectoryName "$script:TestBasePath/Windows/M365"
+                New-MockFileInfo -Name 'MacApp.json' -DirectoryName "$script:TestBasePath/macOS"
+            )
+
+            Mock Get-HydrationTemplates { return $mockTemplates }
+
+            $result = Get-FilteredTemplates -Path $script:TestBasePath -Platform 'Windows' -FilterMode 'Directory'
+
+            $result | Should -HaveCount 2
+            $result.Name | Should -Contain 'WindowsStoreApp.json'
+            $result.Name | Should -Contain 'WindowsM365App.json'
+            $result.Name | Should -Not -Contain 'MacApp.json'
+        }
+
     }
 }

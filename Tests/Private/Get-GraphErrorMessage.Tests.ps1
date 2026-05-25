@@ -1,9 +1,13 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    $statusFunctionPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphStatusCode.ps1'
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Get-GraphErrorMessage.ps1'
+    $statusFunctionPath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphStatusCode.ps1'
+    $convertFunctionPath = Join-Path $PSScriptRoot '..\..\Private\Graph\ConvertFrom-GraphEscapedString.ps1'
+    $limitFunctionPath = Join-Path $PSScriptRoot '..\..\Private\Graph\Limit-GraphMessage.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Graph\Get-GraphErrorMessage.ps1'
     . $statusFunctionPath
+    . $convertFunctionPath
+    . $limitFunctionPath
     . $functionPath
 }
 

@@ -1,7 +1,7 @@
 #Requires -Modules Pester
 
 BeforeAll {
-    . $PSScriptRoot/../../Private/Get-TemplateDisplayNames.ps1
+    . $PSScriptRoot/../../Private/Templates/Get-TemplateDisplayNames.ps1
 }
 
 Describe 'Get-TemplateDisplayNames' {

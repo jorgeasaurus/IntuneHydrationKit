@@ -19,6 +19,9 @@ $script:HydrationState = @{
 $script:LogPath = $null
 $script:VerboseLogging = $false
 $script:CurrentLogFile = $null
+$script:HydrationSessionId = $null
+$script:GeneratedScriptsPath = $null
+$script:GeneratedScriptsNoticeWritten = $false
 
 # Module-level state for Graph environment
 $script:GraphEnvironment = $null
@@ -37,7 +40,8 @@ $script:HydrationMarkerAlt = 'Imported by Intune-Hydration-Kit'
 # Import private functions
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'
 if (Test-Path -Path $privatePath) {
-    $privateFiles = Get-ChildItem -Path $privatePath -Filter '*.ps1' -File
+    $privateFiles = Get-ChildItem -Path $privatePath -Filter '*.ps1' -File -Recurse |
+        Sort-Object -Property FullName
     foreach ($file in $privateFiles) {
         try {
             . $file.FullName
@@ -54,7 +58,8 @@ if (Test-Path -Path $privatePath) {
 # Import public functions
 $publicPath = Join-Path -Path $script:ModuleRoot -ChildPath 'Public'
 if (Test-Path -Path $publicPath) {
-    $publicFiles = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File
+    $publicFiles = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse |
+        Sort-Object -Property FullName
     foreach ($file in $publicFiles) {
         try {
             . $file.FullName
@@ -70,36 +75,25 @@ if (Test-Path -Path $publicPath) {
 
 # Define public functions to export (must match FunctionsToExport in .psd1)
 $publicFunctions = @(
-    # Main entry point
-    'Invoke-IntuneHydration',
-    # Core hydration functions
     'Connect-IntuneHydration',
-    'Test-IntunePrerequisites',
-    # Import functions
+    'Get-OpenIntuneBaseline',
+    'Import-CISBaseline',
+    'Import-HydrationSettings',
+    'Import-IntuneAppProtectionPolicy',
+    'Import-IntuneBaseline',
+    'Import-IntuneCompliancePolicy',
+    'Import-IntuneConditionalAccessPolicy',
+    'Import-IntuneDeviceFilter',
+    'Import-IntuneEnrollmentProfile',
+    'Import-IntuneMobileApp',
+    'Import-IntuneNotificationTemplate',
+    'Import-IntuneWinGetApp',
+    'Initialize-HydrationLogging',
+    'Invoke-IntuneHydration',
     'New-IntuneDynamicGroup',
     'New-IntuneStaticGroup',
-    'Get-OpenIntuneBaseline',
-    'Import-IntuneBaseline',
-    'Import-CISBaseline',
-    'Import-IntuneCompliancePolicy',
-    'Import-IntuneAppProtectionPolicy',
-    'Import-IntuneNotificationTemplate',
-    'Import-IntuneEnrollmentProfile',
-    'Import-IntuneDeviceFilter',
-    'Import-IntuneConditionalAccessPolicy',
-    'Import-IntuneMobileApp',
-    # Helper functions
-    'Initialize-HydrationLogging',
-    'Write-HydrationLog',
-    'Import-HydrationSettings',
-    # Result helpers (used by orchestrator)
-    'New-HydrationResult',
-    'Get-ResultSummary',
-    'Get-GraphErrorMessage',
-    # Safety helpers (used by orchestrator for deletion safety checks)
-    'Test-HydrationKitObject',
-    # Utility helpers
-    'Get-ObfuscatedTenantId'
+    'Test-IntunePrerequisites',
+    'Write-HydrationLog'
 )
 
 # Export functions
