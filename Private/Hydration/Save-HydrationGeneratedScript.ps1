@@ -36,7 +36,22 @@ function Save-HydrationGeneratedScript {
         New-Item -Path $script:GeneratedScriptsPath -ItemType Directory -Force -WhatIf:$false -ErrorAction Stop | Out-Null
     }
 
-    $destinationPath = Join-Path -Path $script:GeneratedScriptsPath -ChildPath $RelativePath
+    if ([System.IO.Path]::IsPathRooted($RelativePath)) {
+        throw 'RelativePath must not be rooted.'
+    }
+
+    $generatedScriptsRoot = [System.IO.Path]::GetFullPath($script:GeneratedScriptsPath)
+    $destinationPath = [System.IO.Path]::GetFullPath((Join-Path -Path $generatedScriptsRoot -ChildPath $RelativePath))
+    $rootWithSeparator = if ($generatedScriptsRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar) -or $generatedScriptsRoot.EndsWith([System.IO.Path]::AltDirectorySeparatorChar)) {
+        $generatedScriptsRoot
+    } else {
+        $generatedScriptsRoot + [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    if (-not $destinationPath.StartsWith($rootWithSeparator, [System.StringComparison]::Ordinal)) {
+        throw 'RelativePath must stay within the generated scripts directory.'
+    }
+
     $destinationDirectory = Split-Path -Path $destinationPath -Parent
     if (-not [string]::IsNullOrWhiteSpace($destinationDirectory) -and -not (Test-Path -LiteralPath $destinationDirectory)) {
         New-Item -Path $destinationDirectory -ItemType Directory -Force -WhatIf:$false -ErrorAction Stop | Out-Null

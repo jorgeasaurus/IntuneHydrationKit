@@ -243,6 +243,78 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         $script:patchedRemediationBody.ContainsKey('@odata.type') | Should -Be $false
     }
 
+    It 'Should delete an owned remediation when the current template set has no packages for its scope' {
+        Mock Invoke-HydrationGraphRequest {
+            param($Method, $Uri, $Body)
+
+            switch ($Method) {
+                'GET' {
+                    if ($Uri -like '*User*') {
+                        return @{
+                            value = @(
+                                @{
+                                    id          = 'existing-user'
+                                    displayName = 'WinGet App Updates (User)'
+                                    description = "Imported by Intune Hydration Kit`nImported from WinGet`nWinGetRemediationScope: user`nWinGetPackageFingerprint: STALE"
+                                }
+                            )
+                        }
+                    }
+
+                    return @{
+                        value = @()
+                    }
+                }
+                'POST' {
+                    $script:postedRemediationBodies += $Body
+                    return @{ id = 'created-system' }
+                }
+                'DELETE' {
+                    $script:deletedRemediationUris += $Uri
+                    return @{}
+                }
+            }
+        } -ModuleName IntuneHydrationKit
+
+        $result = & $script:TestModule {
+            param([object[]]$Templates)
+            Sync-IntuneWinGetProactiveRemediation -Templates $Templates
+        } @(
+            [pscustomobject]@{
+                templateId        = 'contoso-machine'
+                packageIdentifier = 'Contoso.Machine'
+                package           = [pscustomobject]@{
+                    match = [pscustomobject]@{
+                        scope = 'machine'
+                    }
+                }
+            }
+        )
+
+        $result.Action | Should -Be @('Created', 'Deleted')
+        $script:deletedRemediationUris | Should -Contain 'beta/deviceManagement/deviceHealthScripts/existing-user'
+    }
+
+    It 'Should mark empty remediation scopes skipped when no owned remediation exists' {
+        $result = & $script:TestModule {
+            param([object[]]$Templates)
+            Sync-IntuneWinGetProactiveRemediation -Templates $Templates
+        } @(
+            [pscustomobject]@{
+                templateId        = 'contoso-machine'
+                packageIdentifier = 'Contoso.Machine'
+                package           = [pscustomobject]@{
+                    match = [pscustomobject]@{
+                        scope = 'machine'
+                    }
+                }
+            }
+        )
+
+        $result.Action | Should -Contain 'Skipped'
+        ($result | Where-Object { $_.Name -eq 'WinGet App Updates (User)' }).Status | Should -Be 'No packages'
+    }
+
     It 'Should delete owned proactive remediations during remove mode' {
         Mock Invoke-HydrationGraphRequest {
             param($Method, $Uri)

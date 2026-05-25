@@ -10,17 +10,30 @@ function New-WinGetOwnershipNotes {
     )
 
     $lines = [System.Collections.Generic.List[string]]::new()
+    $seenLines = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 
-    foreach ($noteLine in @($Template.metadata.notes)) {
-        if (-not [string]::IsNullOrWhiteSpace($noteLine)) {
-            $lines.Add([string]$noteLine)
+    function Add-OwnershipNoteLine {
+        param(
+            [Parameter()]
+            [AllowNull()]
+            [string]$Line
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Line)) {
+            return
+        }
+
+        if ($seenLines.Add($Line)) {
+            $lines.Add($Line)
         }
     }
 
+    foreach ($noteLine in @($Template.metadata.notes)) {
+        Add-OwnershipNoteLine -Line ([string]$noteLine)
+    }
+
     foreach ($customNote in @($Template.metadata.placeholders.customNotes)) {
-        if (-not [string]::IsNullOrWhiteSpace($customNote)) {
-            $lines.Add([string]$customNote)
-        }
+        Add-OwnershipNoteLine -Line ([string]$customNote)
     }
 
     $sourceMarker = if ($Template.metadata.markers.source) {
@@ -37,10 +50,8 @@ function New-WinGetOwnershipNotes {
             ('WinGetManifestRepository: {0}' -f $PackageMetadata.ManifestSource.Repository),
             ('WinGetManifestPath: {0}' -f $PackageMetadata.ManifestPath)
         )) {
-        if (-not [string]::IsNullOrWhiteSpace($metadataLine)) {
-            $lines.Add($metadataLine)
-        }
+        Add-OwnershipNoteLine -Line $metadataLine
     }
 
-    return ($lines | Select-Object -Unique) -join [Environment]::NewLine
+    return $lines -join [Environment]::NewLine
 }

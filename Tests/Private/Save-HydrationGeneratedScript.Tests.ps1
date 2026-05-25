@@ -52,6 +52,18 @@ Describe 'Save-HydrationGeneratedScript' {
             Should -Throw -ExpectedMessage "SourcePath must be an existing file: $missingSourcePath"
     }
 
+    It 'Should reject rooted generated script paths' {
+        $rootedPath = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath 'Escape.ps1'
+
+        { Save-HydrationGeneratedScript -RelativePath $rootedPath -Content 'Write-Output "escape"' } |
+            Should -Throw -ExpectedMessage 'RelativePath must not be rooted.'
+    }
+
+    It 'Should reject generated script path traversal' {
+        { Save-HydrationGeneratedScript -RelativePath '../Escape.ps1' -Content 'Write-Output "escape"' } |
+            Should -Throw -ExpectedMessage 'RelativePath must stay within the generated scripts directory.'
+    }
+
     It 'Should make filesystem writes terminating' {
         $source = Get-Content -Path "$PSScriptRoot/../../Private/Hydration/Save-HydrationGeneratedScript.ps1" -Raw
 

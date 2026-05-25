@@ -38,6 +38,36 @@ function Sync-IntuneWinGetProactiveRemediation {
         ([string]$ExistingRemediation.description -like "*WinGetRemediationScope: $Scope*")
     }
 
+    function Remove-OwnedWinGetRemediation {
+        param(
+            [Parameter(Mandatory)]
+            [psobject]$Definition,
+
+            [Parameter(Mandatory)]
+            [AllowEmptyCollection()]
+            [object[]]$OwnedExisting
+        )
+
+        if ($OwnedExisting.Count -eq 0) {
+            return $false
+        }
+
+        if ($WhatIfEnabled) {
+            foreach ($existingRemediation in $OwnedExisting) {
+                $results.Add((Add-HydrationDryRunResult -Action 'WouldDelete' -Name $Definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation'))
+            }
+            return $true
+        }
+
+        foreach ($existingRemediation in $OwnedExisting) {
+            Invoke-HydrationGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceHealthScripts/$($existingRemediation.id)" | Out-Null
+            Write-HydrationLog -Message "  Deleted: $($Definition.DisplayName)" -Level Info
+            $results.Add((New-HydrationResult -Name $Definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation' -Action 'Deleted' -Status 'Removed'))
+        }
+
+        return $true
+    }
+
     $results = [System.Collections.Generic.List[object]]::new()
     $definitions = @(
         Get-WinGetRemediationDefinition -Scope 'system' -TemplateSet $Templates
@@ -53,30 +83,24 @@ function Sync-IntuneWinGetProactiveRemediation {
     }
 
     foreach ($definition in $definitions) {
+        if ($definition.PackageIdentifiers.Count -eq 0 -and -not $RemoveExisting) {
+            $existingRemediations = Get-ExistingRemediation -DisplayName $definition.DisplayName
+            $ownedExisting = @($existingRemediations | Where-Object { Test-OwnedWinGetRemediation -ExistingRemediation $_ -Scope $definition.Scope })
+
+            if (Remove-OwnedWinGetRemediation -Definition $definition -OwnedExisting $ownedExisting) {
+                continue
+            }
+
+            Write-HydrationLog -Message "  Skipped: $($definition.DisplayName) - no packages for scope." -Level Info
+            $results.Add((New-HydrationResult -Name $definition.DisplayName -Type 'WinGetRemediation' -Action 'Skipped' -Status 'No packages'))
+            continue
+        }
+
         $existingRemediations = Get-ExistingRemediation -DisplayName $definition.DisplayName
         $ownedExisting = @($existingRemediations | Where-Object { Test-OwnedWinGetRemediation -ExistingRemediation $_ -Scope $definition.Scope })
 
         if ($RemoveExisting) {
-            if ($ownedExisting.Count -eq 0) {
-                continue
-            }
-
-            if ($WhatIfEnabled) {
-                foreach ($existingRemediation in $ownedExisting) {
-                    $results.Add((Add-HydrationDryRunResult -Action 'WouldDelete' -Name $definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation'))
-                }
-                continue
-            }
-
-            foreach ($existingRemediation in $ownedExisting) {
-                Invoke-HydrationGraphRequest -Method DELETE -Uri "beta/deviceManagement/deviceHealthScripts/$($existingRemediation.id)" | Out-Null
-                Write-HydrationLog -Message "  Deleted: $($definition.DisplayName)" -Level Info
-                $results.Add((New-HydrationResult -Name $definition.DisplayName -Id $existingRemediation.id -Type 'WinGetRemediation' -Action 'Deleted' -Status 'Removed'))
-            }
-            continue
-        }
-
-        if ($definition.PackageIdentifiers.Count -eq 0) {
+            $null = Remove-OwnedWinGetRemediation -Definition $definition -OwnedExisting $ownedExisting
             continue
         }
 
