@@ -35,7 +35,7 @@ function Publish-IntuneWin32AppContent {
     }
 
     if (-not (Test-Path -Path $WorkingDirectory)) {
-        $null = New-Item -Path $WorkingDirectory -ItemType Directory -Force
+        $null = New-Item -Path $WorkingDirectory -ItemType Directory -Force -ErrorAction Stop
     }
 
     $encryptedContentPath = Join-Path -Path $WorkingDirectory -ChildPath $Metadata.FileName

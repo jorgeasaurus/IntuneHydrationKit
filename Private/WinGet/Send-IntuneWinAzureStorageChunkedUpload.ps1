@@ -11,6 +11,7 @@ function Send-IntuneWinAzureStorageChunkedUpload {
         [string]$UploadUri,
 
         [Parameter()]
+        [ValidateRange(1, [int]::MaxValue)]
         [int]$ChunkSizeBytes = 6MB,
 
         [Parameter()]
@@ -38,8 +39,9 @@ function Send-IntuneWinAzureStorageChunkedUpload {
         return ($Uri -split '\?', 2)[0]
     }
 
-    $fileSize = (Get-Item -Path $FilePath).Length
-    $chunkCount = [Math]::Ceiling($fileSize / $ChunkSizeBytes)
+    $fileSize = [int64](Get-Item -Path $FilePath).Length
+    $chunkSize = [int64]$ChunkSizeBytes
+    $chunkCount = [int][Math]::Ceiling($fileSize / $chunkSize)
     $currentUploadUri = $UploadUri
     $isoEncoding = [System.Text.Encoding]::GetEncoding('iso-8859-1')
     $chunkIds = @()
@@ -51,7 +53,7 @@ function Send-IntuneWinAzureStorageChunkedUpload {
             $chunkId = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($index.ToString('0000')))
             $chunkIds += $chunkId
 
-            $chunkLength = [Math]::Min($ChunkSizeBytes, $fileSize - ($index * $ChunkSizeBytes))
+            $chunkLength = Get-IntuneWinUploadChunkLength -FileSize $fileSize -ChunkIndex $index -ChunkSizeBytes $ChunkSizeBytes
             $chunkBytes = $reader.ReadBytes($chunkLength)
             $requestBody = $isoEncoding.GetString($chunkBytes)
             $chunkUri = "$currentUploadUri&comp=block&blockid=$chunkId"
