@@ -1,0 +1,49 @@
+site_name: Intune Hydration Kit Docs
+site_description: Documentation and command reference for IntuneHydrationKit
+site_url: https://jorgeasaurus.github.io/IntuneHydrationKit/
+repo_url: https://github.com/jorgeasaurus/IntuneHydrationKit
+repo_name: jorgeasaurus/IntuneHydrationKit
+
+theme:
+  name: material
+  language: en
+  logo: assets/IHTLogoClearLight.png
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - navigation.instant
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: slate
+      primary: black
+      accent: light blue
+  font:
+    text: Montserrat
+    code: JetBrains Mono
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
