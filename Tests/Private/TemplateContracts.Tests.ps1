@@ -181,6 +181,9 @@ Describe 'Bundled template contracts' {
             $template.resolvedPackage.selectedInstaller | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
             $template.resolvedPackage.manifestSource.repository | Should -Be 'microsoft/winget-pkgs' -Because $templateFile.FullName
             $template.icon.sourceType | Should -Be 'file' -Because $templateFile.FullName
+            if ($null -ne $template.resolvedPackage.selectedInstaller.InstallerLocale) {
+                [string]::IsNullOrWhiteSpace($template.resolvedPackage.selectedInstaller.InstallerLocale) | Should -BeFalse -Because $templateFile.FullName
+            }
 
             $templateIds.Add([string]$template.templateId) | Should -BeTrue -Because "Template IDs must be unique: $($template.templateId)"
 
@@ -205,6 +208,7 @@ Describe 'Bundled template contracts' {
 
             $preset.'$schema' | Should -Be '../Schemas/winGetAppPreset.schema.json' -Because $presetFile.FullName
             $preset.schemaVersion | Should -Be '1.0.0' -Because $presetFile.FullName
+            $preset.selectionCriteria.candidateSource.Contains('Winget') | Should -BeFalse -Because $presetFile.FullName
             $preset.appIds.Count | Should -BeGreaterThan 0 -Because $presetFile.FullName
 
             foreach ($appId in $preset.appIds) {

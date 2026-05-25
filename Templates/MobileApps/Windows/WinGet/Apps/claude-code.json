@@ -85,7 +85,7 @@
         "selectedInstaller": {
             "Architecture": "x64",
             "Scope": "machine",
-            "InstallerLocale": "",
+            "InstallerLocale": null,
             "InstallerType": "portable",
             "InstallerUrl": null,
             "InstallerSha256": null,

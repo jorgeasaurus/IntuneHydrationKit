@@ -137,6 +137,71 @@ Describe 'Import-IntuneMobileApp' {
             }
         }
 
+        It 'Should ignore WinGet catalog JSON files in the generic mobile app importer' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'legacy-app-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $tempDir = New-TestTemplateDirectory -Templates @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Legacy Mobile App'
+                    publisher     = 'Test Publisher'
+                }
+            )
+
+            try {
+                $winGetAppPath = Join-Path $tempDir 'Windows/WinGet/Apps'
+                $winGetPresetPath = Join-Path $tempDir 'Windows/WinGet/Presets'
+                $winGetSchemaPath = Join-Path $tempDir 'Windows/WinGet/Schemas'
+                New-Item -Path $winGetAppPath, $winGetPresetPath, $winGetSchemaPath -ItemType Directory -Force | Out-Null
+
+                @{
+                    '$schema'          = '../Schemas/winGetAppTemplate.schema.json'
+                    schemaVersion      = '1.0.0'
+                    templateId         = 'catalog-app'
+                    displayName        = 'Catalog App'
+                    packageIdentifier  = 'Vendor.CatalogApp'
+                    package            = @{ match = @{ packageIdentifier = 'Vendor.CatalogApp' } }
+                    install            = @{ command = 'winget install --id Vendor.CatalogApp --silent' }
+                    icon               = @{ sourceType = 'file'; fileName = 'catalog.png' }
+                    resolvedPackage    = @{ selectedInstaller = @{}; manifestSource = @{ repository = 'microsoft/winget-pkgs' } }
+                } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $winGetAppPath 'catalog-app.json') -Encoding UTF8
+                @{
+                    '$schema'     = '../Schemas/winGetAppPreset.schema.json'
+                    schemaVersion = '1.0.0'
+                    presetId      = 'catalog-preset'
+                    displayName   = 'Catalog Preset'
+                    appIds        = @('catalog-app')
+                } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $winGetPresetPath 'catalog-preset.json') -Encoding UTF8
+                @{ '$schema' = 'https://json-schema.org/draft/2020-12/schema'; type = 'object' } |
+                    ConvertTo-Json -Depth 10 |
+                    Set-Content -Path (Join-Path $winGetSchemaPath 'catalog.schema.json') -Encoding UTF8
+
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+                $result | Should -HaveCount 1
+                $result[0].Action | Should -Be 'Created'
+                $result[0].Name | Should -Be '[IHD] Legacy Mobile App'
+                $script:capturedBatchBody.requests | Should -HaveCount 1
+                $script:capturedBatchBody.requests[0].body.displayName | Should -Be '[IHD] Legacy Mobile App'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
         It 'Should skip apps that already exist with hydration kit tag' {
             # Mock existing app with hydration kit tag
             Mock Invoke-MgGraphRequest {
@@ -355,12 +420,6 @@ Describe 'Import-IntuneMobileApp' {
     Context 'App Deletion' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
-            # Return a HashSet that contains all test app names
-            Mock Get-TemplateDisplayNames {
-                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                @('Hydration Kit App', 'Manually Created App', 'App To Delete', 'Delete Error App') | ForEach-Object { [void]$names.Add($_) }
-                return $names
-            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should delete apps with hydration kit marker in notes' {
@@ -391,7 +450,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 [PSCustomObject]@{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'Hydration Kit App'
                     publisher     = 'Test'
                 }
             )
@@ -431,7 +490,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'App To Delete'
                     publisher     = 'Test'
                 }
             )
@@ -467,7 +526,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'Delete Error App'
                     publisher     = 'Test'
                 }
             )
@@ -532,17 +591,11 @@ Describe 'Import-IntuneMobileApp' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            Mock Get-TemplateDisplayNames {
-                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                [void]$names.Add('App To Delete')
-                return $names
-            } -ModuleName IntuneHydrationKit
-
             # Create a template file so the function doesn't exit early
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'App To Delete'
                     publisher     = 'Test'
                 }
             )
@@ -564,12 +617,6 @@ Describe 'Import-IntuneMobileApp' {
         BeforeEach {
             Mock Write-HydrationLog { } -ModuleName IntuneHydrationKit
             Mock Get-GraphErrorMessage { return 'Graph API error' } -ModuleName IntuneHydrationKit
-            # Return a HashSet that contains all test app names for delete tests
-            Mock Get-TemplateDisplayNames {
-                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                @('Delete Error App') | ForEach-Object { [void]$names.Add($_) }
-                return $names
-            } -ModuleName IntuneHydrationKit
         }
 
         It 'Should handle Graph API errors during creation' {
@@ -634,7 +681,7 @@ Describe 'Import-IntuneMobileApp' {
             $templates = @(
                 @{
                     '@odata.type' = '#microsoft.graph.winGetApp'
-                    displayName   = 'Dummy Template'
+                    displayName   = 'Delete Error App'
                     publisher     = 'Test'
                 }
             )

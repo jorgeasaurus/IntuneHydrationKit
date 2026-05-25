@@ -5,7 +5,7 @@
     "displayName": "WinGet Starter Pack",
     "description": "Initial curated WinGet Win32 app starter pack for Intune Hydration Kit schema and importer scaffolding.",
     "selectionCriteria": {
-        "candidateSource": "WingetIntunePublisher curated popular apps catalog",
+        "candidateSource": "WinGet Intune Publisher curated popular apps catalog",
         "selectionBiases": [
             "Prefer apps already modeled in IntuneAppFactory when available.",
             "Favor a smaller verified starter pack over the full popular-app catalog."
