@@ -18,7 +18,8 @@
         "detection",
         "requirements",
         "icon",
-        "metadata"
+        "metadata",
+        "resolvedPackage"
     ],
     "properties": {
         "$schema": {
@@ -402,7 +403,29 @@
                         "null"
                     ]
                 }
-            }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "sourceType": {
+                                "const": "file"
+                            }
+                        }
+                    },
+                    "then": {
+                        "required": [
+                            "fileName"
+                        ],
+                        "properties": {
+                            "fileName": {
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        }
+                    }
+                }
+            ]
         },
         "metadata": {
             "type": "object",

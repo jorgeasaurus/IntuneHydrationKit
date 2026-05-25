@@ -177,6 +177,7 @@ Describe 'Bundled template contracts' {
             $template.templateId | Should -Match '^[a-z0-9]+(?:-[a-z0-9]+)*$' -Because $templateFile.FullName
             $template.packageIdentifier | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
             $template.package.match.packageIdentifier | Should -Be $template.packageIdentifier -Because $templateFile.FullName
+            $template.install.command | Should -Match '(^|\s)--silent(\s|$)' -Because $templateFile.FullName
             $template.resolvedPackage.selectedInstaller | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
             $template.resolvedPackage.manifestSource.repository | Should -Be 'microsoft/winget-pkgs' -Because $templateFile.FullName
             $template.icon.sourceType | Should -Be 'file' -Because $templateFile.FullName
@@ -220,5 +221,21 @@ Describe 'Bundled template contracts' {
                 $null = Get-Content -Path $schemaFile.FullName -Raw | ConvertFrom-Json -Depth 100
             } | Should -Not -Throw
         }
+    }
+
+    It 'Should require runtime-critical fields in the WinGet app schema' {
+        $schemaFile = Join-Path $script:WinGetRoot 'Schemas/winGetAppTemplate.schema.json'
+        $schema = Get-Content -Path $schemaFile -Raw | ConvertFrom-Json -Depth 100
+
+        $schema.required | Should -Contain 'resolvedPackage'
+
+        $fileIconRule = $schema.properties.icon.allOf | Where-Object {
+            $_.if.properties.sourceType.const -eq 'file'
+        } | Select-Object -First 1
+
+        $fileIconRule | Should -Not -BeNullOrEmpty
+        $fileIconRule.then.required | Should -Contain 'fileName'
+        $fileIconRule.then.properties.fileName.type | Should -Be 'string'
+        $fileIconRule.then.properties.fileName.minLength | Should -Be 1
     }
 }

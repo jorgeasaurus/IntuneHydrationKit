@@ -23,7 +23,7 @@
         }
     },
     "install": {
-        "command": "winget install --id Anthropic.ClaudeCode --exact --scope machine --accept-package-agreements --accept-source-agreements",
+        "command": "winget install --id Anthropic.ClaudeCode --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
         "experience": "system",
         "restartBehavior": "suppress"
     },
