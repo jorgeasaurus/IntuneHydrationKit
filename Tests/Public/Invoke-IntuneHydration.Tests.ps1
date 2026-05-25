@@ -311,6 +311,8 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit
             Mock Import-IntuneEnrollmentProfile -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit
+            Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneWinGetApp { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup -ModuleName IntuneHydrationKit
             Mock Get-ChildItem { @() } -ModuleName IntuneHydrationKit
 
@@ -618,6 +620,7 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneEnrollmentProfile { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneWinGetApp { @() } -ModuleName IntuneHydrationKit
             Mock Import-CISBaseline { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup { @{ Action = 'Created'; Id = 'test-id' } } -ModuleName IntuneHydrationKit
             Mock Invoke-GroupBatchImport { @() } -ModuleName IntuneHydrationKit
@@ -665,6 +668,38 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-CISBaseline -ModuleName IntuneHydrationKit -Times 1
         }
 
+        It 'Should call WinGet and scoped legacy mobile app importers when MobileApps is enabled' {
+            $expectedWindowsFallbackTemplateIds = & $script:TestModule { Get-WindowsLegacyMobileAppTemplateId }
+
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -MobileApps -WhatIf
+
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                -not $PSBoundParameters.ContainsKey('PresetId') -and
+                -not $PSBoundParameters.ContainsKey('TemplateId') -and
+                $RemediationEnabled -eq $true -and
+                $WhatIf -eq $true
+            }
+
+            Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                @($Platform).Count -eq 1 -and $Platform[0] -eq 'macOS'
+            }
+
+            Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                @($Platform).Count -eq 1 -and
+                $Platform[0] -eq 'Windows' -and
+                (Compare-Object -ReferenceObject $expectedWindowsFallbackTemplateIds -DifferenceObject $TemplateId).Count -eq 0
+            }
+        }
+
+        It 'Should not call WinGet apps for macOS-only MobileApps' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -MobileApps -Platform macOS -WhatIf
+
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                @($Platform).Count -eq 1 -and $Platform[0] -eq 'macOS'
+            }
+        }
+
         It 'Should call all import functions when -All is specified' {
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -All -WhatIf
 
@@ -676,6 +711,7 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneEnrollmentProfile -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit -Times 1
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 1
         }
 
         It 'Should call Import-IntuneBaseline without BaselinePath parameter' {
@@ -697,6 +733,84 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneCompliancePolicy -ModuleName IntuneHydrationKit -Times 0
             Should -Invoke Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 0
+        }
+    }
+
+    Context 'Mobile app settings' {
+        BeforeEach {
+            Mock Connect-IntuneHydration -ModuleName IntuneHydrationKit
+            Mock Test-IntunePrerequisites -ModuleName IntuneHydrationKit
+            Mock Initialize-HydrationLogging -ModuleName IntuneHydrationKit
+            Mock Write-HydrationLog -ModuleName IntuneHydrationKit
+            Mock Write-HydrationExecutionSettingsSummary -ModuleName IntuneHydrationKit
+            Mock Write-HydrationExecutionSummary {
+                @{
+                    Summary            = @{ Failed = 0 }
+                    ReportPath         = $null
+                    JsonReportPath     = $null
+                    ElapsedTime        = [TimeSpan]::FromSeconds(3)
+                    ElapsedTimeDisplay = '00:00:03'
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Get-ObfuscatedTenantId { return '12345678-****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneWinGetApp { @() } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should pass configured mobile app preset and template IDs from settings mode' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-mobile-apps.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ mobileApps = $true }
+                    mobileApps     = @{
+                        presetId    = 'mobile-apps'
+                        templateIds = @('google-chrome')
+                        remediation = @{ enabled = $false }
+                    }
+                    reporting      = @{ formats = @('markdown') }
+                    platforms      = @('Windows')
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath | Out-Null
+
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $PresetId -eq 'mobile-apps' -and
+                @($TemplateId).Count -eq 1 -and
+                $TemplateId[0] -eq 'google-chrome' -and
+                $RemediationEnabled -eq $false -and
+                $WhatIf -eq $true
+            }
+        }
+
+        It 'Should not import WinGet apps in settings mode with macOS-only platform filter' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-mobile-apps-macos.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ mobileApps = $true }
+                    mobileApps     = @{ presetId = 'mobile-apps'; templateIds = @('google-chrome') }
+                    reporting      = @{ formats = @('markdown') }
+                    platforms      = @('macOS')
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath | Out-Null
+
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                @($Platform).Count -eq 1 -and $Platform[0] -eq 'macOS'
+            }
         }
     }
 }

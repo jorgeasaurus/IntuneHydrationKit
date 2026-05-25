@@ -30,6 +30,13 @@
         "mobileApps": true,
         "cisBaselines": false
     },
+    "mobileApps": {
+        "presetId": null,
+        "templateIds": [],
+        "remediation": {
+            "enabled": true
+        }
+    },
     "platforms": [
         "All"
     ],

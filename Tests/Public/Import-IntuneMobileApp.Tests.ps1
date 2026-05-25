@@ -93,6 +93,26 @@ Describe 'Import-IntuneMobileApp' {
                 Remove-Item -Path $emptyDir -Force -ErrorAction SilentlyContinue
             }
         }
+
+        It 'Should warn when no mobile app templates match requested template IDs' {
+            $tempDir = New-TestTemplateDirectory -Templates @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Existing App'
+                    publisher     = 'Test Publisher'
+                }
+            )
+
+            try {
+                $warnings = @()
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir -TemplateId 'DoesNotExist' -WarningVariable warnings -WarningAction SilentlyContinue
+
+                $result | Should -BeNullOrEmpty
+                $warnings[0].Message | Should -Be 'No mobile app templates matched TemplateId value(s): DoesNotExist'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     Context 'App Creation' {
@@ -197,6 +217,48 @@ Describe 'Import-IntuneMobileApp' {
                 $result[0].Name | Should -Be '[IHD] Legacy Mobile App'
                 $script:capturedBatchBody.requests | Should -HaveCount 1
                 $script:capturedBatchBody.requests[0].body.displayName | Should -Be '[IHD] Legacy Mobile App'
+            } finally {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        It 'Should filter legacy mobile app templates by template ID' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'spotify-app-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $tempDir = New-TestTemplateDirectory -Templates @(
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Spotify Music and Podcasts'
+                    publisher     = 'Spotify'
+                },
+                @{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = 'Other App'
+                    publisher     = 'Other'
+                }
+            )
+
+            try {
+                $result = Import-IntuneMobileApp -TemplatePath $tempDir -TemplateId 'SpotifyMusicAndPodcasts'
+
+                $result | Should -HaveCount 1
+                $result[0].Name | Should -Be '[IHD] Spotify Music and Podcasts'
+                $script:capturedBatchBody.requests | Should -HaveCount 1
+                $script:capturedBatchBody.requests[0].body.displayName | Should -Be '[IHD] Spotify Music and Podcasts'
             } finally {
                 Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
             }

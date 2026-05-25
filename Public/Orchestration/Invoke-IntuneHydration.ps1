@@ -557,14 +557,53 @@ function Invoke-IntuneHydration {
             }
             Write-HydrationLog @logParams
 
-            $mobileAppParams = @{
-                Platform       = $platformFilters.MobileApps
-                RemoveExisting = $RemoveExisting
-                WhatIf         = $effectiveWhatIfEnabled
-                Verbose        = $effectiveVerboseEnabled
+            $mobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
+            $mobileAppPlatforms = @($platformFilters.MobileApps)
+            $includeWindowsMobileApps = $mobileAppPlatforms -contains 'All' -or $mobileAppPlatforms -contains 'Windows'
+            $includeMacOSMobileApps = $mobileAppPlatforms -contains 'All' -or $mobileAppPlatforms -contains 'macOS'
+
+            if ($includeWindowsMobileApps) {
+                $winGetAppParams = @{
+                    RemoveExisting     = $RemoveExisting
+                    RemediationEnabled = $mobileAppConfiguration.remediationEnabled
+                    WhatIf             = $effectiveWhatIfEnabled
+                    Verbose            = $effectiveVerboseEnabled
+                }
+
+                if ($mobileAppConfiguration.presetId) {
+                    $winGetAppParams['PresetId'] = $mobileAppConfiguration.presetId
+                }
+
+                if ($mobileAppConfiguration.templateIds.Count -gt 0) {
+                    $winGetAppParams['TemplateId'] = $mobileAppConfiguration.templateIds
+                }
+
+                $winGetAppResults = @((Import-IntuneWinGetApp @winGetAppParams) | Where-Object { $null -ne $_ })
+                $allResults += $winGetAppResults
             }
-            $mobileAppResults = @((Import-IntuneMobileApp @mobileAppParams) | Where-Object { $null -ne $_ })
-            $allResults += $mobileAppResults
+
+            if ($includeMacOSMobileApps) {
+                $macOSMobileAppParams = @{
+                    Platform       = @('macOS')
+                    RemoveExisting = $RemoveExisting
+                    WhatIf         = $effectiveWhatIfEnabled
+                    Verbose        = $effectiveVerboseEnabled
+                }
+                $macOSMobileAppResults = @((Import-IntuneMobileApp @macOSMobileAppParams) | Where-Object { $null -ne $_ })
+                $allResults += $macOSMobileAppResults
+            }
+
+            if ($includeWindowsMobileApps) {
+                $windowsFallbackMobileAppParams = @{
+                    Platform       = @('Windows')
+                    TemplateId     = Get-WindowsLegacyMobileAppTemplateId
+                    RemoveExisting = $RemoveExisting
+                    WhatIf         = $effectiveWhatIfEnabled
+                    Verbose        = $effectiveVerboseEnabled
+                }
+                $windowsFallbackMobileAppResults = @((Import-IntuneMobileApp @windowsFallbackMobileAppParams) | Where-Object { $null -ne $_ })
+                $allResults += $windowsFallbackMobileAppResults
+            }
         }
 
         $summaryParams = @{

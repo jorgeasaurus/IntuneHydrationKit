@@ -157,6 +157,13 @@ function Resolve-HydrationExecutionSettings {
             verbose = $VerboseOutput.IsPresent
         }
         imports        = $importsEnabled
+        mobileApps     = @{
+            presetId    = $null
+            templateIds = @()
+            remediation = @{
+                enabled = $true
+            }
+        }
         reporting      = @{
             outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { $null }
             formats    = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
