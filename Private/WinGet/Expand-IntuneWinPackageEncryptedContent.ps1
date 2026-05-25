@@ -19,7 +19,7 @@ function Expand-IntuneWinPackageEncryptedContent {
 
     $destinationDirectory = Split-Path -Path $DestinationPath -Parent
     if (-not [string]::IsNullOrWhiteSpace($destinationDirectory) -and -not (Test-Path -Path $destinationDirectory)) {
-        $null = New-Item -Path $destinationDirectory -ItemType Directory -Force
+        $null = New-Item -Path $destinationDirectory -ItemType Directory -Force -ErrorAction Stop
     }
 
     $archive = [System.IO.Compression.ZipFile]::OpenRead($IntuneWinPath)

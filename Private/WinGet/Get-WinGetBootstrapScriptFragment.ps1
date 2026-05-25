@@ -18,7 +18,8 @@ function Get-WinGetExecutablePath {
     [CmdletBinding()]
     param()
 
-    `$programDataWingetRoot = Join-Path -Path `$env:ProgramData -ChildPath 'Microsoft.DesktopAppInstaller'
+    `$programDataRoot = if ([string]::IsNullOrWhiteSpace(`$env:ProgramData)) { 'C:\ProgramData' } else { `$env:ProgramData }
+    `$programDataWingetRoot = Join-Path -Path `$programDataRoot -ChildPath 'Microsoft.DesktopAppInstaller'
     `$programDataWingetExe = Join-Path -Path `$programDataWingetRoot -ChildPath 'winget.exe'
     `$isSystem = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name -eq 'NT AUTHORITY\SYSTEM'
 
