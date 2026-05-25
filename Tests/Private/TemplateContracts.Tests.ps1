@@ -7,6 +7,10 @@ BeforeAll {
 
     $script:OpenIntuneTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/OpenIntuneBaseline') -Filter '*.json' -File -Recurse
     $script:CisTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/CISBaselines') -Filter '*.json' -File -Recurse
+    $script:WinGetRoot = Join-Path $modulePath 'Templates/MobileApps/Windows/WinGet'
+    $script:WinGetAppTemplates = Get-ChildItem -Path (Join-Path $script:WinGetRoot 'Apps') -Filter '*.json' -File
+    $script:WinGetPresetTemplates = Get-ChildItem -Path (Join-Path $script:WinGetRoot 'Presets') -Filter '*.json' -File
+    $script:WinGetSchemaTemplates = Get-ChildItem -Path (Join-Path $script:WinGetRoot 'Schemas') -Filter '*.json' -File
 }
 
 AfterAll {
@@ -159,5 +163,62 @@ Describe 'Bundled template contracts' {
                 Test-ContainsInvalidGraphMetadata -Node $cleanTemplate | Should -BeFalse -Because $templateFile.FullName
             }
         } $templateFiles
+    }
+
+    It 'Should keep bundled WinGet app templates internally consistent' {
+        $script:WinGetAppTemplates.Count | Should -Be 28
+
+        $templateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($templateFile in $script:WinGetAppTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 100
+
+            $template.'$schema' | Should -Be '../Schemas/winGetAppTemplate.schema.json' -Because $templateFile.FullName
+            $template.schemaVersion | Should -Be '1.0.0' -Because $templateFile.FullName
+            $template.templateId | Should -Match '^[a-z0-9]+(?:-[a-z0-9]+)*$' -Because $templateFile.FullName
+            $template.packageIdentifier | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
+            $template.package.match.packageIdentifier | Should -Be $template.packageIdentifier -Because $templateFile.FullName
+            $template.resolvedPackage.selectedInstaller | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
+            $template.resolvedPackage.manifestSource.repository | Should -Be 'microsoft/winget-pkgs' -Because $templateFile.FullName
+            $template.icon.sourceType | Should -Be 'file' -Because $templateFile.FullName
+
+            $templateIds.Add([string]$template.templateId) | Should -BeTrue -Because "Template IDs must be unique: $($template.templateId)"
+
+            $iconPath = Join-Path -Path $templateFile.DirectoryName -ChildPath $template.icon.fileName
+            Test-Path -Path $iconPath -PathType Leaf | Should -BeTrue -Because $templateFile.FullName
+
+            $iconBytes = [System.IO.File]::ReadAllBytes($iconPath)
+            $iconBytes[0..7] | Should -Be @(137, 80, 78, 71, 13, 10, 26, 10) -Because $templateFile.FullName
+        }
+    }
+
+    It 'Should keep bundled WinGet presets aligned to existing app templates' {
+        $script:WinGetPresetTemplates.Count | Should -BeGreaterThan 0
+        $templateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($templateFile in $script:WinGetAppTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 100
+            $null = $templateIds.Add([string]$template.templateId)
+        }
+
+        foreach ($presetFile in $script:WinGetPresetTemplates) {
+            $preset = Get-Content -Path $presetFile.FullName -Raw | ConvertFrom-Json -Depth 100
+
+            $preset.'$schema' | Should -Be '../Schemas/winGetAppPreset.schema.json' -Because $presetFile.FullName
+            $preset.schemaVersion | Should -Be '1.0.0' -Because $presetFile.FullName
+            $preset.appIds.Count | Should -BeGreaterThan 0 -Because $presetFile.FullName
+
+            foreach ($appId in $preset.appIds) {
+                $templateIds.Contains([string]$appId) | Should -BeTrue -Because "$presetFile references $appId"
+            }
+        }
+    }
+
+    It 'Should keep bundled WinGet schemas as valid JSON' {
+        $script:WinGetSchemaTemplates.Count | Should -Be 2
+
+        foreach ($schemaFile in $script:WinGetSchemaTemplates) {
+            {
+                $null = Get-Content -Path $schemaFile.FullName -Raw | ConvertFrom-Json -Depth 100
+            } | Should -Not -Throw
+        }
     }
 }
