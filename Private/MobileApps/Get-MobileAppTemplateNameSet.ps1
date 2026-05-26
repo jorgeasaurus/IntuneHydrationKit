@@ -3,10 +3,10 @@ function Get-MobileAppTemplateNameSet {
     .SYNOPSIS
         Builds a HashSet of display names from mobile app template files.
     .DESCRIPTION
-        Reads each template file, extracts the displayName, applies the
-        hydration mobile-app display-name transformation (suffix), and
-        returns a case-insensitive HashSet of
-        the resulting names. Used for scoping deletion to known templates.
+        Reads each template file, extracts displayName, and returns a
+        case-insensitive HashSet containing the current suffixed name plus
+        supported raw and legacy-prefixed variants. Used for idempotency and
+        template-scoped deletes.
     .PARAMETER TemplateFiles
         Array of FileInfo objects representing the template files to read.
     #>

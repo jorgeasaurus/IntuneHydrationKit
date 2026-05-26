@@ -228,7 +228,7 @@ Describe 'Test-IntunePrerequisites' {
         It 'Should skip WinGet remediation access probe when remediation is disabled' {
             Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
 
-            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppsRemediationEnabled $false | Should -Be $true
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppConfiguration @{ remediationEnabled = $false } | Should -Be $true
 
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
@@ -241,7 +241,24 @@ Describe 'Test-IntunePrerequisites' {
         It 'Should skip WinGet remediation access probe when Windows mobile apps are not selected' {
             Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
 
-            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppsIncludeWinGet $false | Should -Be $true
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppPlatforms @('macOS') | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
+        It 'Should skip WinGet remediation access probe when selected template IDs are legacy mobile apps only' {
+            Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites `
+                -Imports @{ mobileApps = $true } `
+                -MobileAppConfiguration @{ remediationEnabled = $true; templateIds = @('CompanyPortal', 'M365Apps') } `
+                -MobileAppPlatforms @('Windows') |
+                Should -Be $true
 
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'

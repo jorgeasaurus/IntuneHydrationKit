@@ -102,8 +102,10 @@ BeforeAll {
 
 AfterAll {
     # Cleanup any temp directories
-    Get-ChildItem -Path ([System.IO.Path]::GetTempPath()) -Directory -Filter "MobileAppsTest-*" |
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    foreach ($directoryFilter in @('MobileAppsTest-*', 'EmptyMobileAppsTest-*')) {
+        Get-ChildItem -Path ([System.IO.Path]::GetTempPath()) -Directory -Filter $directoryFilter |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Describe 'Import-IntuneMobileApp' {
@@ -240,6 +242,39 @@ Describe 'Import-IntuneMobileApp' {
             $result | Should -HaveCount 1
             $result[0].Action | Should -Be 'Created'
             $result[0].Name | Should -Be 'Test WinGet App - [IHD]'
+        }
+
+        It 'Should create legacy-prefixed template names with the suffix after the app name' {
+            $script:capturedBatchBody = $null
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @(); '@odata.nextLink' = $null }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $script:capturedBatchBody = $Body | ConvertFrom-Json
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'legacy-prefixed-app-id' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $tempDir = New-TestTemplateDirectory -Templates @(
+                [PSCustomObject]@{
+                    '@odata.type' = '#microsoft.graph.winGetApp'
+                    displayName   = '[IHD] Company Portal'
+                    publisher     = 'Microsoft'
+                }
+            )
+
+            $result = Import-IntuneMobileApp -TemplatePath $tempDir
+
+            $result | Should -HaveCount 1
+            $result[0].Action | Should -Be 'Created'
+            $result[0].Name | Should -Be 'Company Portal - [IHD]'
+            $script:capturedBatchBody.requests[0].body.displayName | Should -Be 'Company Portal - [IHD]'
         }
 
         It 'Should ignore WinGet catalog JSON files in the generic mobile app importer' {

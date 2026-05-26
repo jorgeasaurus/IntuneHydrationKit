@@ -3,9 +3,9 @@ function Get-HydrationMobileAppDisplayName {
     .SYNOPSIS
         Returns the Intune Hydration Kit display name for a mobile app.
     .DESCRIPTION
-        Appends the mobile app identification suffix used by Intune Hydration Kit.
-        Existing suffixed names are returned unchanged so templates can safely be
-        processed more than once.
+        Returns the app-name-first mobile app identification format used by
+        Intune Hydration Kit. Legacy prefixed names and already-suffixed names
+        are normalized so templates can safely be processed more than once.
     .PARAMETER DisplayName
         The template display name to format.
     .OUTPUTS
@@ -20,9 +20,14 @@ function Get-HydrationMobileAppDisplayName {
     )
 
     $suffix = ' - [IHD]'
-    if ([string]::IsNullOrWhiteSpace($DisplayName) -or $DisplayName.EndsWith($suffix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ([string]::IsNullOrWhiteSpace($DisplayName)) {
         return $DisplayName
     }
 
-    return "$DisplayName$suffix"
+    $baseName = Get-HydrationMobileAppBaseName -DisplayName $DisplayName
+    if ([string]::IsNullOrWhiteSpace($baseName)) {
+        return $DisplayName
+    }
+
+    return "$baseName$suffix"
 }

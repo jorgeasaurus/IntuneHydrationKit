@@ -20,28 +20,20 @@ function Get-HydrationMobileAppNameVariant {
 
     $suffix = ' - [IHD]'
     $rawName = $DisplayName.Trim()
-    $escapedPrefix = [regex]::Escape($script:ImportPrefix)
+    $baseName = Get-HydrationMobileAppBaseName -DisplayName $rawName
 
-    $normalizedName = $rawName -replace "^$escapedPrefix", ''
-    $normalizedName = if ($normalizedName.EndsWith($suffix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        $normalizedName.Substring(0, $normalizedName.Length - $suffix.Length)
-    } else {
-        $normalizedName
-    }
-
-    $currentName = Get-HydrationMobileAppDisplayName -DisplayName $normalizedName
-    $legacyPrefixedName = "$($script:ImportPrefix)$normalizedName"
-    $rawNameWithoutSuffix = if ($rawName.EndsWith($suffix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        $rawName.Substring(0, $rawName.Length - $suffix.Length)
-    } else {
-        $rawName
+    $currentName = Get-HydrationMobileAppDisplayName -DisplayName $baseName
+    $legacyPrefixedName = "$($script:ImportPrefix)$baseName"
+    $rawNameWithoutSuffix = $rawName
+    if ($rawNameWithoutSuffix.EndsWith($suffix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $rawNameWithoutSuffix = $rawNameWithoutSuffix.Substring(0, $rawNameWithoutSuffix.Length - $suffix.Length).TrimEnd()
     }
 
     @(
         $currentName
         $rawName
         $legacyPrefixedName
-        $normalizedName
+        $baseName
         $rawNameWithoutSuffix
     ) |
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |

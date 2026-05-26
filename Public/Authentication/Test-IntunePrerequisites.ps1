@@ -17,10 +17,10 @@ function Test-IntunePrerequisites {
         [hashtable]$Imports = @{},
 
         [Parameter()]
-        [bool]$MobileAppsRemediationEnabled = $true,
+        [hashtable]$MobileAppConfiguration = @{},
 
         [Parameter()]
-        [bool]$MobileAppsIncludeWinGet = $true
+        [string[]]$MobileAppPlatforms = @('All')
     )
 
     Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
@@ -125,8 +125,8 @@ function Test-IntunePrerequisites {
         if ($issues.Count -eq 0) {
             $workloadAccessIssues = @(Test-HydrationGraphWorkloadAccess `
                     -Imports $Imports `
-                    -MobileAppsRemediationEnabled $MobileAppsRemediationEnabled `
-                    -MobileAppsIncludeWinGet $MobileAppsIncludeWinGet)
+                    -MobileAppConfiguration $MobileAppConfiguration `
+                    -MobileAppPlatforms $MobileAppPlatforms)
             if ($workloadAccessIssues.Count -gt 0) {
                 $issues += $workloadAccessIssues
             }
