@@ -4,6 +4,68 @@ BeforeAll {
     # Import the module
     $modulePath = Join-Path $PSScriptRoot '..\..\'
     Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
+
+    function Set-RequiredGraphContextMock {
+        Mock Get-MgContext {
+            return @{
+                Scopes = @(
+                    'DeviceManagementConfiguration.ReadWrite.All',
+                    'DeviceManagementServiceConfig.ReadWrite.All',
+                    'DeviceManagementManagedDevices.ReadWrite.All',
+                    'DeviceManagementScripts.ReadWrite.All',
+                    'DeviceManagementApps.ReadWrite.All',
+                    'Group.ReadWrite.All',
+                    'Policy.Read.All',
+                    'Policy.ReadWrite.ConditionalAccess',
+                    'Application.Read.All',
+                    'Directory.ReadWrite.All',
+                    'LicenseAssignment.Read.All',
+                    'Organization.Read.All'
+                )
+            }
+        } -ModuleName IntuneHydrationKit
+    }
+
+    function Set-PrerequisiteGraphRequestMock {
+        param(
+            [scriptblock]$AssignmentFilterResponse,
+
+            [scriptblock]$MobileAppsResponse,
+
+            [scriptblock]$DeviceHealthScriptsResponse
+        )
+
+        $script:AssignmentFilterResponse = $AssignmentFilterResponse
+        $script:MobileAppsResponse = $MobileAppsResponse
+        $script:DeviceHealthScriptsResponse = $DeviceHealthScriptsResponse
+        Mock Invoke-MgGraphRequest {
+            param($Uri)
+
+            if ($Uri -like '*organization*') {
+                return @{ value = @(@{ displayName = 'Test Organization' }) }
+            }
+            if ($Uri -like '*subscribedSkus*') {
+                return @{
+                    value = @(@{
+                            capabilityStatus = 'Enabled'
+                            servicePlans     = @(@{
+                                    servicePlanName    = 'INTUNE_A'
+                                    provisioningStatus = 'Success'
+                                })
+                        })
+                }
+            }
+            if ($Uri -like '*assignmentFilters*' -and $script:AssignmentFilterResponse) {
+                return & $script:AssignmentFilterResponse
+            }
+            if ($Uri -like '*deviceAppManagement/mobileApps*' -and $script:MobileAppsResponse) {
+                return & $script:MobileAppsResponse
+            }
+            if ($Uri -like '*deviceManagement/deviceHealthScripts*' -and $script:DeviceHealthScriptsResponse) {
+                return & $script:DeviceHealthScriptsResponse
+            }
+        } -ModuleName IntuneHydrationKit
+    }
 }
 
 Describe 'Test-IntunePrerequisites' {
@@ -100,6 +162,119 @@ Describe 'Test-IntunePrerequisites' {
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Uri -like '*subscribedSkus*'
             }
+        }
+    }
+
+    Context 'Workload Access Validation' {
+        BeforeEach {
+            Set-RequiredGraphContextMock
+        }
+
+        It 'Should probe device filter access when DeviceFilters is selected' {
+            Set-PrerequisiteGraphRequestMock -AssignmentFilterResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites -Imports @{ deviceFilters = $true } | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceManagement/assignmentFilters*'
+            }
+        }
+
+        It 'Should fail pre-flight with a concise device filter access issue on Intune backend 401 Forbidden' {
+            Set-PrerequisiteGraphRequestMock -AssignmentFilterResponse {
+                throw 'HTTP/2.0 401 Unauthorized {"error":{"code":"UnknownError","message":"{\"ErrorCode\":\"Forbidden\"}"}}'
+            }
+
+            { Test-IntunePrerequisites -Imports @{ deviceFilters = $true } } |
+                Should -Throw '*Device Filters access check failed*HTTP 401*DeviceManagementConfiguration.ReadWrite.All*Global Administrator*'
+        }
+
+        It 'Should not probe device filter access when DeviceFilters is not selected' {
+            Set-PrerequisiteGraphRequestMock
+
+            Test-IntunePrerequisites -Imports @{ deviceFilters = $false } | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/assignmentFilters*'
+            }
+        }
+
+        It 'Should not emit Conditional Access notes when only DeviceFilters is selected' {
+            Set-PrerequisiteGraphRequestMock -AssignmentFilterResponse { @{ value = @() } }
+
+            $messages = @()
+            Test-IntunePrerequisites -Imports @{ deviceFilters = $true; conditionalAccess = $false } -InformationVariable messages -InformationAction Continue | Out-Null
+
+            $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Not -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+            $messageData | Should -Not -Contain '  • Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+        }
+
+        It 'Should probe mobile app and WinGet remediation access when MobileApps is selected' {
+            Set-PrerequisiteGraphRequestMock `
+                -MobileAppsResponse { @{ value = @() } } `
+                -DeviceHealthScriptsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true } | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
+        It 'Should skip WinGet remediation access probe when remediation is disabled' {
+            Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppConfiguration @{ remediationEnabled = $false } | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
+        It 'Should skip WinGet remediation access probe when Windows mobile apps are not selected' {
+            Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true } -MobileAppPlatforms @('macOS') | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
+        It 'Should skip WinGet remediation access probe when selected template IDs are legacy mobile apps only' {
+            Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites `
+                -Imports @{ mobileApps = $true } `
+                -MobileAppConfiguration @{ remediationEnabled = $true; templateIds = @('CompanyPortal', 'M365Apps') } `
+                -MobileAppPlatforms @('Windows') |
+                Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/mobileApps*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
+        It 'Should fail pre-flight with a concise mobile app access issue on Intune backend 403' {
+            Set-PrerequisiteGraphRequestMock -MobileAppsResponse {
+                throw 'HTTP/2.0 403 Forbidden {"error":{"code":"UnknownError","message":"User is not authorized to perform this operation"}}'
+            }
+
+            { Test-IntunePrerequisites -Imports @{ mobileApps = $true } } |
+                Should -Throw '*Mobile Apps access check failed*HTTP 403*DeviceManagementApps.ReadWrite.All*Global Administrator*'
         }
     }
 
@@ -522,4 +697,3 @@ Describe 'Test-IntunePrerequisites' {
         }
     }
 }
-

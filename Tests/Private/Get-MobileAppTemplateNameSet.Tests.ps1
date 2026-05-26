@@ -29,6 +29,8 @@ Describe 'Get-MobileAppTemplateNameSet' {
             $result = Get-MobileAppTemplateNameSet -TemplateFiles $TemplateFiles
 
             $result | Should -Contain 'Company Portal - [IHD]'
+            $result | Should -Contain 'Company Portal'
+            $result | Should -Contain '[IHD] Company Portal'
             $result | Should -Contain 'WhatsApp - [IHD]'
         }
     }

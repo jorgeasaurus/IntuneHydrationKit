@@ -68,9 +68,9 @@ function Get-FilteredTemplates {
                     $matched = $template.Name -like "*[-_]$plat.json"
                 }
                 'Directory' {
-                    $parentDir = Split-Path -Path $template.DirectoryName -Leaf
-                    $matched = $parentDir -eq $plat -or
-                    ($plat -eq 'macOS' -and $parentDir -eq 'Mac')
+                    $pathParts = $template.DirectoryName -split '[/\\]'
+                    $matched = $pathParts -contains $plat -or
+                    ($plat -eq 'macOS' -and $pathParts -contains 'Mac')
                 }
                 'Folder' {
                     # OpenIntuneBaseline uses uppercase folder names: WINDOWS, WINDOWS365, MACOS, BYOD

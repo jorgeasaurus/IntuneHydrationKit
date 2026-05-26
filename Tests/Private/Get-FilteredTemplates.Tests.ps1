@@ -286,6 +286,22 @@ Describe 'Get-FilteredTemplates' {
             $result | Should -HaveCount 1
             $result.Name | Should -Be 'AppProtection.json'
         }
+
+        It 'Should match nested platform directories' {
+            $mockTemplates = @(
+                New-MockFileInfo -Name 'CompanyPortal.json' -DirectoryName "$script:TestBasePath/Windows/Store"
+                New-MockFileInfo -Name 'M365Apps.json' -DirectoryName "$script:TestBasePath/Windows/M365"
+                New-MockFileInfo -Name 'MicrosoftEdge.json' -DirectoryName "$script:TestBasePath/macOS"
+            )
+
+            Mock Get-HydrationTemplates { return $mockTemplates }
+
+            $result = Get-FilteredTemplates -Path $script:TestBasePath -Platform 'Windows' -FilterMode 'Directory'
+
+            $result | Should -HaveCount 2
+            $result.Name | Should -Contain 'CompanyPortal.json'
+            $result.Name | Should -Contain 'M365Apps.json'
+        }
     }
 
     Context 'When using Folder filter mode (OpenIntuneBaseline structure)' {

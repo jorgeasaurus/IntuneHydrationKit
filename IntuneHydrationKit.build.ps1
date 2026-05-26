@@ -24,6 +24,7 @@ $ModuleFiles = @(
 $ModuleFolders = @(
     'Public'
     'Private'
+    'media'
     'Templates'
 )
 

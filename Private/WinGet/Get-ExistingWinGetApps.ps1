@@ -26,7 +26,7 @@ function Get-ExistingWinGetApps {
         foreach ($existingApp in @($response.value)) {
             $appToEvaluate = $existingApp
             $appName = [string]$existingApp.displayName
-            $isPotentialMatch = $KnownTemplateNames.Contains($appName)
+            $isPotentialMatch = Test-HydrationMobileAppNameInSet -DisplayName $appName -NameSet $KnownTemplateNames
 
             if ($isPotentialMatch -and [string]::IsNullOrWhiteSpace($existingApp.description) -and [string]::IsNullOrWhiteSpace($existingApp.notes)) {
                 try {

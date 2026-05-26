@@ -357,7 +357,12 @@ function Invoke-IntuneHydration {
         Write-HydrationLog @logParams
 
         # Always run pre-flight checks (read-only operations)
-        Test-IntunePrerequisites -Verbose:$effectiveVerboseEnabled | Out-Null
+        $preflightMobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
+        Test-IntunePrerequisites `
+            -Imports $settings.imports `
+            -MobileAppConfiguration $preflightMobileAppConfiguration `
+            -MobileAppPlatforms $platformFilters.MobileApps `
+            -Verbose:$effectiveVerboseEnabled | Out-Null
 
         # Step 3: Dynamic Groups
         if ($settings.imports.dynamicGroups) {

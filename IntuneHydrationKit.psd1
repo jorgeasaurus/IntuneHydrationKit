@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.7.1'
+    ModuleVersion     = '0.8.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -104,9 +104,15 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v0.7.1
+## v0.8.1
 
-- **OpenIntuneBaseline:** Updated to windows-v3.8.
+- **Authentication:** Interactive sign-in now uses a themed browser PKCE flow with fresh-token retry and no persistent refresh-token cache.
+- **Mobile Apps:** Added bundled WinGet app templates and WinGet-backed Win32 app import support under the Mobile Apps workflow.
+- **Pre-flight checks:** Device Filter runs now validate selected Intune workload access before imports and report concise authorization guidance.
+- **Runtime permission checks:** Added selected-import access checks and clearer Global Administrator guidance for tenants where PIM-elevated roles may not be accepted by downstream Intune authorization.
+- **Mobile Apps:** Fixed new mobile app names to append ` - [IHD]` after the app name instead of prefixing `[IHD]`.
+- **Mobile Apps:** Fixed legacy Windows mobile app TemplateId matching for nested Store and M365 templates.
+- **Sovereign clouds:** Centralized Graph environment metadata for consistent GCC High and DoD endpoint handling.
 
 '@
         }

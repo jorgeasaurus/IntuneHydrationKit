@@ -14,8 +14,17 @@ function Get-HydrationGraphEnvironmentInfo {
         'China' { 'https://microsoftgraph.chinacloudapi.cn' }
     }
 
+    $authorityHost = switch ($Environment) {
+        'Global' { 'https://login.microsoftonline.com' }
+        'USGov' { 'https://login.microsoftonline.us' }
+        'USGovDoD' { 'https://login.microsoftonline.us' }
+        'Germany' { 'https://login.microsoftonline.de' }
+        'China' { 'https://login.chinacloudapi.cn' }
+    }
+
     return @{
-        Environment = $Environment
-        Endpoint    = $endpoint
+        Environment   = $Environment
+        Endpoint      = $endpoint
+        AuthorityHost = $authorityHost
     }
 }

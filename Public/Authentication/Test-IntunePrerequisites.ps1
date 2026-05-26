@@ -12,13 +12,23 @@ function Test-IntunePrerequisites {
         Test-IntunePrerequisites
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter()]
+        [hashtable]$Imports = @{},
+
+        [Parameter()]
+        [hashtable]$MobileAppConfiguration = @{},
+
+        [Parameter()]
+        [string[]]$MobileAppPlatforms = @('All')
+    )
 
     Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
 
     $issues = @()
     $notes = [System.Collections.Generic.List[object]]::new()
     $riskBasedPolicyNames = @()
+    $conditionalAccessSelected = $Imports.Count -eq 0 -or ($Imports.ContainsKey('conditionalAccess') -and $Imports.conditionalAccess)
 
     # Required scopes from Connect-IntuneHydration
     $requiredScopes = Get-HydrationGraphScopes
@@ -68,7 +78,7 @@ function Test-IntunePrerequisites {
             $issues += "No active Intune license found. Please ensure Intune is licensed for this tenant."
         }
 
-        if (-not $hasPremiumP2) {
+        if ($conditionalAccessSelected -and -not $hasPremiumP2) {
             $riskBasedPolicyNames = @(
                 'Require multifactor authentication for risky sign-ins'
                 'Require password change for high-risk users'
@@ -81,10 +91,12 @@ function Test-IntunePrerequisites {
                 })
         }
 
-        $notes.Add([PSCustomObject]@{
-                Message     = 'Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
-                DetailLines = @()
-            })
+        if ($conditionalAccessSelected) {
+            $notes.Add([PSCustomObject]@{
+                    Message     = 'Some Conditional Access templates use private preview features and will be skipped unless the tenant is explicitly authorized.'
+                    DetailLines = @()
+                })
+        }
 
         # Check for required permission scopes
         $context = Get-MgContext
@@ -107,6 +119,16 @@ function Test-IntunePrerequisites {
                 } else {
                     Write-Verbose 'All required permission scopes are present'
                 }
+            }
+        }
+
+        if ($issues.Count -eq 0) {
+            $workloadAccessIssues = @(Test-HydrationGraphWorkloadAccess `
+                    -Imports $Imports `
+                    -MobileAppConfiguration $MobileAppConfiguration `
+                    -MobileAppPlatforms $MobileAppPlatforms)
+            if ($workloadAccessIssues.Count -gt 0) {
+                $issues += $workloadAccessIssues
             }
         }
 

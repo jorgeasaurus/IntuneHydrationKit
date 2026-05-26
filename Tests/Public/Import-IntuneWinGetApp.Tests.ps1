@@ -44,6 +44,44 @@ BeforeAll {
             }
         }
     }
+
+    function New-TestExistingWinGetApp {
+        param(
+            [Parameter()]
+            [string]$Id = 'existing-id',
+
+            [Parameter()]
+            [string]$DisplayName = 'Contoso App - [IHD]',
+
+            [Parameter()]
+            [string]$PackageIdentifier = 'Contoso.App'
+        )
+
+        @{
+            id          = $Id
+            displayName = $DisplayName
+            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
+            notes       = "Imported from WinGet`nWinGetPackageIdentifier: $PackageIdentifier"
+        }
+    }
+
+    function Set-TestExistingWinGetAppsMock {
+        param(
+            [Parameter(Mandatory)]
+            [object[]]$Apps
+        )
+
+        $script:testExistingWinGetApps = @($Apps)
+        Mock Invoke-HydrationGraphRequest {
+            param($Method)
+            if ($Method -eq 'GET') {
+                return @{
+                    value             = @($script:testExistingWinGetApps)
+                    '@odata.nextLink' = $null
+                }
+            }
+        } -ModuleName IntuneHydrationKit
+    }
 }
 
 Describe 'Import-IntuneWinGetApp' {
@@ -161,6 +199,7 @@ Describe 'Import-IntuneWinGetApp' {
         $script:deletedGraphUris = @()
         $script:batchOperationItems = @()
         $script:invokeTemplateCallCount = 0
+        $script:testExistingWinGetApps = @()
     }
 
     It 'Should create a WinGet-backed Win32 app with ownership metadata' {
@@ -394,22 +433,7 @@ Describe 'Import-IntuneWinGetApp' {
     }
 
     It 'Should skip apps already owned by the WinGet hydration importer' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method)
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'existing-id'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+        Set-TestExistingWinGetAppsMock -Apps @(New-TestExistingWinGetApp)
 
         $result = Import-IntuneWinGetApp -WorkingDirectory $script:workingRoot
 
@@ -419,50 +443,20 @@ Describe 'Import-IntuneWinGetApp' {
         Should -Not -Invoke Publish-IntuneWin32AppContent -ModuleName IntuneHydrationKit
     }
 
-    It 'Should skip WinGet-owned apps with the mobile app suffix' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method)
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'existing-id'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+    It 'Should skip WinGet-owned apps with a legacy prefixed name' {
+        Set-TestExistingWinGetAppsMock -Apps @(New-TestExistingWinGetApp -DisplayName '[IHD] Contoso App')
 
         $result = Import-IntuneWinGetApp -WorkingDirectory $script:workingRoot
 
         $result | Should -HaveCount 1
         $result[0].Action | Should -Be 'Skipped'
         $result[0].Name | Should -Be 'Contoso App - [IHD]'
+        $result[0].Id | Should -Be 'existing-id'
         Should -Not -Invoke Publish-IntuneWin32AppContent -ModuleName IntuneHydrationKit
     }
 
     It 'Should delete proactive remediations with app deletes when enabled' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method, $Uri)
-            $null = $Uri
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'existing-id'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+        Set-TestExistingWinGetAppsMock -Apps @(New-TestExistingWinGetApp)
 
         $null = Import-IntuneWinGetApp -WorkingDirectory $script:workingRoot -RemoveExisting -RemediationEnabled
 
@@ -473,28 +467,10 @@ Describe 'Import-IntuneWinGetApp' {
     }
 
     It 'Should only delete template-scoped WinGet-owned apps' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method)
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'delete-me'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        },
-                        @{
-                            id          = 'leave-me'
-                            displayName = 'Other App - [IHD]'
-                            description = 'Other app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Other.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+        Set-TestExistingWinGetAppsMock -Apps @(
+            New-TestExistingWinGetApp -Id 'delete-me'
+            New-TestExistingWinGetApp -Id 'leave-me' -DisplayName 'Other App - [IHD]' -PackageIdentifier 'Other.App'
+        )
         Mock Invoke-GraphBatchOperation {
             $script:batchOperationItems = @($Items)
             @(
@@ -516,28 +492,13 @@ Describe 'Import-IntuneWinGetApp' {
         $script:batchOperationItems[0].Id | Should -Be 'delete-me'
     }
 
-    It 'Should delete WinGet-owned apps with the mobile app suffix' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method)
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'delete-me'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+    It 'Should delete WinGet-owned apps with a legacy prefixed name' {
+        Set-TestExistingWinGetAppsMock -Apps @(New-TestExistingWinGetApp -Id 'delete-me' -DisplayName '[IHD] Contoso App')
         Mock Invoke-GraphBatchOperation {
             $script:batchOperationItems = @($Items)
             @(
                 [pscustomobject]@{
-                    Name   = 'Contoso App - [IHD]'
+                    Name   = '[IHD] Contoso App'
                     Type   = 'WinGetWin32App'
                     Action = 'Deleted'
                     Status = 'Success'
@@ -550,28 +511,13 @@ Describe 'Import-IntuneWinGetApp' {
 
         $result | Should -HaveCount 1
         $result[0].Action | Should -Be 'Deleted'
-        $result[0].Name | Should -Be 'Contoso App - [IHD]'
+        $result[0].Name | Should -Be '[IHD] Contoso App'
         $script:batchOperationItems | Should -HaveCount 1
         $script:batchOperationItems[0].Id | Should -Be 'delete-me'
     }
 
     It 'Should return dry-run delete results without calling the batch deleter' {
-        Mock Invoke-HydrationGraphRequest {
-            param($Method)
-            if ($Method -eq 'GET') {
-                return @{
-                    value             = @(
-                        @{
-                            id          = 'delete-me'
-                            displayName = 'Contoso App - [IHD]'
-                            description = 'WinGet packaged Contoso app - Imported by Intune Hydration Kit'
-                            notes       = "Imported from WinGet`nWinGetPackageIdentifier: Contoso.App"
-                        }
-                    )
-                    '@odata.nextLink' = $null
-                }
-            }
-        } -ModuleName IntuneHydrationKit
+        Set-TestExistingWinGetAppsMock -Apps @(New-TestExistingWinGetApp -Id 'delete-me')
 
         $result = Import-IntuneWinGetApp -WorkingDirectory $script:workingRoot -RemoveExisting -WhatIf
 

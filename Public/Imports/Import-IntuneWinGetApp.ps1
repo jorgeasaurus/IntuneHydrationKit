@@ -67,7 +67,9 @@ function Import-IntuneWinGetApp {
     foreach ($template in $templates) {
         if (-not [string]::IsNullOrWhiteSpace($template.displayName)) {
             $templateDisplayName = [string]$template.displayName
-            [void]$knownTemplateNames.Add((Get-HydrationMobileAppDisplayName -DisplayName $templateDisplayName))
+            foreach ($nameVariant in Get-HydrationMobileAppNameVariant -DisplayName $templateDisplayName) {
+                [void]$knownTemplateNames.Add($nameVariant)
+            }
         }
     }
 
@@ -109,8 +111,9 @@ function Import-IntuneWinGetApp {
         }
 
         $displayName = Get-HydrationMobileAppDisplayName -DisplayName $templateDisplayName
-        if ($existingApps.Lookup.ContainsKey($displayName) -and $existingApps.Lookup[$displayName].IsOwned) {
-            $matchedApp = $existingApps.Lookup[$displayName]
+        $matchedName = Get-HydrationMobileAppExistingMatch -ExistingApps $existingApps.Lookup -DisplayName $templateDisplayName -OwnershipProperty IsOwned
+        if ($matchedName) {
+            $matchedApp = $existingApps.Lookup[$matchedName]
             Write-Debug "Create decision: skipping '$displayName' because matching WinGet-owned app '$($matchedApp.DisplayName)' already exists with AppId='$($matchedApp.Id)'."
             Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
             $results += New-HydrationResult -Name $displayName -Id $matchedApp.Id -Path $template.TemplatePath -Type 'WinGetWin32App' -Action 'Skipped' -Status 'Already exists'

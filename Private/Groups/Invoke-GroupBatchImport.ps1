@@ -78,18 +78,6 @@ function Invoke-GroupBatchImport {
         return $body
     }
 
-    # Helper function to get Graph base URI for the current environment
-    function Get-GraphBaseUri {
-        param([string]$Environment)
-        switch ($Environment) {
-            "USGov" { return "https://graph.microsoft.us" }
-            "USGovDoD" { return "https://graph.microsoft.us" }
-            "China" { return "https://graph.chinacloudapi.cn" }
-            "Germany" { return "https://graph.microsoft.de" }
-            default { return "https://graph.microsoft.com" }
-        }
-    }
-
     $results = @()
     $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
 
@@ -490,7 +478,7 @@ function Invoke-GroupBatchImport {
         }
 
         # Get Graph base URI for owner reference
-        $graphBaseUri = Get-GraphBaseUri -Environment $mgContext.Environment
+        $graphBaseUri = (Get-HydrationGraphEnvironmentInfo -Environment $mgContext.Environment).Endpoint
 
         # Create each SP owner group sequentially (need to add owner after creation)
         foreach ($groupDef in $spOwnerGroups) {
