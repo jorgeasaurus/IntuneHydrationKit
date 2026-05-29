@@ -12,7 +12,12 @@ Main orchestrator function for Intune tenant hydration
 
 ## SYNTAX
 
-### SettingsFile (Default)
+### InteractiveTui
+```
+Invoke-IntuneHydration [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+```
+
+### SettingsFile
 ```
 Invoke-IntuneHydration [-SettingsPath] <String> [-Delete] [-Force] [-Platform <String[]>]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
@@ -41,17 +46,28 @@ Invoke-IntuneHydration -TenantId <String> [-TenantName <String>] [-Interactive] 
 Executes the complete hydration workflow including authentication,
 pre-flight checks, and import of all baseline configurations.
 
-Two mutually exclusive invocation modes:
+Three mutually exclusive invocation modes:
 1.
-Settings File Mode: Use -SettingsPath to load all configuration from a JSON file
+Interactive TUI Mode: Call without arguments to launch the console wizard
 2.
+Settings File Mode: Use -SettingsPath to load all configuration from a JSON file
+3.
 Parameter Mode: Use -Interactive or -ClientId/-ClientSecret with other parameters
 
-These modes cannot be mixed - choose one or the other.
+These modes cannot be mixed - choose one.
 
 ## EXAMPLES
 
 ### EXAMPLE 1
+```
+Invoke-IntuneHydration
+```
+
+Launch the interactive console wizard.
+The TUI prompts for Azure cloud environment, operation mode, workload targets, platform filter, optional Graph consent prompting, verbose logging, and final confirmation. The tenant ID is discovered after browser sign-in.
+Authentication uses interactive browser sign-in.
+
+### EXAMPLE 2
 ```
 Invoke-IntuneHydration `
 	-SettingsPath ./settings.json
@@ -59,7 +75,7 @@ Invoke-IntuneHydration `
 
 Run using settings from a JSON file.
 
-### EXAMPLE 2
+### EXAMPLE 3
 ```
 Invoke-IntuneHydration `
 	-SettingsPath ./settings.json `
@@ -68,7 +84,7 @@ Invoke-IntuneHydration `
 
 Dry-run using settings file.
 
-### EXAMPLE 3
+### EXAMPLE 4
 ```
 Invoke-IntuneHydration `
 	-TenantId "00000000-0000-0000-0000-000000000000" `
@@ -79,7 +95,7 @@ Invoke-IntuneHydration `
 
 Run with all imports enabled using interactive authentication.
 
-### EXAMPLE 4
+### EXAMPLE 5
 ```
 Invoke-IntuneHydration `
 	-TenantId "00000000-0000-0000-0000-000000000000" `
@@ -92,7 +108,7 @@ Invoke-IntuneHydration `
 
 Run with service principal authentication and specific imports enabled.
 
-### EXAMPLE 5
+### EXAMPLE 6
 ```
 Invoke-IntuneHydration `
 	-TenantId "00000000-0000-0000-0000-000000000000" `
@@ -110,6 +126,7 @@ Dry-run delete mode with interactive authentication.
 Path to the settings JSON file.
 Use this for settings file-based invocation.
 Cannot be combined with -Interactive, -ClientId, or -ClientSecret.
+Omit all parameters to launch the interactive TUI instead.
 
 ```yaml
 Type: String
@@ -117,7 +134,7 @@ Parameter Sets: SettingsFile
 Aliases:
 
 Required: True
-Position: 1
+Position: 0
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -238,7 +255,7 @@ Enable deletion of kit-created configurations
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: (All)
+Parameter Sets: SettingsFile, ServicePrincipal, Interactive
 Aliases:
 
 Required: False
@@ -253,7 +270,7 @@ Skip confirmation prompt when running in delete mode (available for both setting
 
 ```yaml
 Type: SwitchParameter
-Parameter Sets: (All)
+Parameter Sets: SettingsFile, ServicePrincipal, Interactive
 Aliases:
 
 Required: False
@@ -452,7 +469,7 @@ Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, Notifi
 
 ```yaml
 Type: String[]
-Parameter Sets: (All)
+Parameter Sets: SettingsFile, ServicePrincipal, Interactive
 Aliases:
 
 Required: False

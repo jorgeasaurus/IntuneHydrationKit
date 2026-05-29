@@ -8,14 +8,22 @@ function Test-HydrationGraphWorkloadAccess {
         [hashtable]$MobileAppConfiguration = @{},
 
         [Parameter()]
-        [string[]]$MobileAppPlatforms = @('All')
+        [string[]]$MobileAppPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$AppProtectionPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$BaselinePlatforms = @('All')
     )
 
     $issues = [System.Collections.Generic.List[string]]::new()
     $probes = Get-HydrationGraphWorkloadAccessProbe `
         -Imports $Imports `
         -MobileAppConfiguration $MobileAppConfiguration `
-        -MobileAppPlatforms $MobileAppPlatforms
+        -MobileAppPlatforms $MobileAppPlatforms `
+        -AppProtectionPlatforms $AppProtectionPlatforms `
+        -BaselinePlatforms $BaselinePlatforms
 
     foreach ($probe in $probes) {
         try {

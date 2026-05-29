@@ -13,6 +13,9 @@ function Connect-HydrationGraphViaBrowser {
         [ValidateSet('Global', 'USGov', 'USGovDoD', 'Germany', 'China')]
         [string]$Environment,
 
+        [Parameter()]
+        [switch]$ForceConsent,
+
         [string]$ClientId = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
     )
 
@@ -24,19 +27,34 @@ function Connect-HydrationGraphViaBrowser {
             -ClientId $ClientId `
             -TenantId $TenantId `
             -AuthorityHost $environmentInfo.AuthorityHost `
-            -Scopes $resolvedScopes
+            -Scopes $resolvedScopes `
+            -ForceConsent:$ForceConsent
 
         $secureToken = ConvertTo-SecureString -String $tokens.access_token -AsPlainText -Force
         try {
             Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
             Connect-MgGraph -AccessToken $secureToken -Environment $Environment -NoWelcome -ErrorAction Stop
-            return
         } catch {
             if ($attempt -eq 2) {
                 throw
             }
 
             Write-Verbose "Browser Graph token could not connect; retrying with a fresh browser sign-in: $_"
+            continue
+        }
+
+        $tenantIdFromToken = Get-HydrationTenantIdFromAccessToken -AccessToken $tokens.access_token
+        $connectedTenantId = if ($tenantIdFromToken) {
+            $tenantIdFromToken
+        } elseif ($TenantId -ne 'organizations') {
+            $TenantId
+        } else {
+            throw 'Unable to determine the signed-in tenant ID after interactive authentication.'
+        }
+
+        return [pscustomobject]@{
+            TenantId    = $connectedTenantId
+            Environment = $Environment
         }
     }
 }

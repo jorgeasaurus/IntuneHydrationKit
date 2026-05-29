@@ -2,6 +2,7 @@
 
 BeforeAll {
     . $PSScriptRoot/../../Private/Hydration/Format-HydrationDisplayMessage.ps1
+    . $PSScriptRoot/../../Private/Hydration/Get-HydrationTenantDisplay.ps1
     . $PSScriptRoot/../../Private/Configuration/Write-HydrationExecutionSettingsSummary.ps1
 
     function Remove-AnsiFormatting {
@@ -48,4 +49,3 @@ Describe 'Write-HydrationExecutionSettingsSummary' {
         Should -Invoke Write-Information -Exactly 8
     }
 }
-

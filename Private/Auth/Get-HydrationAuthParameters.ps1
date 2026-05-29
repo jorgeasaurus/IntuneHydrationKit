@@ -4,12 +4,13 @@ function Get-HydrationAuthParameters {
         [Parameter(Mandatory)]
         [hashtable]$AuthenticationSettings,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string]$TenantId
     )
 
-    $authParams = @{
-        TenantId = $TenantId
+    $authParams = @{}
+    if ($TenantId) {
+        $authParams['TenantId'] = $TenantId
     }
 
     if ($AuthenticationSettings.environment) {

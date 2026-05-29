@@ -24,7 +24,8 @@
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#configuration">Configuration</a> •
+  <a href="#interactive-tui">Interactive TUI</a> •
+  <a href="#automation-and-settings-files">Automation</a> •
   <a href="#safety-features">Safety Features</a> •
   <a href="#troubleshooting">Troubleshooting</a>
 </p>
@@ -40,7 +41,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 ### Demo
 
 <p align="center">
-  <img src="media/demo.gif" alt="Demo" width="900">
+  <video src="media/IHDEdit.mp4" controls width="900" aria-label="Demo"></video>
 </p>
 
 ### What Gets Created
@@ -77,8 +78,8 @@ These counts reflect the bundled template set at the time of the latest validate
 ### Recommendations
 
 1. **Test in a non-production tenant first** - Use a dev/test tenant before running against production
-2. **Always preview changes first** - Use `-WhatIf` in parameter or settings mode
-3. **Review enabled targets** - Start with specific import switches before using `-All`
+2. **Always preview changes first** - Use dry-run create in the TUI, or `-WhatIf` in automation mode
+3. **Review enabled targets** - Start with a small TUI workload selection before selecting everything
 4. **Have a rollback plan** - Know how to remove configurations if needed
 
 ### Deletion Safety
@@ -98,7 +99,7 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 - **Retry-After Throttle Handling** - Automatic retry with `Retry-After` header support on 429/503 Graph API responses
 - **Bundled Baselines** - OpenIntuneBaseline and CIS baseline templates are included in the module (no external download required)
 - **Idempotent** - Safe to run multiple times; skips existing configurations
-- **Dry-Run Mode** - Preview changes with PowerShell `-WhatIf` before applying
+- **Dry-Run Mode** - Preview selected TUI workloads before applying; automation can use PowerShell `-WhatIf`
 - **Safe Deletion** - Only removes objects created by this kit (identified by the hydration marker, with prefixes used where applicable)
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
 - **Platform Filtering** - Import resources for specific platforms only (e.g., `-Platform Windows,macOS`)
@@ -176,10 +177,68 @@ Import-Module ./IntuneHydrationKit.psd1
 
 ## Quick Start
 
-Start with the module and parameters first. Use settings files only when you want reusable configuration. The full command patterns live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
+The TUI is the main way to run Intune Hydration Kit. It guides you through Azure cloud, operation mode, workload targets, platform filtering, and final confirmation before any Graph write calls run. The tenant ID is discovered after browser sign-in.
+
+Install the module, then start the guided flow:
+
+```powershell
+Install-Module -Name IntuneHydrationKit -Scope CurrentUser
+Invoke-IntuneHydration
+```
+
+For the first pass, choose **Dry-run create** in the TUI and select a small workload such as Device Filters. After reviewing the summary, rerun the TUI and choose **Create** for the workloads you want to apply.
+
+Use command-line parameters or settings files only when you need repeatable automation, service-principal authentication, custom report paths, custom report formats, or PowerShell `-WhatIf`.
+
+---
+
+## Interactive TUI
+
+Run with no arguments to launch the guided console experience:
+
+```powershell
+Invoke-IntuneHydration
+```
+
+<p align="center">
+  <img src="media/TUI.png" alt="Intune Hydration Kit interactive TUI" width="900">
+</p>
+
+The wizard prompts for:
+
+- Azure cloud environment
+- Operation mode: create, delete, or dry-run create
+- Workload targets
+- Platform filter
+- Verbose logging
+- Final confirmation
+
+TUI behavior:
+
+- Authentication is interactive browser sign-in.
+- Dry-run create previews the selected workload without writing to Graph.
+- No workloads are selected by default.
+- At least one workload must be selected before review.
+- Platform defaults to `All`; choosing a specific platform clears `All`.
+- Configuration is not saved to a settings file.
+- Type `q` at any prompt to cancel before Graph calls run.
+
+The TUI hands off to the same execution engine as parameter and settings-file mode, so reports, logs, safety checks, and deletion protections are identical.
+
+---
+
+## Automation and Settings Files
+
+Use automation mode when the run must be repeatable or non-interactive. The full command patterns live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
 
 ```powershell
 Invoke-IntuneHydration -TenantId "your-tenant-id" -Interactive -Create -All -WhatIf
+```
+
+Use settings files only when you want reusable configuration:
+
+```powershell
+Invoke-IntuneHydration -SettingsPath ./settings.json -WhatIf
 ```
 
 ---
@@ -226,9 +285,9 @@ Get-Help Invoke-IntuneHydration -Detailed
 
 ---
 
-## Settings File Configuration
+## Settings File Reference
 
-Use a settings file only when you want reusable configuration. The full settings-file structure and examples live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
+The full settings-file structure and examples live in [docs/Invocation-Examples.md](docs/Invocation-Examples.md).
 
 #### Selective Targets
 
@@ -320,7 +379,7 @@ Conditional Access policies receive additional protection:
 
 ### WhatIf Support (Preview Mode)
 
-All operations support PowerShell `-WhatIf` preview mode in both parameter and settings modes:
+For normal interactive use, choose **Dry-run create** in the TUI. For automation, use PowerShell `-WhatIf` in parameter or settings-file mode:
 
 ```powershell
 # Parameter mode

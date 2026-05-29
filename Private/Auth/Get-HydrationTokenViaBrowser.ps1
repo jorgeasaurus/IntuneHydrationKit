@@ -13,6 +13,9 @@ function Get-HydrationTokenViaBrowser {
         [Parameter(Mandatory)]
         [string[]]$Scopes,
 
+        [Parameter()]
+        [switch]$ForceConsent,
+
         [int]$RedirectPort
     )
 
@@ -24,23 +27,17 @@ function Get-HydrationTokenViaBrowser {
     $verifier = New-HydrationCodeVerifier
     $challenge = New-HydrationCodeChallenge -Verifier $verifier
     $state = [Guid]::NewGuid().ToString('N')
+    $prompt = if ($ForceConsent) { 'consent' } else { 'select_account' }
 
-    $authParams = [ordered]@{
-        client_id             = $ClientId
-        response_type         = 'code'
-        redirect_uri          = $redirectUri
-        response_mode         = 'query'
-        scope                 = ($Scopes -join ' ')
-        state                 = $state
-        code_challenge        = $challenge
-        code_challenge_method = 'S256'
-        prompt                = 'select_account'
-    }
-
-    $query = ($authParams.GetEnumerator() | ForEach-Object {
-            "$($_.Key)=$([Uri]::EscapeDataString([string]$_.Value))"
-        }) -join '&'
-    $authUri = "$($AuthorityHost.TrimEnd('/'))/$TenantId/oauth2/v2.0/authorize?$query"
+    $authUri = New-HydrationOAuthAuthorizeUri `
+        -ClientId $ClientId `
+        -TenantId $TenantId `
+        -AuthorityHost $AuthorityHost `
+        -RedirectUri $redirectUri `
+        -Scopes $Scopes `
+        -State $state `
+        -CodeChallenge $challenge `
+        -Prompt $prompt
 
     $listener = [System.Net.HttpListener]::new()
     $listener.Prefixes.Add($redirectUri)

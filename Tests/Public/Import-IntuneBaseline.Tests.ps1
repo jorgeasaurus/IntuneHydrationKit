@@ -139,6 +139,38 @@ Describe 'Import-IntuneBaseline' {
                 $Message -like 'Prepared * OpenIntuneBaseline payloads. Starting batch import...'
             }
         }
+
+        It 'Should scope BYOD app protection templates and cache endpoints by selected platform' {
+            $baseDir = Join-Path 'TestDrive:' 'ByodBaseline'
+            $appProtectionDir = Join-Path $baseDir 'BYOD\AppProtection'
+            New-Item -Path $appProtectionDir -ItemType Directory -Force | Out-Null
+
+            @{
+                '@odata.type' = '#microsoft.graph.iosManagedAppProtection'
+                displayName   = 'iOS BYOD Policy'
+                description   = ''
+            } | ConvertTo-Json | Set-Content -Path (Join-Path $appProtectionDir 'iOS-BYOD.json')
+
+            @{
+                '@odata.type' = '#microsoft.graph.androidManagedAppProtection'
+                displayName   = 'Android BYOD Policy'
+                description   = ''
+            } | ConvertTo-Json | Set-Content -Path (Join-Path $appProtectionDir 'Android-BYOD.json')
+
+            Mock Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneBaseline -BaselinePath $baseDir -Platform iOS -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
+
+            $result.Name | Should -Contain '[IHD] iOS BYOD Policy'
+            $result.Name | Should -Not -Contain '[IHD] Android BYOD Policy'
+            Should -Invoke Get-GraphPagedResults -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Uri -eq 'beta/deviceAppManagement/iosManagedAppProtections'
+            } -Times 1
+            Should -Invoke Get-GraphPagedResults -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -eq 'beta/deviceAppManagement/androidManagedAppProtections'
+            }
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
+        }
     }
 
     Context 'WhatIf Support' {

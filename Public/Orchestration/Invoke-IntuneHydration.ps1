@@ -8,11 +8,12 @@ function Invoke-IntuneHydration {
         Executes the complete hydration workflow including authentication,
         pre-flight checks, and import of all baseline configurations.
 
-        Two mutually exclusive invocation modes:
-        1. Settings File Mode: Use -SettingsPath to load all configuration from a JSON file
-        2. Parameter Mode: Use -Interactive or -ClientId/-ClientSecret with other parameters
+        Three mutually exclusive invocation modes:
+        1. Interactive TUI Mode: Call without arguments to launch the console wizard
+        2. Settings File Mode: Use -SettingsPath to load all configuration from a JSON file
+        3. Parameter Mode: Use -Interactive or -ClientId/-ClientSecret with other parameters
 
-        These modes cannot be mixed - choose one or the other.
+        These modes cannot be mixed - choose one.
     .PARAMETER SettingsPath
         Path to the settings JSON file. Use this for settings file-based invocation.
         Cannot be combined with -Interactive, -ClientId, or -ClientSecret.
@@ -71,6 +72,10 @@ function Invoke-IntuneHydration {
     .PARAMETER ReportFormats
         Report formats to generate (markdown, json)
     .EXAMPLE
+        Invoke-IntuneHydration
+
+        Launch the interactive console wizard. The TUI asks for Azure cloud first and discovers the tenant ID after browser sign-in.
+    .EXAMPLE
         Invoke-IntuneHydration -SettingsPath ./settings.json
 
         Run using settings from a JSON file.
@@ -91,7 +96,7 @@ function Invoke-IntuneHydration {
 
         Dry-run delete mode with interactive authentication.
     #>
-    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'SettingsFile')]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'InteractiveTui')]
     param(
         # Settings file parameter - exclusive mode
         [Parameter(ParameterSetName = 'SettingsFile', Mandatory = $true, Position = 0)]
@@ -230,6 +235,25 @@ function Invoke-IntuneHydration {
     $executionStartTime = Get-Date
 
     try {
+        $tuiSelection = $null
+        if ($PSCmdlet.ParameterSetName -eq 'InteractiveTui') {
+            if (-not (Test-HydrationTuiHost)) {
+                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                    [System.Exception]::new('Invoke-IntuneHydration with zero arguments requires an interactive console. Use -SettingsPath or parameter-based invocation in non-interactive hosts.'),
+                    'HydrationTuiRequiresInteractiveHost',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $null
+                )
+                $PSCmdlet.ThrowTerminatingError($errorRecord)
+            }
+
+            $tuiSelection = Invoke-HydrationTui
+            if (-not $tuiSelection) {
+                Write-Warning 'Interactive setup cancelled. No hydration actions were run.'
+                return $null
+            }
+        }
+
         $resolveSettingsParams = @{
             ParameterSetName      = $PSCmdlet.ParameterSetName
             SettingsPath          = $SettingsPath
@@ -259,12 +283,24 @@ function Invoke-IntuneHydration {
             ReportOutputPath      = $ReportOutputPath
             ReportFormats         = $ReportFormats
             WhatIfEnabled         = [bool]$WhatIfPreference
+            CommonVerboseEnabled  = ($VerbosePreference -eq 'Continue')
+            TuiSelection          = $tuiSelection
             CommandRuntime        = $PSCmdlet
         }
         $settings = Resolve-HydrationExecutionSettings @resolveSettingsParams
 
+        if ($PSCmdlet.ParameterSetName -eq 'InteractiveTui') {
+            $null = Show-HydrationTuiReview -Settings $settings
+            $confirmed = Confirm-HydrationTuiChoice -Prompt 'Run hydration with these settings?' -Default:$false -ClearScreen:$false
+            if (-not $confirmed) {
+                Write-Warning 'Interactive setup cancelled. No hydration actions were run.'
+                return $null
+            }
+        }
+
         Write-HydrationExecutionSettingsSummary -Settings $settings
         $platformFilters = Get-HydrationPlatformFilters -Platforms $settings.platforms
+        $preflightMobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
         $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
         $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
         if ($settings.options.verbose -eq $true -and $VerbosePreference -ne 'Continue') {
@@ -300,7 +336,7 @@ function Invoke-IntuneHydration {
         Write-HydrationLog @logParams
 
         $logParams = @{
-            Message = "Loaded settings for tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)"
+            Message = "Loaded settings for tenant: $(Get-HydrationTenantDisplay -TenantId $settings.tenant.tenantId)"
             Level   = 'Info'
         }
         Write-HydrationLog @logParams
@@ -344,10 +380,23 @@ function Invoke-IntuneHydration {
             TenantId               = $settings.tenant.tenantId
         }
         $authParams = Get-HydrationAuthParameters @getAuthParams
+        $requiredGraphScopes = Get-HydrationGraphScopes `
+            -Imports $settings.imports `
+            -Create:$createEnabled `
+            -Delete:$deleteEnabled `
+            -MobileAppConfiguration $preflightMobileAppConfiguration `
+            -MobileAppPlatforms $platformFilters.MobileApps
+        if ($settings.authentication.mode -ne 'clientSecret') {
+            $authParams['Scopes'] = $requiredGraphScopes
+            $authParams['ForceConsent'] = [bool]$settings.options.forceConsent
+        }
         $authParams['Verbose'] = $effectiveVerboseEnabled
 
         # Always connect to Graph API (needed for dry-run to check existing policies)
         Connect-IntuneHydration @authParams
+        if ([string]::IsNullOrWhiteSpace($settings.tenant.tenantId) -and $script:HydrationState.TenantId) {
+            $settings.tenant['tenantId'] = $script:HydrationState.TenantId
+        }
 
         # Step 2: Pre-flight checks
         $logParams = @{
@@ -357,11 +406,13 @@ function Invoke-IntuneHydration {
         Write-HydrationLog @logParams
 
         # Always run pre-flight checks (read-only operations)
-        $preflightMobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
         Test-IntunePrerequisites `
             -Imports $settings.imports `
             -MobileAppConfiguration $preflightMobileAppConfiguration `
             -MobileAppPlatforms $platformFilters.MobileApps `
+            -AppProtectionPlatforms $platformFilters.AppProtection `
+            -BaselinePlatforms $platformFilters.Baseline `
+            -RequiredScopes $requiredGraphScopes `
             -Verbose:$effectiveVerboseEnabled | Out-Null
 
         # Step 3: Dynamic Groups

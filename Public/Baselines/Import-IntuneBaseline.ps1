@@ -111,6 +111,14 @@ function Import-IntuneBaseline {
     $odataTypeToEndpoint = $importMetadata.ODataTypeToEndpoint
     $intuneManagementFolders = $importMetadata.IntuneManagementFolders
     $skipFolders = $importMetadata.SkipFolders
+    $appProtectionODataTypes = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($endpointInfo in (Get-AppProtectionEndpointInfo)) {
+        [void]$appProtectionODataTypes.Add($endpointInfo.ODataType)
+    }
+    $appProtectionODataTypesInScope = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($endpointInfo in (Get-AppProtectionEndpointInfo -Platform $Platform)) {
+        [void]$appProtectionODataTypesInScope.Add($endpointInfo.ODataType)
+    }
 
     $results = @()
 
@@ -230,9 +238,41 @@ function Import-IntuneBaseline {
     }
     Write-HydrationLog @logParams
 
-    # Pre-fetch existing policies from all unique endpoints to avoid repeated API calls
+    $activePolicyFolders = @($policyTypefolders | Where-Object { $_.PolicyType -notin $skipFolders })
+
+    # Pre-fetch existing policies from selected template endpoints to avoid repeated API calls
     $endpointPolicyCache = @{}
-    $uniqueEndpoints = $odataTypeToEndpoint.Values | Sort-Object -Unique
+    $uniqueEndpointSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($policyFolder in $activePolicyFolders) {
+        $folderName = $policyFolder.PolicyType
+        $jsonFiles = Get-ChildItem -Path $policyFolder.Folder.FullName -Filter "*.json" -File -Recurse
+
+        if ($folderName -in $intuneManagementFolders) {
+            foreach ($jsonFile in $jsonFiles) {
+                try {
+                    $templateContent = Get-Content -Path $jsonFile.FullName -Raw | ConvertFrom-Json
+                    $odataType = $templateContent.'@odata.type'
+                    if ($appProtectionODataTypes.Contains($odataType) -and -not $appProtectionODataTypesInScope.Contains($odataType)) {
+                        continue
+                    }
+
+                    $typeEndpoint = $odataTypeToEndpoint[$odataType]
+                    if ($typeEndpoint) {
+                        [void]$uniqueEndpointSet.Add($typeEndpoint)
+                    }
+                } catch {
+                    Write-Verbose "Could not determine endpoint for $($jsonFile.FullName) during cache planning"
+                }
+            }
+            continue
+        }
+
+        $endpoint = $endpointMap[$folderName]
+        if ($endpoint) {
+            [void]$uniqueEndpointSet.Add($endpoint)
+        }
+    }
+    $uniqueEndpoints = @($uniqueEndpointSet) | Sort-Object
     $cacheIndex = 0
     foreach ($cacheEndpoint in $uniqueEndpoints) {
         $cacheIndex++
@@ -271,7 +311,6 @@ function Import-IntuneBaseline {
 
     # Collect all policies to create with their prepared bodies
     $policiesToCreate = @()
-    $activePolicyFolders = @($policyTypefolders | Where-Object { $_.PolicyType -notin $skipFolders })
     $folderIndex = 0
 
     foreach ($policyFolder in $policyTypefolders) {
@@ -307,6 +346,11 @@ function Import-IntuneBaseline {
                     }
                     $policyContent = $jsonContent | ConvertFrom-Json
                     $odataType = $policyContent.'@odata.type'
+
+                    if ($appProtectionODataTypes.Contains($odataType) -and -not $appProtectionODataTypesInScope.Contains($odataType)) {
+                        Write-Verbose "Skipping $policyName - app protection template is outside selected platform filter"
+                        continue
+                    }
 
                     # Determine endpoint from @odata.type
                     $typeEndpoint = $odataTypeToEndpoint[$odataType]

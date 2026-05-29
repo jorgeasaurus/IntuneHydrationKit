@@ -8,6 +8,9 @@ function Test-IntunePrerequisites {
 
         Non-blocking notes are emitted when Premium P2 is not found, as certain Conditional
         Access policies that use sign-in risk or user risk conditions require this license level.
+    .PARAMETER RequiredScopes
+        Delegated Graph scopes requested during interactive authentication. When omitted,
+        scopes are resolved from the selected imports for direct prerequisite checks.
     .EXAMPLE
         Test-IntunePrerequisites
     #>
@@ -20,7 +23,16 @@ function Test-IntunePrerequisites {
         [hashtable]$MobileAppConfiguration = @{},
 
         [Parameter()]
-        [string[]]$MobileAppPlatforms = @('All')
+        [string[]]$MobileAppPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$AppProtectionPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$BaselinePlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$RequiredScopes
     )
 
     Write-Information (Format-HydrationDisplayMessage -Message 'Validating Intune prerequisites...' -Style 'Section' -Emoji '🔎') -InformationAction Continue
@@ -30,8 +42,14 @@ function Test-IntunePrerequisites {
     $riskBasedPolicyNames = @()
     $conditionalAccessSelected = $Imports.Count -eq 0 -or ($Imports.ContainsKey('conditionalAccess') -and $Imports.conditionalAccess)
 
-    # Required scopes from Connect-IntuneHydration
-    $requiredScopes = Get-HydrationGraphScopes
+    $requiredScopes = if ($RequiredScopes) {
+        $RequiredScopes
+    } else {
+        Get-HydrationGraphScopes `
+            -Imports $Imports `
+            -MobileAppConfiguration $MobileAppConfiguration `
+            -MobileAppPlatforms $MobileAppPlatforms
+    }
 
     try {
         # Check organization info and licenses
@@ -126,7 +144,9 @@ function Test-IntunePrerequisites {
             $workloadAccessIssues = @(Test-HydrationGraphWorkloadAccess `
                     -Imports $Imports `
                     -MobileAppConfiguration $MobileAppConfiguration `
-                    -MobileAppPlatforms $MobileAppPlatforms)
+                    -MobileAppPlatforms $MobileAppPlatforms `
+                    -AppProtectionPlatforms $AppProtectionPlatforms `
+                    -BaselinePlatforms $BaselinePlatforms)
             if ($workloadAccessIssues.Count -gt 0) {
                 $issues += $workloadAccessIssues
             }

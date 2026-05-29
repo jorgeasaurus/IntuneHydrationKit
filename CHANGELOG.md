@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-05-30
+
+### Added
+
+- **Interactive TUI**: Added a zero-argument `Invoke-IntuneHydration` console wizard for Azure cloud, operation mode, workload targets, platform filtering, optional Graph consent prompting, verbose logging, and final confirmation. The tenant ID is discovered after browser sign-in.
+- **Dry-run first workflow**: Added a TUI dry-run create mode and review screen before Graph write calls.
+- **TUI documentation and media**: Updated README/help docs, screenshot, demo capture, and VHS source files for the guided console experience.
+
+### Changed
+
+- **Default invocation**: Bare module and repository-wrapper invocation now launch the TUI; settings-file and parameter-based automation modes remain available.
+- **Execution settings**: TUI selections now resolve through the same execution settings shape as parameter and settings-file runs.
+- **Common parameter handling**: `-WhatIf` and `-Verbose` now flow into TUI review and execution settings.
+- **Wrapper parity**: The repository wrapper now matches the module command parameter surface, including `-StaticGroups`, `-MobileApps`, `-CISBaselines`, and `-Platform`.
+
 ## [0.8.1] - 2026-05-25
 
 ### Added
