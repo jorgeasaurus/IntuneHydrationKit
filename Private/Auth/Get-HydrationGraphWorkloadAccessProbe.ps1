@@ -13,7 +13,13 @@ function Get-HydrationGraphWorkloadAccessProbe {
         [hashtable]$MobileAppConfiguration = @{},
 
         [Parameter()]
-        [string[]]$MobileAppPlatforms = @('All')
+        [string[]]$MobileAppPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$AppProtectionPlatforms = @('All'),
+
+        [Parameter()]
+        [string[]]$BaselinePlatforms = @('All')
     )
 
     $probes = [System.Collections.Generic.List[hashtable]]::new()
@@ -51,6 +57,42 @@ function Get-HydrationGraphWorkloadAccessProbe {
                     RoleHint      = 'Use a Global Administrator account with active Intune device script access; PIM-elevated roles can still be rejected by the downstream Intune service.'
                 })
         }
+    }
+
+    $appProtectionProbePlatforms = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    if ($Imports.ContainsKey('appProtection') -and $Imports.appProtection) {
+        foreach ($endpointInfo in (Get-AppProtectionEndpointInfo -Platform $AppProtectionPlatforms)) {
+            [void]$appProtectionProbePlatforms.Add($endpointInfo.Platform)
+        }
+    }
+
+    if ($Imports.ContainsKey('openIntuneBaseline') -and $Imports.openIntuneBaseline) {
+        foreach ($endpointInfo in (Get-AppProtectionEndpointInfo -Platform $BaselinePlatforms)) {
+            [void]$appProtectionProbePlatforms.Add($endpointInfo.Platform)
+        }
+    }
+
+    foreach ($endpointInfo in (Get-AppProtectionEndpointInfo)) {
+        if ($appProtectionProbePlatforms.Contains($endpointInfo.Platform)) {
+            $probes.Add(@{
+                    Workload      = 'App Protection'
+                    Endpoint      = $endpointInfo.Endpoint
+                    Uri           = "$($endpointInfo.Endpoint)`?`$top=1"
+                    RequiredScope = 'DeviceManagementApps.ReadWrite.All'
+                    RoleHint      = 'Use a Global Administrator account with active Intune app protection access; PIM-elevated roles can still be rejected by the downstream Intune service.'
+                })
+        }
+    }
+
+    if ($Imports.ContainsKey('conditionalAccess') -and $Imports.conditionalAccess) {
+        $probes.Add(@{
+                Workload      = 'Conditional Access'
+                Endpoint      = 'beta/identity/conditionalAccess/policies'
+                Uri           = 'beta/identity/conditionalAccess/policies?$top=1&$select=id,displayName,state'
+                RequiredScope = 'Policy.ReadWrite.ConditionalAccess'
+                RoleHint      = 'Use a Global Administrator, Security Administrator, or Conditional Access Administrator account with active Conditional Access access.'
+            })
     }
 
     return $probes.ToArray()

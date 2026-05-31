@@ -44,17 +44,18 @@ function Import-IntuneAppProtectionPolicy {
         return @()
     }
 
-    $typeToEndpoint = @{
-        '#microsoft.graph.androidManagedAppProtection' = 'beta/deviceAppManagement/androidManagedAppProtections'
-        '#microsoft.graph.iosManagedAppProtection'     = 'beta/deviceAppManagement/iosManagedAppProtections'
+    $endpointInfo = @(Get-AppProtectionEndpointInfo -Platform $Platform)
+    $typeToEndpoint = @{}
+    foreach ($info in $endpointInfo) {
+        $typeToEndpoint[$info.ODataType] = $info.Endpoint
     }
 
     $results = @()
 
-    # Prefetch existing policies from both endpoints
+    # Prefetch existing policies from selected platform endpoints
     # Note: App protection policies don't support $select for description, so we fetch all properties
     $existingPolicies = @{}
-    foreach ($endpoint in $typeToEndpoint.Values) {
+    foreach ($endpoint in @($endpointInfo | ForEach-Object { $_.Endpoint } | Select-Object -Unique)) {
         try {
             $listUri = $endpoint
             do {

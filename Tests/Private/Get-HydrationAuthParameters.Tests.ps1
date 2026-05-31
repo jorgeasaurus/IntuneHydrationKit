@@ -17,6 +17,16 @@ Describe 'Get-HydrationAuthParameters' {
             $result.Interactive | Should -Be $true
             $result.ContainsKey('ClientSecret') | Should -Be $false
         }
+
+        It 'Should omit TenantId when interactive settings are tenantless' {
+            $result = Get-HydrationAuthParameters -AuthenticationSettings @{
+                mode        = 'interactive'
+                environment = 'Global'
+            }
+
+            $result.ContainsKey('TenantId') | Should -BeFalse
+            $result.Interactive | Should -Be $true
+        }
     }
 
     Context 'Client secret mode' {

@@ -9,8 +9,10 @@ BeforeAll {
     . (Join-Path $script:ModuleRoot 'Private/Auth/Get-HydrationFreeTcpPort.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/New-HydrationCodeVerifier.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/New-HydrationCodeChallenge.ps1')
+    . (Join-Path $script:ModuleRoot 'Private/Auth/New-HydrationOAuthAuthorizeUri.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/Invoke-HydrationOAuthTokenRequest.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/Get-HydrationOAuthCallbackResult.ps1')
+    . (Join-Path $script:ModuleRoot 'Private/Auth/Get-HydrationTenantIdFromAccessToken.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/Get-HydrationTokenViaBrowser.ps1')
     . (Join-Path $script:ModuleRoot 'Private/Auth/Connect-HydrationGraphViaBrowser.ps1')
 
@@ -29,6 +31,15 @@ BeforeAll {
 }
 
 Describe 'Browser authentication helpers' {
+    BeforeAll {
+        function New-TestJwt {
+            param([string]$PayloadJson)
+
+            $payload = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($PayloadJson)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            return "header.$payload.signature"
+        }
+    }
+
     Context 'ConvertTo-HydrationOAuthScope' {
         It 'Should prefix bare Graph scopes with the selected Graph endpoint' {
             $result = ConvertTo-HydrationOAuthScope `
@@ -74,6 +85,60 @@ Describe 'Browser authentication helpers' {
         }
     }
 
+    Context 'New-HydrationOAuthAuthorizeUri' {
+        BeforeAll {
+            function ConvertFrom-TestQueryString {
+                param([Parameter(Mandatory)][string]$Uri)
+
+                $query = ([uri]$Uri).Query.TrimStart('?')
+                $values = @{}
+                foreach ($pair in ($query -split '&')) {
+                    $parts = $pair -split '=', 2
+                    $values[[uri]::UnescapeDataString($parts[0])] = [uri]::UnescapeDataString($parts[1])
+                }
+
+                return $values
+            }
+        }
+
+        It 'Should request account selection by default' {
+            $uri = New-HydrationOAuthAuthorizeUri `
+                -ClientId 'client-id' `
+                -TenantId 'organizations' `
+                -AuthorityHost 'https://login.microsoftonline.com' `
+                -RedirectUri 'http://localhost:12345/' `
+                -Scopes @('https://graph.microsoft.com/DeviceManagementConfiguration.ReadWrite.All', 'https://graph.microsoft.com/Policy.ReadWrite.ConditionalAccess') `
+                -State 'state-value' `
+                -CodeChallenge 'challenge-value'
+
+            $query = ConvertFrom-TestQueryString -Uri $uri
+
+            $query.prompt | Should -Be 'select_account'
+            $query.scope | Should -Be 'https://graph.microsoft.com/DeviceManagementConfiguration.ReadWrite.All https://graph.microsoft.com/Policy.ReadWrite.ConditionalAccess'
+            $query.response_type | Should -Be 'code'
+            $query.code_challenge_method | Should -Be 'S256'
+        }
+
+        It 'Should request an OAuth consent prompt when specified' {
+            $uri = New-HydrationOAuthAuthorizeUri `
+                -ClientId 'client-id' `
+                -TenantId 'organizations' `
+                -AuthorityHost 'https://login.microsoftonline.com' `
+                -RedirectUri 'http://localhost:12345/' `
+                -Scopes @('https://graph.microsoft.com/DeviceManagementConfiguration.ReadWrite.All') `
+                -State 'state-value' `
+                -CodeChallenge 'challenge-value' `
+                -Prompt consent
+
+            $query = ConvertFrom-TestQueryString -Uri $uri
+
+            $query.prompt | Should -Be 'consent'
+            $query.scope | Should -Be 'https://graph.microsoft.com/DeviceManagementConfiguration.ReadWrite.All'
+            $query.response_type | Should -Be 'code'
+            $query.code_challenge_method | Should -Be 'S256'
+        }
+    }
+
     Context 'New-HydrationBrowserAuthResponseHtml' {
         It 'Should render themed success HTML with the IHD logo' {
             $html = New-HydrationBrowserAuthResponseHtml -Status Success
@@ -81,6 +146,8 @@ Describe 'Browser authentication helpers' {
             $html | Should -Match 'Intune Hydration Kit'
             $html | Should -Match 'Authentication complete'
             $html | Should -Match 'data:image/png;base64,'
+            $html | Should -Match 'By <a href="https://github.com/jorgeasaurus"'
+            $html | Should -Match '>Jorgeasaurus</a>'
             $html | Should -Not -Match '\{\{TITLE\}\}'
         }
 
@@ -119,6 +186,20 @@ Describe 'Browser authentication helpers' {
         }
     }
 
+    Context 'Get-HydrationTenantIdFromAccessToken' {
+        It 'Should extract tenant ID from a JWT access token' {
+            $token = New-TestJwt -PayloadJson '{"tid":"12345678-1234-1234-1234-123456789abc"}'
+
+            Get-HydrationTenantIdFromAccessToken -AccessToken $token |
+                Should -Be '12345678-1234-1234-1234-123456789abc'
+        }
+
+        It 'Should return null when the token is not a JWT with a tenant claim' {
+            Get-HydrationTenantIdFromAccessToken -AccessToken 'opaque-token' |
+                Should -BeNullOrEmpty
+        }
+    }
+
     Context 'Connect-HydrationGraphViaBrowser' {
         BeforeEach {
             Mock Get-HydrationGraphEnvironmentInfo {
@@ -133,8 +214,9 @@ Describe 'Browser authentication helpers' {
 
         It 'Should retry with a fresh browser sign-in when token connection fails' {
             $script:ConnectAttempts = 0
+            $token = New-TestJwt -PayloadJson '{"tid":"12345678-1234-1234-1234-123456789abc"}'
 
-            Mock Get-HydrationTokenViaBrowser { [pscustomobject]@{ access_token = 'browser-access' } }
+            Mock Get-HydrationTokenViaBrowser { [pscustomobject]@{ access_token = $token } }
             Mock Connect-MgGraph {
                 $script:ConnectAttempts++
                 if ($script:ConnectAttempts -eq 1) {
@@ -142,8 +224,9 @@ Describe 'Browser authentication helpers' {
                 }
             }
 
-            Connect-HydrationGraphViaBrowser -TenantId '12345678-1234-1234-1234-123456789abc' -Scopes @('User.Read') -Environment Global
+            $result = Connect-HydrationGraphViaBrowser -TenantId 'organizations' -Scopes @('User.Read') -Environment Global
 
+            $result.TenantId | Should -Be '12345678-1234-1234-1234-123456789abc'
             Should -Invoke Get-HydrationTokenViaBrowser -Times 2
             Should -Invoke Connect-MgGraph -Times 2
             Should -Invoke Disconnect-MgGraph -Times 2
@@ -160,6 +243,32 @@ Describe 'Browser authentication helpers' {
             Should -Invoke Get-HydrationTokenViaBrowser -Times 2
             Should -Invoke Connect-MgGraph -Times 2
             Should -Invoke Disconnect-MgGraph -Times 2
+        }
+
+        It 'Should fail tenantless browser auth when the connected token has no tenant claim' {
+            Mock Get-HydrationTokenViaBrowser { [pscustomobject]@{ access_token = 'opaque-token' } }
+            Mock Connect-MgGraph { }
+
+            {
+                Connect-HydrationGraphViaBrowser -TenantId 'organizations' -Scopes @('User.Read') -Environment Global
+            } | Should -Throw '*Unable to determine the signed-in tenant ID*'
+
+            Should -Invoke Get-HydrationTokenViaBrowser -Times 1
+            Should -Invoke Connect-MgGraph -Times 1
+            Should -Invoke Disconnect-MgGraph -Times 1
+        }
+
+        It 'Should pass forced consent to browser token acquisition when requested' {
+            $token = New-TestJwt -PayloadJson '{"tid":"12345678-1234-1234-1234-123456789abc"}'
+            Mock Get-HydrationTokenViaBrowser { [pscustomobject]@{ access_token = $token } }
+            Mock Connect-MgGraph { }
+
+            $result = Connect-HydrationGraphViaBrowser -TenantId 'organizations' -Scopes @('User.Read') -Environment Global -ForceConsent
+
+            $result.TenantId | Should -Be '12345678-1234-1234-1234-123456789abc'
+            Should -Invoke Get-HydrationTokenViaBrowser -Times 1 -ParameterFilter {
+                $ForceConsent -eq $true
+            }
         }
     }
 }

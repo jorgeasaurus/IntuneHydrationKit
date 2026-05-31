@@ -14,14 +14,14 @@ Connects to Microsoft Graph with required scopes for Intune hydration
 
 ### Interactive (Default)
 ```
-Connect-IntuneHydration -TenantId <String> [-Interactive] [-Environment <String>] [-ScopeProfile <String>]
- [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Connect-IntuneHydration [[-TenantId] <String>] [-Interactive] [-Environment <String>] [-Scopes <String[]>]
+ [-ForceConsent] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ### ClientSecret
 ```
 Connect-IntuneHydration -TenantId <String> -ClientId <String> -ClientSecret <SecureString>
- [-Environment <String>] [-ScopeProfile <String>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+ [-Environment <String>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -32,15 +32,22 @@ Supports multiple cloud environments: Global (Commercial), USGov, USGovDoD, Germ
 
 ### EXAMPLE 1
 ```
+Connect-IntuneHydration -Interactive -Environment USGov
+```
+
+Interactive sign-in for a government cloud tenant. The tenant ID is discovered after browser sign-in.
+
+### EXAMPLE 2
+```
 Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -Interactive
 ```
 
-### EXAMPLE 2
+### EXAMPLE 3
 ```
 Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -ClientId "app-id" -ClientSecret $secret
 ```
 
-### EXAMPLE 3
+### EXAMPLE 4
 ```
 Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -Interactive -Environment USGov
 ```
@@ -48,14 +55,14 @@ Connect-IntuneHydration -TenantId "00000000-0000-0000-0000-000000000000" -Intera
 ## PARAMETERS
 
 ### -TenantId
-The Azure AD tenant ID (GUID format)
+The Azure AD tenant ID (GUID format). Optional for interactive authentication; required for client secret authentication.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
 Aliases:
 
-Required: True
+Required: False for Interactive, True for ClientSecret
 Position: Named
 Default value: None
 Accept pipeline input: False
@@ -122,19 +129,33 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ScopeProfile
-Scope profile used for interactive delegated auth.
-Hydration requests full kit scopes;
-ConditionalAccess requests a narrower CA-focused scope set.
+### -Scopes
+Delegated Microsoft Graph scopes to request for interactive authentication.
+Defaults to the full Intune Hydration Kit scope set when omitted.
 
 ```yaml
-Type: String
-Parameter Sets: (All)
+Type: String[]
+Parameter Sets: Interactive
 Aliases:
 
 Required: False
 Position: Named
-Default value: Hydration
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ForceConsent
+Request the Microsoft identity consent prompt during interactive authentication.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: Interactive
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

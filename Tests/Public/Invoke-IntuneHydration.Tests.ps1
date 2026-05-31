@@ -2,8 +2,8 @@
 
 BeforeAll {
     # Import the module
-    $modulePath = Join-Path $PSScriptRoot '..\..\'
-    Import-Module (Join-Path $modulePath 'IntuneHydrationKit.psd1') -Force
+    $script:ModuleRoot = Join-Path $PSScriptRoot '..\..\'
+    Import-Module (Join-Path $script:ModuleRoot 'IntuneHydrationKit.psd1') -Force
 
     # Get reference to the module
     $script:TestModule = Get-Module -Name IntuneHydrationKit
@@ -38,19 +38,20 @@ AfterAll {
 
 Describe 'Invoke-IntuneHydration' {
     Context 'Parameter Validation' {
-        It 'Should have SettingsFile parameter set as default' {
+        It 'Should have InteractiveTui parameter set as default' {
             $command = Get-Command Invoke-IntuneHydration
-            $command.DefaultParameterSet | Should -Be 'SettingsFile'
+            $command.DefaultParameterSet | Should -Be 'InteractiveTui'
         }
 
-        It 'Should have three parameter sets' {
+        It 'Should have four parameter sets' {
             $command = Get-Command Invoke-IntuneHydration
+            $command.ParameterSets.Name | Should -Contain 'InteractiveTui'
             $command.ParameterSets.Name | Should -Contain 'SettingsFile'
             $command.ParameterSets.Name | Should -Contain 'Interactive'
             $command.ParameterSets.Name | Should -Contain 'ServicePrincipal'
         }
 
-        It 'Should require SettingsPath in SettingsFile parameter set' {
+        It 'Should require SettingsPath in SettingsFile mode' {
             $command = Get-Command Invoke-IntuneHydration
             $param = $command.Parameters['SettingsPath']
 
@@ -284,6 +285,11 @@ Describe 'Invoke-IntuneHydration' {
 
             Should -Invoke Import-HydrationSettings -ModuleName IntuneHydrationKit -Times 1
         }
+
+        It 'Should require SettingsPath when SettingsFile mode has bound parameters' {
+            { Invoke-IntuneHydration -Delete -WhatIf } |
+                Should -Throw '*Parameter set cannot be resolved*'
+        }
     }
 
     Context 'Parameter Mode - Target Validation' {
@@ -390,6 +396,19 @@ Describe 'Invoke-IntuneHydration' {
             }
         }
 
+        It 'Should pass selected workload scopes to Connect-IntuneHydration' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -DeviceFilters -WhatIf
+
+            Should -Invoke Connect-IntuneHydration -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Scopes -contains 'Organization.Read.All' -and
+                $Scopes -contains 'LicenseAssignment.Read.All' -and
+                $Scopes -contains 'DeviceManagementConfiguration.ReadWrite.All' -and
+                $Scopes -notcontains 'Group.ReadWrite.All' -and
+                $Scopes -notcontains 'Policy.ReadWrite.ConditionalAccess' -and
+                $Scopes -notcontains 'DeviceManagementApps.ReadWrite.All'
+            }
+        }
+
         It 'Should always call Test-IntunePrerequisites' {
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -DeviceFilters -WhatIf
 
@@ -404,7 +423,8 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Connect-IntuneHydration -ModuleName IntuneHydrationKit -ParameterFilter {
                 $TenantId -eq '12345678-1234-1234-1234-123456789abc' -and
                 $ClientId -eq 'client-id' -and
-                $ClientSecret -is [SecureString]
+                $ClientSecret -is [SecureString] -and
+                $null -eq $Scopes
             }
         }
     }
@@ -498,6 +518,54 @@ Describe 'Invoke-IntuneHydration' {
 
             Should -Invoke Write-HydrationExecutionSummary -ModuleName IntuneHydrationKit -ParameterFilter {
                 $StartTime -is [datetime]
+            } -Times 1
+        }
+
+        It 'Should resolve ordered settings-file dictionaries and command-line force override' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-ordered-force.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                [ordered]@{
+                    tenant         = [ordered]@{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = [ordered]@{ mode = 'interactive'; environment = 'Global' }
+                    options        = [ordered]@{ create = $false; delete = $true; force = $false; dryRun = $false; verbose = $false }
+                    imports        = [ordered]@{ deviceFilters = $true }
+                    reporting      = [ordered]@{ formats = @('markdown') }
+                    mobileApps     = [ordered]@{ remediation = [ordered]@{ enabled = $false } }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            { Invoke-IntuneHydration -SettingsPath $testSettingsPath -Force | Out-Null } | Should -Not -Throw
+
+            Should -Invoke Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit -ParameterFilter {
+                $RemoveExisting -eq $true
+            } -Times 1
+            Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Imports -is [hashtable] -and $Imports.deviceFilters -eq $true
+            } -Times 1
+        }
+
+        It 'Should pass baseline platform filters to prerequisite checks' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-baseline-platforms.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ openIntuneBaseline = $true }
+                    platforms      = @('Windows')
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneBaseline { @() } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath | Out-Null
+
+            Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
+                $BaselinePlatforms.Count -eq 1 -and $BaselinePlatforms -contains 'Windows'
             } -Times 1
         }
     }

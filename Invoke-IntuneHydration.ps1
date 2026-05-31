@@ -11,7 +11,7 @@
 
     For new users, consider installing from PSGallery:
         Install-Module IntuneHydrationKit
-        Invoke-IntuneHydration -SettingsPath ./settings.json
+        Invoke-IntuneHydration
 .PARAMETER SettingsPath
     Path to the settings JSON file. Use this for settings file-based invocation.
 .PARAMETER TenantId
@@ -46,18 +46,30 @@
     Process enrollment profiles (Autopilot, ESP)
 .PARAMETER DynamicGroups
     Process dynamic groups
+.PARAMETER StaticGroups
+    Process static groups
 .PARAMETER DeviceFilters
     Process device filters
 .PARAMETER ConditionalAccess
     Process Conditional Access starter pack policies
+.PARAMETER MobileApps
+    Process mobile app templates
+.PARAMETER CISBaselines
+    Process bundled CIS baseline policies
 .PARAMETER All
     Enable all targets
+.PARAMETER Platform
+    Filter imports by platform. Valid values: Windows, macOS, iOS, Android, Linux, All.
 .PARAMETER ReportOutputPath
     Output directory for reports
 .PARAMETER ReportFormats
     Report formats to generate (markdown, json)
 .PARAMETER WhatIf
     Run in dry-run mode without making changes to Intune
+.EXAMPLE
+    ./Invoke-IntuneHydration.ps1
+
+    Launch the interactive console wizard.
 .EXAMPLE
     ./Invoke-IntuneHydration.ps1 -SettingsPath ./settings.json
 
@@ -67,7 +79,7 @@
 
     Run with all imports enabled using interactive authentication.
 #>
-[CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'SettingsFile')]
+[CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'InteractiveTui')]
 param(
     [Parameter(ParameterSetName = 'SettingsFile', Mandatory = $true, Position = 0)]
     [ValidateScript({ Test-Path $_ })]
@@ -140,6 +152,10 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$StaticGroups,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$DeviceFilters,
 
     [Parameter(ParameterSetName = 'Interactive')]
@@ -148,7 +164,21 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$MobileApps,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$CISBaselines,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$All,
+
+    [Parameter(ParameterSetName = 'SettingsFile')]
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'Linux', 'All')]
+    [string[]]$Platform = @('All'),
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]

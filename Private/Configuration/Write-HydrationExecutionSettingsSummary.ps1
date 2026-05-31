@@ -6,7 +6,7 @@ function Write-HydrationExecutionSettingsSummary {
     )
 
     $summaryLines = @(
-        (Format-HydrationDisplayMessage -Message "Target Tenant: $(Get-ObfuscatedTenantId -TenantId $Settings.tenant.tenantId)" -Style 'Info' -Emoji '🎯')
+        (Format-HydrationDisplayMessage -Message "Target Tenant: $(Get-HydrationTenantDisplay -TenantId $Settings.tenant.tenantId)" -Style 'Info' -Emoji '🎯')
     )
 
     if ($Settings.tenant.tenantName) {
@@ -26,4 +26,3 @@ function Write-HydrationExecutionSettingsSummary {
         Write-Information $summaryLine -InformationAction Continue
     }
 }
-

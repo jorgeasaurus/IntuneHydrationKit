@@ -85,9 +85,48 @@ function Resolve-HydrationExecutionSettings {
         [Parameter()]
         [bool]$WhatIfEnabled,
 
+        [Parameter()]
+        [bool]$CommonVerboseEnabled,
+
+        [Parameter()]
+        [hashtable]$TuiSelection,
+
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCmdlet]$CommandRuntime
     )
+
+    if ($ParameterSetName -eq 'InteractiveTui') {
+        if (-not $TuiSelection) {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Exception]::new('TUI selection data is required for interactive TUI invocation.'),
+                'TuiSelectionRequired',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+            $CommandRuntime.ThrowTerminatingError($errorRecord)
+        }
+
+        $operation = $TuiSelection.Operation
+        $options = @{
+            create       = [bool]$operation.create
+            delete       = [bool]$operation.delete
+            force        = $false
+            dryRun       = [bool]$operation.dryRun -or $WhatIfEnabled
+            verbose      = [bool]$TuiSelection.VerboseEnabled -or $CommonVerboseEnabled
+            forceConsent = [bool]$TuiSelection.ConsentPromptEnabled
+        }
+        $resolvedPlatforms = if ($TuiSelection.Platforms) { $TuiSelection.Platforms } else { @('All') }
+        $resolvedEnvironment = if ($TuiSelection.Environment) { $TuiSelection.Environment } else { 'Global' }
+
+        return New-HydrationExecutionSetting `
+            -TenantId $TuiSelection.TenantId `
+            -AuthenticationMode 'interactive' `
+            -Environment $resolvedEnvironment `
+            -Options $options `
+            -Imports $TuiSelection.Imports `
+            -Platforms $resolvedPlatforms `
+            -ReportFormats @('markdown')
+    }
 
     if ($ParameterSetName -eq 'SettingsFile') {
         $settings = Import-HydrationSettings -Path $SettingsPath
@@ -97,7 +136,7 @@ function Resolve-HydrationExecutionSettings {
             $settings['options'] = @{}
         }
 
-        $settings.options.force = $Force.IsPresent -or ($settings.options.ContainsKey('force') -and $settings.options.force)
+        $settings.options.force = $Force.IsPresent -or ($settings.options.Contains('force') -and $settings.options.force)
 
         if ($Platform -and $Platform -notcontains 'All') {
             $settings['platforms'] = $Platform
@@ -105,7 +144,19 @@ function Resolve-HydrationExecutionSettings {
             $settings['platforms'] = @('All')
         }
 
-        return $settings
+        return New-HydrationExecutionSetting `
+            -TenantId $settings.tenant.tenantId `
+            -TenantName $settings.tenant.tenantName `
+            -AuthenticationMode $settings.authentication.mode `
+            -ClientId $settings.authentication.clientId `
+            -ClientSecret $settings.authentication.clientSecret `
+            -Environment $settings.authentication.environment `
+            -Options $settings.options `
+            -Imports $settings.imports `
+            -Platforms $settings.platforms `
+            -ReportOutputPath $settings.reporting.outputPath `
+            -ReportFormats $settings.reporting.formats `
+            -MobileApps $settings.mobileApps
     }
 
     Write-Information (Format-HydrationDisplayMessage -Message 'Using parameter-based configuration' -Style 'Info' -Emoji '🧩') -InformationAction Continue
@@ -138,36 +189,28 @@ function Resolve-HydrationExecutionSettings {
         $CommandRuntime.ThrowTerminatingError($errorRecord)
     }
 
-    return @{
-        tenant         = @{
-            tenantId   = $TenantId
-            tenantName = $TenantName
-        }
-        authentication = @{
-            mode         = if ($Interactive) { 'interactive' } else { 'clientSecret' }
-            clientId     = $ClientId
-            clientSecret = $ClientSecret
-            environment  = $Environment
-        }
-        options        = @{
-            create  = $Create.IsPresent
-            delete  = $Delete.IsPresent
-            force   = $Force.IsPresent
-            dryRun  = $WhatIfEnabled
-            verbose = $VerboseOutput.IsPresent
-        }
-        imports        = $importsEnabled
-        mobileApps     = @{
-            presetId    = $null
-            templateIds = @()
-            remediation = @{
-                enabled = $true
-            }
-        }
-        reporting      = @{
-            outputPath = if ($ReportOutputPath) { $ReportOutputPath } else { $null }
-            formats    = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
-        }
-        platforms      = if ($Platform) { $Platform } else { @('All') }
+    $options = @{
+        create       = $Create.IsPresent
+        delete       = $Delete.IsPresent
+        force        = $Force.IsPresent
+        dryRun       = $WhatIfEnabled
+        verbose      = $VerboseOutput.IsPresent -or $CommonVerboseEnabled
+        forceConsent = $false
     }
+    $authenticationMode = if ($Interactive) { 'interactive' } else { 'clientSecret' }
+    $resolvedPlatforms = if ($Platform) { $Platform } else { @('All') }
+    $resolvedReportFormats = if ($ReportFormats) { $ReportFormats } else { @('markdown') }
+
+    New-HydrationExecutionSetting `
+        -TenantId $TenantId `
+        -TenantName $TenantName `
+        -AuthenticationMode $authenticationMode `
+        -ClientId $ClientId `
+        -ClientSecret $ClientSecret `
+        -Environment $Environment `
+        -Options $options `
+        -Imports $importsEnabled `
+        -Platforms $resolvedPlatforms `
+        -ReportOutputPath $ReportOutputPath `
+        -ReportFormats $resolvedReportFormats
 }

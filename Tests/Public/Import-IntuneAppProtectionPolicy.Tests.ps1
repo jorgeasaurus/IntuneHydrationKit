@@ -169,6 +169,17 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
         }
+
+        It 'Should prefetch only the selected platform endpoint' {
+            Import-IntuneAppProtectionPolicy -Platform iOS -WhatIf
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/iosManagedAppProtections*'
+            } -Times 1
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceAppManagement/androidManagedAppProtections*'
+            }
+        }
     }
 
     Context 'Delete Mode' {
@@ -241,6 +252,48 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
             $wouldDelete = @($result | Where-Object { $_.Action -eq 'WouldDelete' })
             $wouldDelete.Count | Should -Be 1
+        }
+
+        It 'Should delete only from the selected platform endpoint' {
+            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit
+
+            Mock Get-TemplateDisplayNames {
+                $hashSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                $hashSet.Add('Test Policy') | Out-Null
+                return $hashSet
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*iosManagedAppProtections*') {
+                    return @{
+                        value = @(
+                            @{ id = 'ios-policy-1'; displayName = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
+                        )
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*androidManagedAppProtections*') {
+                    throw 'Android endpoint should not be queried'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation {
+                return @([PSCustomObject]@{ Name = '[IHD] Test Policy'; Type = 'AppProtection'; Action = 'Deleted'; Status = 'Success' })
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneAppProtectionPolicy -Platform iOS -RemoveExisting -Confirm:$false
+
+            $deleted = @($result | Where-Object { $_.Action -eq 'Deleted' })
+            $deleted.Count | Should -Be 1
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceAppManagement/iosManagedAppProtections*'
+            } -Times 1
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceAppManagement/androidManagedAppProtections*'
+            }
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
+                $BaseUrl -eq '/deviceAppManagement/iosManagedAppProtections'
+            } -Times 1
         }
     }
 
