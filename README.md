@@ -41,7 +41,7 @@ The Intune Hydration Kit is a PowerShell module that bootstraps Microsoft Intune
 ### Demo
 
 <p align="center">
-  <video src="media/IHDEdit.mp4" controls width="900" aria-label="Demo"></video>
+  <img src="media/demo.gif" alt="Demo" width="900">
 </p>
 
 ### What Gets Created
