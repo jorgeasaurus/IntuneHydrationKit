@@ -7,5 +7,5 @@ function Read-HydrationTuiOperation {
         -Title 'Operation mode' `
         -Options $options `
         -Prompt 'Select operation' `
-        -ConvertOption { param($option) ConvertTo-HydrationTuiOperationOption -Option $option }
+        -ConvertOption { param($option) $option.Options }
 }

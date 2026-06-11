@@ -23,21 +23,25 @@ function Resolve-HydrationTuiOptionSelection {
 
     foreach ($token in $tokens) {
         $trimmedToken = $token.Trim()
+
         if ($AllowAllKeyword -and $trimmedToken.Equals('all', [System.StringComparison]::OrdinalIgnoreCase)) {
-            $trimmedToken = '0'
+            $match = $Options | Where-Object { $_.IsExclusive } | Select-Object -First 1
+            if (-not $match) {
+                throw "Invalid selection '$token'. Enter option numbers separated by commas."
+            }
+        } else {
+            $number = 0
+            if (-not [int]::TryParse($trimmedToken, [ref]$number)) {
+                throw "Invalid selection '$token'. Enter option numbers separated by commas."
+            }
+
+            $match = $Options | Where-Object { $_.Number -eq $number } | Select-Object -First 1
+            if (-not $match) {
+                throw "Invalid option number '$number'."
+            }
         }
 
-        $number = 0
-        if (-not [int]::TryParse($trimmedToken, [ref]$number)) {
-            throw "Invalid selection '$token'. Enter option numbers separated by commas."
-        }
-
-        $match = $Options | Where-Object { $_.Number -eq $number } | Select-Object -First 1
-        if (-not $match) {
-            throw "Invalid option number '$number'."
-        }
-
-        if ($selectedNumbers.Add($number)) {
+        if ($selectedNumbers.Add($match.Number)) {
             $selectedOptions.Add($match)
         }
     }

@@ -72,10 +72,7 @@ function Get-HydrationGraphScopes {
         }
     }
 
-    $remediationEnabled = $true
-    if ($MobileAppConfiguration -and $MobileAppConfiguration.ContainsKey('remediationEnabled') -and $null -ne $MobileAppConfiguration.remediationEnabled) {
-        $remediationEnabled = [bool]$MobileAppConfiguration.remediationEnabled
-    }
+    $remediationEnabled = Get-HydrationMobileAppRemediationEnabled -Configuration $MobileAppConfiguration
     if ($Imports.ContainsKey('mobileApps') -and $Imports.mobileApps -and $remediationEnabled -and
         (Test-HydrationMobileAppsIncludeWinGet -Configuration $MobileAppConfiguration -Platforms $MobileAppPlatforms)) {
         [void]$scopes.Add('DeviceManagementScripts.ReadWrite.All')

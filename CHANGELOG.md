@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-06-11
+
+### Changed
+
+- **Internal maintainability**: Refactored the interactive TUI and browser-auth helpers with no change to behavior. The multi-select "All" option is now driven by an `IsExclusive` data flag instead of a magic index/string spread across multiple files; duplicated PKCE base64url encoding and mobile-app `remediationEnabled` resolution were consolidated into shared helpers; and a redundant TUI operation-converter wrapper was removed.
+
 ## [1.0.0] - 2026-05-30
 
 ### Added

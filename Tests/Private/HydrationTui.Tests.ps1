@@ -24,7 +24,7 @@ BeforeAll {
                 [int]$Number = 2
             )
 
-            ConvertTo-HydrationTuiOperationOption -Option (& $script:GetTestHydrationTuiOption -Options @(Get-HydrationTuiOperationOption) -Number $Number)[0]
+            (& $script:GetTestHydrationTuiOption -Options @(Get-HydrationTuiOperationOption) -Number $Number)[0].Options
         }
 
         $script:NewTestHydrationTuiImportMap = {
@@ -170,7 +170,7 @@ Describe 'Hydration TUI helpers' {
             $importOptions = @(Get-HydrationTuiImportOption | Where-Object { $_.Number -in @(1, 3, 11) })
             $platformOptions = @(Get-HydrationTuiPlatformOption | Where-Object { $_.Number -in @(1, 2) })
 
-            $operation = ConvertTo-HydrationTuiOperationOption -Option $operationOption
+            $operation = $operationOption.Options
             $imports = ConvertTo-HydrationTuiImportMap -Option $importOptions
             $platforms = ConvertTo-HydrationTuiPlatformList -Option $platformOptions
 

@@ -6,5 +6,5 @@ function New-HydrationCodeChallenge {
     )
 
     $hash = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Verifier))
-    return [Convert]::ToBase64String($hash).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    return ConvertTo-HydrationBase64Url -Bytes $hash
 }

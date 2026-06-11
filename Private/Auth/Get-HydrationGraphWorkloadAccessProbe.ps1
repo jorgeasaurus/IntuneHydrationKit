@@ -43,10 +43,7 @@ function Get-HydrationGraphWorkloadAccessProbe {
                 RoleHint      = 'Use a Global Administrator account with active Intune app management access; PIM-elevated roles can still be rejected by the downstream Intune service.'
             })
 
-        $remediationEnabled = $true
-        if ($MobileAppConfiguration.ContainsKey('remediationEnabled') -and $null -ne $MobileAppConfiguration.remediationEnabled) {
-            $remediationEnabled = [bool]$MobileAppConfiguration.remediationEnabled
-        }
+        $remediationEnabled = Get-HydrationMobileAppRemediationEnabled -Configuration $MobileAppConfiguration
 
         if ($remediationEnabled -and (Test-HydrationMobileAppsIncludeWinGet -Configuration $MobileAppConfiguration -Platforms $MobileAppPlatforms)) {
             $probes.Add(@{

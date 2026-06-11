@@ -4,5 +4,5 @@ function New-HydrationCodeVerifier {
 
     $bytes = [byte[]]::new(32)
     [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-    return [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    return ConvertTo-HydrationBase64Url -Bytes $bytes
 }

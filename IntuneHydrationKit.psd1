@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -103,6 +103,10 @@ To update to the latest version:
 ```powershell
 Update-Module -Name IntuneHydrationKit
 ```
+
+## v1.0.1
+
+- **Internal cleanup:** Refactored the interactive TUI and browser-auth helpers for maintainability with no change to behavior. The multi-select "All" option is now data-driven instead of relying on magic constants, duplicate PKCE base64url and mobile-app remediation logic is consolidated into shared helpers, and a redundant TUI converter wrapper was removed.
 
 ## v1.0.0
 

@@ -11,8 +11,12 @@ function ConvertTo-HydrationTuiPlatformList {
 
     $selectedPlatforms = [System.Collections.Generic.List[string]]::new()
     foreach ($selectedOption in $selectedOptions) {
+        if ($selectedOption.IsExclusive) {
+            continue
+        }
+
         $platform = $selectedOption.Value
-        if ($platform -ne 'All' -and -not $selectedPlatforms.Contains($platform)) {
+        if (-not $selectedPlatforms.Contains($platform)) {
             $selectedPlatforms.Add($platform)
         }
     }

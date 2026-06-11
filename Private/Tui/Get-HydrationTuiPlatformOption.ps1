@@ -4,7 +4,7 @@ function Get-HydrationTuiPlatformOption {
     param()
 
     @(
-        [pscustomobject]@{ Number = 0; Label = 'All'; Value = 'All' }
+        [pscustomobject]@{ Number = 0; Label = 'All'; Value = 'All'; IsExclusive = $true }
         [pscustomobject]@{ Number = 1; Label = 'Windows'; Value = 'Windows' }
         [pscustomobject]@{ Number = 2; Label = 'macOS'; Value = 'macOS' }
         [pscustomobject]@{ Number = 3; Label = 'iOS'; Value = 'iOS' }
