@@ -365,7 +365,7 @@ Describe 'Import-IntuneWinGetApp' {
         $decodedScript | Should -Not -Match ([regex]::Escape('{23170F69-40C1-2702-2490-000001000000}'))
     }
 
-    It 'Should generate wrapper scripts that log to the IntuneManagementExtension log directory' {
+    It 'Should generate wrapper scripts that log to a writable WinGet log directory' {
         $script:capturedInstallScript = $null
         $script:capturedUninstallScript = $null
         $script:capturedDetectionScript = $null
@@ -400,6 +400,10 @@ Describe 'Import-IntuneWinGetApp' {
         [System.Management.Automation.Language.Parser]::ParseInput($script:capturedUninstallScript, [ref]$null, [ref]$parseErrors) | Out-Null
         $parseErrors | Should -BeNullOrEmpty
         $script:capturedInstallScript | Should -Match 'Microsoft\\IntuneManagementExtension\\Logs'
+        $script:capturedInstallScript | Should -Match 'IntuneHydrationKit\\Logs'
+        $script:capturedInstallScript | Should -Match 'Test-HydrationWinGetLogDirectory'
+        $script:capturedInstallScript | Should -Match 'Get-HydrationWinGetLogDirectory'
+        $script:capturedInstallScript | Should -Not -Match 'Get-IntuneManagementExtensionLogDirectory'
         $script:capturedInstallScript | Should -Match "\$operationName = 'Install'"
         $script:capturedInstallScript | Should -Match "\$packageIdentifier = 'Contoso.App'"
         $script:capturedInstallScript | Should -Match 'IntuneHydrationKit-WinGet-\$operationName-\$safePackageIdentifier\.log'
@@ -414,6 +418,8 @@ Describe 'Import-IntuneWinGetApp' {
         $script:capturedInstallScript | Should -Match 'RedirectStandardError'
         $script:capturedInstallScript | Should -Match 'Microsoft\.DesktopAppInstaller'
         $script:capturedInstallScript | Should -Match 'Install-WinGetSystemBootstrap'
+        $script:capturedInstallScript | Should -Match 'Get-UserWinGetExecutablePath'
+        $script:capturedInstallScript | Should -Match 'winget\.exe could not be located for this user context'
         $script:capturedInstallScript | Should -Match 'NT AUTHORITY\\SYSTEM'
         $script:capturedUninstallScript | Should -Match "\$operationName = 'Uninstall'"
         $script:capturedUninstallScript | Should -Match "\$packageIdentifier = 'Contoso.App'"

@@ -178,6 +178,16 @@ Describe 'Bundled template contracts' {
             $template.packageIdentifier | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
             $template.package.match.packageIdentifier | Should -Be $template.packageIdentifier -Because $templateFile.FullName
             $template.install.command | Should -Match '(^|\s)--silent(\s|$)' -Because $templateFile.FullName
+            $template.resolvedPackage.selectedInstaller.Scope | Should -Be $template.package.match.scope -Because $templateFile.FullName
+            if ([string]$template.package.match.scope -eq 'user') {
+                $template.install.experience | Should -Be 'user' -Because $templateFile.FullName
+                $template.install.command | Should -Match '(^|\s)--scope user(\s|$)' -Because $templateFile.FullName
+                $template.uninstall.command | Should -Match '(^|\s)--scope user(\s|$)' -Because $templateFile.FullName
+            } else {
+                $template.install.experience | Should -Be 'system' -Because $templateFile.FullName
+                $template.install.command | Should -Match '(^|\s)--scope machine(\s|$)' -Because $templateFile.FullName
+                $template.uninstall.command | Should -Match '(^|\s)--scope machine(\s|$)' -Because $templateFile.FullName
+            }
             $template.resolvedPackage.selectedInstaller | Should -Not -BeNullOrEmpty -Because $templateFile.FullName
             $template.resolvedPackage.manifestSource.repository | Should -Be 'microsoft/winget-pkgs' -Because $templateFile.FullName
             $template.icon.sourceType | Should -Be 'file' -Because $templateFile.FullName

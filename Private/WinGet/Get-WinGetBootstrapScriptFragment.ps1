@@ -41,6 +41,43 @@ function Get-WinGetExecutablePath {
         }
     }
 
+    function Get-UserWinGetExecutablePath {
+        [CmdletBinding()]
+        param()
+
+        `$command = Get-Command -Name 'winget.exe' -ErrorAction SilentlyContinue
+        if (`$command -and -not [string]::IsNullOrWhiteSpace(`$command.Source) -and (Test-WinGetExecutable -Path `$command.Source)) {
+            return `$command.Source
+        }
+
+        `$searchPatterns = [System.Collections.Generic.List[string]]::new()
+
+        if (-not [string]::IsNullOrWhiteSpace(`$env:LOCALAPPDATA)) {
+            `$searchPatterns.Add((Join-Path -Path `$env:LOCALAPPDATA -ChildPath 'Microsoft\WindowsApps\winget.exe'))
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace(`$env:ProgramFiles)) {
+            `$searchPatterns.Add((Join-Path -Path `$env:ProgramFiles -ChildPath 'WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe\winget.exe'))
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace(`${env:ProgramFiles(x86)})) {
+            `$searchPatterns.Add((Join-Path -Path `${env:ProgramFiles(x86)} -ChildPath 'WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe\winget.exe'))
+        }
+
+        foreach (`$pattern in `$searchPatterns) {
+            if ([string]::IsNullOrWhiteSpace(`$pattern)) {
+                continue
+            }
+
+            `$candidateFiles = @(Get-ChildItem -Path `$pattern -File -ErrorAction SilentlyContinue | Sort-Object -Property FullName -Descending)
+            if (`$candidateFiles.Count -gt 0 -and (Test-WinGetExecutable -Path `$candidateFiles[0].FullName)) {
+                return `$candidateFiles[0].FullName
+            }
+        }
+
+        return `$null
+    }
+
     function Install-WinGetSystemBootstrap {
         [CmdletBinding()]
         param()
@@ -133,35 +170,21 @@ function Get-WinGetExecutablePath {
         $LogFunctionName -Message "Bootstrapped WinGet to '`$programDataWingetRoot'."
     }
 
-    if (Test-WinGetExecutable -Path `$programDataWingetExe) {
-        return `$programDataWingetExe
+    if (-not `$isSystem) {
+        `$userWingetExe = Get-UserWinGetExecutablePath
+        if (-not [string]::IsNullOrWhiteSpace(`$userWingetExe)) {
+            return `$userWingetExe
+        }
+
+        if (Test-WinGetExecutable -Path `$programDataWingetExe) {
+            return `$programDataWingetExe
+        }
+
+        throw 'winget.exe could not be located for this user context. Ensure App Installer is installed for the signed-in user or pre-bootstrap WinGet in SYSTEM context.'
     }
 
-    if (-not `$isSystem) {
-        `$command = Get-Command -Name 'winget.exe' -ErrorAction SilentlyContinue
-        if (`$command -and -not [string]::IsNullOrWhiteSpace(`$command.Source) -and (Test-WinGetExecutable -Path `$command.Source)) {
-            return `$command.Source
-        }
-
-        `$searchPatterns = @(
-            (Join-Path -Path `$env:LOCALAPPDATA -ChildPath 'Microsoft\WindowsApps\winget.exe'),
-            (Join-Path -Path `$env:ProgramFiles -ChildPath 'WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe\winget.exe')
-        )
-
-        if (`${env:ProgramFiles(x86)}) {
-            `$searchPatterns += Join-Path -Path `${env:ProgramFiles(x86)} -ChildPath 'WindowsApps\Microsoft.DesktopAppInstaller_*__8wekyb3d8bbwe\winget.exe'
-        }
-
-        foreach (`$pattern in `$searchPatterns) {
-            if ([string]::IsNullOrWhiteSpace(`$pattern)) {
-                continue
-            }
-
-            `$candidateFiles = @(Get-ChildItem -Path `$pattern -File -ErrorAction SilentlyContinue | Sort-Object -Property FullName -Descending)
-            if (`$candidateFiles.Count -gt 0 -and (Test-WinGetExecutable -Path `$candidateFiles[0].FullName)) {
-                return `$candidateFiles[0].FullName
-            }
-        }
+    if (Test-WinGetExecutable -Path `$programDataWingetExe) {
+        return `$programDataWingetExe
     }
 
     Install-WinGetSystemBootstrap

@@ -1,3 +1,76 @@
+function Get-WinGetLogDirectoryScriptFragment {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param()
+
+    return @"
+function Test-HydrationWinGetLogDirectory {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]`$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace(`$Path)) {
+        return `$false
+    }
+
+    try {
+        if (-not (Test-Path -Path `$Path)) {
+            `$null = New-Item -Path `$Path -ItemType Directory -Force -ErrorAction Stop
+        }
+
+        `$probePath = Join-Path -Path `$Path -ChildPath ("IntuneHydrationKit-LogProbe-`$([guid]::NewGuid().ToString('N')).tmp")
+        Set-Content -Path `$probePath -Value '' -Encoding utf8 -ErrorAction Stop
+        Remove-Item -Path `$probePath -Force -ErrorAction SilentlyContinue
+        return `$true
+    } catch {
+        return `$false
+    }
+}
+
+function Get-HydrationWinGetLogDirectory {
+    [CmdletBinding()]
+    param()
+
+    `$programDataPath = if (-not [string]::IsNullOrWhiteSpace(`$env:ProgramData)) {
+        `$env:ProgramData
+    } else {
+        'C:\ProgramData'
+    }
+
+    `$candidatePaths = [System.Collections.Generic.List[string]]::new()
+    `$candidatePaths.Add((Join-Path -Path `$programDataPath -ChildPath 'Microsoft\IntuneManagementExtension\Logs'))
+
+    if (-not [string]::IsNullOrWhiteSpace(`$env:LOCALAPPDATA)) {
+        `$candidatePaths.Add((Join-Path -Path `$env:LOCALAPPDATA -ChildPath 'IntuneHydrationKit\Logs'))
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace(`$env:TEMP)) {
+        `$candidatePaths.Add((Join-Path -Path `$env:TEMP -ChildPath 'IntuneHydrationKit\Logs'))
+    }
+
+    `$systemTempPath = [System.IO.Path]::GetTempPath()
+    if (-not [string]::IsNullOrWhiteSpace(`$systemTempPath)) {
+        `$candidatePaths.Add((Join-Path -Path `$systemTempPath -ChildPath 'IntuneHydrationKit\Logs'))
+    }
+
+    `$seenPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach (`$candidatePath in `$candidatePaths) {
+        if ([string]::IsNullOrWhiteSpace(`$candidatePath) -or -not `$seenPaths.Add(`$candidatePath)) {
+            continue
+        }
+
+        if (Test-HydrationWinGetLogDirectory -Path `$candidatePath) {
+            return `$candidatePath
+        }
+    }
+
+    throw 'No writable log directory was available for WinGet script execution.'
+}
+"@
+}
+
 function Get-WinGetWrapperScriptContent {
     [CmdletBinding()]
     [OutputType([string])]
@@ -16,30 +89,15 @@ function Get-WinGetWrapperScriptContent {
     $escapedCommand = $WingetCommand -replace "'", "''"
     $escapedPackageIdentifier = $PackageIdentifier -replace "'", "''"
     $escapedOperation = $Operation -replace "'", "''"
-    $bootstrapFragment = Get-WinGetBootstrapScriptFragment -LogFunctionName 'Write-WinGetWrapperLog' -BootstrapMessage 'Bootstrapping WinGet for SYSTEM context.'
+    $bootstrapFragment = Get-WinGetBootstrapScriptFragment -LogFunctionName 'Write-WinGetWrapperLog' -BootstrapMessage 'Resolving WinGet for current execution context.'
+    $logDirectoryFragment = Get-WinGetLogDirectoryScriptFragment
 
     return @"
 `$ErrorActionPreference = 'Stop'
 `$packageIdentifier = '$escapedPackageIdentifier'
 `$operationName = '$escapedOperation'
 
-function Get-IntuneManagementExtensionLogDirectory {
-    [CmdletBinding()]
-    param()
-
-    `$programDataPath = if (-not [string]::IsNullOrWhiteSpace(`$env:ProgramData)) {
-        `$env:ProgramData
-    } else {
-        'C:\ProgramData'
-    }
-
-    `$logDirectory = Join-Path -Path `$programDataPath -ChildPath 'Microsoft\IntuneManagementExtension\Logs'
-    if (-not (Test-Path -Path `$logDirectory)) {
-        `$null = New-Item -Path `$logDirectory -ItemType Directory -Force
-    }
-
-    return `$logDirectory
-}
+$logDirectoryFragment
 
 function Get-WinGetWrapperLogFileName {
     [CmdletBinding()]
@@ -124,7 +182,7 @@ if ([string]::IsNullOrWhiteSpace(`$argumentString)) {
     throw "Unable to derive WinGet arguments from command '`$wingetCommand'."
 }
 
-`$logDirectory = Get-IntuneManagementExtensionLogDirectory
+`$logDirectory = Get-HydrationWinGetLogDirectory
 `$logFileName = Get-WinGetWrapperLogFileName
 `$script:logPath = Join-Path -Path `$logDirectory -ChildPath `$logFileName
 `$baseLogName = [System.IO.Path]::GetFileNameWithoutExtension(`$logFileName)

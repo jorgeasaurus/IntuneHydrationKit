@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -103,6 +103,12 @@ To update to the latest version:
 ```powershell
 Update-Module -Name IntuneHydrationKit
 ```
+
+## v1.0.1
+
+- **Mobile Apps:** Fixed user-scope WinGet app installs for standard users by preferring the signed-in user's WinGet executable and avoiding SYSTEM bootstrap attempts in user context.
+- **WinGet logging:** Generated WinGet install, uninstall, and remediation scripts now fall back to user-writable log folders when the Intune Management Extension log directory is not writable.
+- **Template contracts:** Added coverage to keep user-scope WinGet templates aligned with `install.experience = user`, `--scope user`, and Graph `runAsAccount = user`.
 
 ## v1.0.0
 

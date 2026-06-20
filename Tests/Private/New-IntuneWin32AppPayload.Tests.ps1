@@ -88,6 +88,20 @@ Describe 'New-IntuneWin32AppPayload' {
         $payload.ContainsKey('applicableArchitectures') | Should -BeFalse
     }
 
+    It 'Should map user install experience to Graph runAsAccount' {
+        $payload = New-IntuneWin32AppPayload -Configuration @{
+            Information     = @{ DisplayName = 'Contoso User App' }
+            Program         = @{
+                InstallCommand    = 'Install-WinGetPackage.ps1'
+                UninstallCommand  = 'Uninstall-WinGetPackage.ps1'
+                InstallExperience = 'user'
+            }
+            RequirementRule = @{ Architecture = 'All' }
+        }
+
+        $payload.installExperience.runAsAccount | Should -Be 'user'
+    }
+
     It 'Should map Windows 10 20H2 to the Graph minimum OS key' {
         $payload = New-IntuneWin32AppPayload -Configuration @{
             Information     = @{ DisplayName = 'Contoso App' }

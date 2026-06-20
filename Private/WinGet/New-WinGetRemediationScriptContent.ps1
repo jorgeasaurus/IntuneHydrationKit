@@ -29,6 +29,7 @@ function New-WinGetRemediationScriptContent {
     $scopeLabel = if ($Scope -eq 'system') { 'System' } else { 'User' }
     $logOperation = if ($ScriptType -eq 'Detection') { 'Detect' } else { 'Remediate' }
     $bootstrapFragment = Get-WinGetBootstrapScriptFragment -LogFunctionName 'Write-RemediationLog' -BootstrapMessage 'Bootstrapping WinGet for proactive remediation.'
+    $logDirectoryFragment = Get-WinGetLogDirectoryScriptFragment
     $scriptSuffix = if ($ScriptType -eq 'Detection') {
         @"
 `$pendingUpgrades = [System.Collections.Generic.List[string]]::new()
@@ -96,23 +97,7 @@ exit 0
 `$scope = '$wingetScope'
 `$scopeLabel = '$scopeLabel'
 
-function Get-IntuneManagementExtensionLogDirectory {
-    [CmdletBinding()]
-    param()
-
-    `$programDataPath = if (-not [string]::IsNullOrWhiteSpace(`$env:ProgramData)) {
-        `$env:ProgramData
-    } else {
-        'C:\ProgramData'
-    }
-
-    `$logDirectory = Join-Path -Path `$programDataPath -ChildPath 'Microsoft\IntuneManagementExtension\Logs'
-    if (-not (Test-Path -Path `$logDirectory)) {
-        `$null = New-Item -Path `$logDirectory -ItemType Directory -Force
-    }
-
-    return `$logDirectory
-}
+$logDirectoryFragment
 
 function Write-RemediationLog {
     [CmdletBinding()]
@@ -131,7 +116,7 @@ function Write-RemediationLog {
     Write-Output `$entry
 }
 
-`$logDirectory = Get-IntuneManagementExtensionLogDirectory
+`$logDirectory = Get-HydrationWinGetLogDirectory
 `$script:logPath = Join-Path -Path `$logDirectory -ChildPath "IntuneHydrationKit-WinGet-Remediation-$scopeLabel-$logOperation.log"
 
 Write-RemediationLog -Message "Starting WinGet proactive remediation $ScriptType for `$scopeLabel scope."

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-06-20
+
+### Fixed
+
+- **Mobile Apps**: Fixed user-scope WinGet app installs for standard users by preferring the signed-in user's WinGet executable and avoiding SYSTEM bootstrap attempts in user context.
+- **WinGet logging**: Generated WinGet install, uninstall, and remediation scripts now fall back to user-writable log folders when the Intune Management Extension log directory is not writable.
+- **Template contracts**: Added coverage to keep user-scope WinGet templates aligned with `install.experience = user`, `--scope user`, and Graph `runAsAccount = user`.
+
 ## [1.0.0] - 2026-05-30
 
 ### Added

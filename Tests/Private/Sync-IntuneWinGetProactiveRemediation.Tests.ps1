@@ -129,6 +129,10 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         $userRemediation | Should -Match "Contoso\.User"
         $userRemediation | Should -Match "\$scope = 'user'"
         $userRemediation | Should -Match 'upgrade --id "\$packageIdentifier".*--scope \$scope'
+        $userRemediation | Should -Match 'Microsoft\\IntuneManagementExtension\\Logs'
+        $userRemediation | Should -Match 'IntuneHydrationKit\\Logs'
+        $userRemediation | Should -Match 'Get-HydrationWinGetLogDirectory'
+        $userRemediation | Should -Not -Match 'Get-IntuneManagementExtensionLogDirectory'
         (Join-Path $script:generatedScriptsRoot 'WinGetRemediations/System/Detect-WinGetAppUpdates.ps1') | Should -Exist
         (Join-Path $script:generatedScriptsRoot 'WinGetRemediations/User/Remediate-WinGetAppUpdates.ps1') | Should -Exist
     }
