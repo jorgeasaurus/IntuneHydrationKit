@@ -1,0 +1,16 @@
+{
+    "filters": [
+        {
+            "displayName": "macOS - Apple Silicon Devices",
+            "description": "Filter for macOS devices reporting ARM64 CPU architecture",
+            "platform": "macOS",
+            "rule": "(device.cpuArchitecture -eq \"arm64\")"
+        },
+        {
+            "displayName": "macOS - Intel Devices",
+            "description": "Filter for macOS devices reporting x64 CPU architecture",
+            "platform": "macOS",
+            "rule": "(device.cpuArchitecture -eq \"x64\")"
+        }
+    ]
+}

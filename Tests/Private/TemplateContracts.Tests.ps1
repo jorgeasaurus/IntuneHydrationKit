@@ -7,6 +7,10 @@ BeforeAll {
 
     $script:OpenIntuneTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/OpenIntuneBaseline') -Filter '*.json' -File -Recurse
     $script:CisTemplates = Get-ChildItem -Path (Join-Path $modulePath 'Templates/CISBaselines') -Filter '*.json' -File -Recurse
+    $script:DynamicGroupTemplatePath = Join-Path $modulePath 'Templates/DynamicGroups'
+    $script:DynamicGroupTemplates = Get-ChildItem -Path $script:DynamicGroupTemplatePath -Filter '*.json' -File
+    $script:DeviceFilterTemplatePath = Join-Path $modulePath 'Templates/Filters'
+    $script:DeviceFilterTemplates = Get-ChildItem -Path $script:DeviceFilterTemplatePath -Filter '*.json' -File
     $script:WinGetRoot = Join-Path $modulePath 'Templates/MobileApps/Windows/WinGet'
     $script:WinGetAppTemplates = Get-ChildItem -Path (Join-Path $script:WinGetRoot 'Apps') -Filter '*.json' -File
     $script:WinGetPresetTemplates = Get-ChildItem -Path (Join-Path $script:WinGetRoot 'Presets') -Filter '*.json' -File
@@ -26,6 +30,77 @@ Describe 'Bundled template contracts' {
             {
                 $null = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 100
             } | Should -Not -Throw
+        }
+    }
+
+    It 'Should load bundled dynamic group templates as valid JSON with unique names' {
+        $script:DynamicGroupTemplates.Count | Should -BeGreaterThan 0
+        $displayNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+        foreach ($templateFile in $script:DynamicGroupTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            $groups = @($template.groups)
+            $groups.Count | Should -BeGreaterThan 0 -Because $templateFile.FullName
+
+            foreach ($group in $groups) {
+                [string]::IsNullOrWhiteSpace([string]$group.displayName) | Should -BeFalse -Because $templateFile.FullName
+                [string]::IsNullOrWhiteSpace([string]$group.description) | Should -BeFalse -Because $templateFile.FullName
+                [string]::IsNullOrWhiteSpace([string]$group.membershipRule) | Should -BeFalse -Because $templateFile.FullName
+
+                if ($group.PSObject.Properties['platform']) {
+                    [string]$group.platform | Should -BeIn @('All', 'Windows', 'macOS', 'iOS', 'Android') -Because $group.displayName
+                }
+
+                $displayNames.Add([string]$group.displayName) | Should -BeTrue -Because "Duplicate dynamic group name: $($group.displayName)"
+            }
+        }
+    }
+
+    It 'Should load bundled device filter templates as valid JSON with unique names' {
+        $script:DeviceFilterTemplates.Count | Should -BeGreaterThan 0
+        $displayNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+        foreach ($templateFile in $script:DeviceFilterTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            $filters = @($template.filters)
+            $filters.Count | Should -BeGreaterThan 0 -Because $templateFile.FullName
+
+            foreach ($filter in $filters) {
+                [string]::IsNullOrWhiteSpace([string]$filter.displayName) | Should -BeFalse -Because $templateFile.FullName
+                [string]::IsNullOrWhiteSpace([string]$filter.description) | Should -BeFalse -Because $templateFile.FullName
+                [string]::IsNullOrWhiteSpace([string]$filter.platform) | Should -BeFalse -Because $templateFile.FullName
+                [string]::IsNullOrWhiteSpace([string]$filter.rule) | Should -BeFalse -Because $templateFile.FullName
+                [string]$filter.platform | Should -BeIn @('androidForWork', 'iOS', 'macOS', 'windows10AndLater') -Because $filter.displayName
+
+                $displayNames.Add([string]$filter.displayName) | Should -BeTrue -Because "Duplicate device filter name: $($filter.displayName)"
+            }
+        }
+    }
+
+    It 'Should keep architecture device filters on documented cpu architecture rules' {
+        $architectureTemplateFiles = @(
+            Join-Path $script:DeviceFilterTemplatePath 'Windows-Architecture-Filters.json'
+            Join-Path $script:DeviceFilterTemplatePath 'macOS-Architecture-Filters.json'
+        )
+        $filters = foreach ($templateFile in $architectureTemplateFiles) {
+            $template = Get-Content -Path $templateFile -Raw | ConvertFrom-Json -Depth 20
+            @($template.filters)
+        }
+        $expectedFilters = @{
+            'Windows - x64 Devices'           = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "amd64")' }
+            'Windows - ARM64 Devices'         = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "arm64")' }
+            'Windows - x86 Devices'           = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "x86")' }
+            'macOS - Apple Silicon Devices'   = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "arm64")' }
+            'macOS - Intel Devices'           = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "x64")' }
+        }
+
+        $filters | Should -HaveCount $expectedFilters.Count
+        foreach ($filter in $filters) {
+            $expectedFilters.ContainsKey([string]$filter.displayName) | Should -BeTrue -Because $filter.displayName
+            $expected = $expectedFilters[[string]$filter.displayName]
+
+            $filter.platform | Should -Be $expected.Platform
+            $filter.rule | Should -Be $expected.Rule
         }
     }
 

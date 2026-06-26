@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "Windows - x64 Devices",
+            "description": "Filter for Windows devices reporting amd64 CPU architecture",
+            "platform": "windows10AndLater",
+            "rule": "(device.cpuArchitecture -eq \"amd64\")"
+        },
+        {
+            "displayName": "Windows - ARM64 Devices",
+            "description": "Filter for Windows devices reporting ARM64 CPU architecture",
+            "platform": "windows10AndLater",
+            "rule": "(device.cpuArchitecture -eq \"arm64\")"
+        },
+        {
+            "displayName": "Windows - x86 Devices",
+            "description": "Filter for Windows devices reporting x86 CPU architecture",
+            "platform": "windows10AndLater",
+            "rule": "(device.cpuArchitecture -eq \"x86\")"
+        }
+    ]
+}

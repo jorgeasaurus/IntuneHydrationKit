@@ -52,7 +52,7 @@ These counts reflect the bundled template set at the time of the latest validate
 | ---------- | ------- | ------------- |
 | Dynamic Groups | 50 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
-| Device Filters | 24 | Platform, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
+| Device Filters | 29 | Platform, architecture, manufacturer, and VM-based filters (Windows, macOS, iOS, Android) |
 | OpenIntuneBaseline | 99 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
 | CIS Baselines | 728 | Bundled [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) CIS benchmark-derived policies across Windows, macOS, iOS, Android, Edge, Chrome, and related administrative template workloads |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
@@ -103,6 +103,7 @@ When using delete mode (`-Delete` parameter or `"delete": true` in settings), th
 - **Safe Deletion** - Only removes objects created by this kit (identified by the hydration marker, with prefixes used where applicable)
 - **Multi-Platform** - Supports Windows, macOS, iOS, Android, and Linux
 - **Platform Filtering** - Import resources for specific platforms only (e.g., `-Platform Windows,macOS`)
+- **Architecture Filters** - Windows and macOS assignment filters use Intune's native `device.cpuArchitecture` property for policy and app targeting
 - **Detailed Logging** - Full audit trail of all operations
 - **Elapsed Time Tracking** - Final summary output and reports include total hydration time
 - **Summary Reports** - Markdown and JSON reports of all changes
