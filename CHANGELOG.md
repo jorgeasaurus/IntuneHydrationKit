@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-26
+
+### Added
+
+- **Device Filters**: Added Windows architecture assignment filters for x64, ARM64, and x86 devices using Intune's native `device.cpuArchitecture` property.
+- **Device Filters**: Added macOS architecture assignment filters for Apple Silicon and Intel devices using Intune's native `device.cpuArchitecture` property.
+- **Template contracts**: Added coverage for bundled dynamic group and device filter templates, including architecture filter rule validation.
+
 ## [1.0.1] - 2026-06-20
 
 ### Fixed
