@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.0.1'
+    ModuleVersion     = '1.1.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -104,20 +104,11 @@ To update to the latest version:
 Update-Module -Name IntuneHydrationKit
 ```
 
-## v1.0.1
+## v1.1.0
 
-- **Mobile Apps:** Fixed user-scope WinGet app installs for standard users by preferring the signed-in user's WinGet executable and avoiding SYSTEM bootstrap attempts in user context.
-- **WinGet logging:** Generated WinGet install, uninstall, and remediation scripts now fall back to user-writable log folders when the Intune Management Extension log directory is not writable.
-- **Template contracts:** Added coverage to keep user-scope WinGet templates aligned with `install.experience = user`, `--scope user`, and Graph `runAsAccount = user`.
-
-## v1.0.0
-
-- **Interactive TUI:** Calling `Invoke-IntuneHydration` with no arguments now launches a guided console flow for Azure cloud, operation mode, workload targets, platform filtering, optional Graph consent prompting, verbose logging, and final confirmation. The tenant ID is discovered after browser sign-in.
-- **Dry-run first workflow:** The TUI includes a dry-run create mode and review screen before Graph write calls, making manual previews the default path.
-- **Unified execution path:** TUI selections resolve into the same settings shape as parameter and settings-file runs, preserving logging, reports, pre-flight checks, platform filtering, and deletion protections.
-- **Common parameter handling:** `-WhatIf` and `-Verbose` are reflected in TUI execution settings and review output.
-- **Wrapper parity:** The repository wrapper now matches the module command surface, including `-StaticGroups`, `-MobileApps`, `-CISBaselines`, `-Platform`, and zero-argument TUI invocation.
-- **Documentation:** Updated README, help content, TUI screenshot, demo capture, and VHS source files for the new guided experience.
+- **Device Filters:** Added Windows architecture assignment filters for x64, ARM64, and x86 devices using Intune's native `device.cpuArchitecture` property.
+- **Device Filters:** Added macOS architecture assignment filters for Apple Silicon and Intel devices using Intune's native `device.cpuArchitecture` property.
+- **Template contracts:** Added coverage for bundled dynamic group and device filter templates, including architecture filter rule validation.
 
 '@
         }
