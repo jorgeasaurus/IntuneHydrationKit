@@ -92,18 +92,6 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-Install directly from the PowerShell Gallery:
-
-```powershell
-Install-Module -Name IntuneHydrationKit -Scope CurrentUser
-```
-
-To update to the latest version:
-
-```powershell
-Update-Module -Name IntuneHydrationKit
-```
-
 ## v1.1.0
 
 - **Device Filters:** Added Windows architecture assignment filters for x64, ARM64, and x86 devices using Intune's native `device.cpuArchitecture` property.
