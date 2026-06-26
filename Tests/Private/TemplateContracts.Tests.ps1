@@ -33,6 +33,16 @@ Describe 'Bundled template contracts' {
         }
     }
 
+    It 'Should keep manifest release notes scoped to release notes only' {
+        $manifest = Import-PowerShellDataFile -Path (Join-Path $modulePath 'IntuneHydrationKit.psd1')
+        $releaseNotes = [string]$manifest.PrivateData.PSData.ReleaseNotes
+
+        $releaseNotes | Should -Match '## v\d+\.\d+\.\d+'
+        $releaseNotes | Should -Not -Match 'Install-Module'
+        $releaseNotes | Should -Not -Match 'Update-Module'
+        $releaseNotes | Should -Not -Match 'Install directly from the PowerShell Gallery'
+    }
+
     It 'Should load bundled dynamic group templates as valid JSON with unique names' {
         $script:DynamicGroupTemplates.Count | Should -BeGreaterThan 0
         $displayNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
