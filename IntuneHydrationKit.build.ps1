@@ -118,7 +118,7 @@ Task Test {
 
     $testResult = Invoke-Pester -Configuration $pesterConfig
 
-    if ($testResult.FailedCount -gt 0) {
+    if (($testResult.FailedCount + $testResult.FailedBlocksCount + $testResult.FailedContainersCount) -gt 0) {
         throw "Pester tests failed: $($testResult.FailedCount) of $($testResult.TotalCount) tests failed"
     }
 
