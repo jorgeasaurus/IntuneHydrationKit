@@ -105,6 +105,7 @@ Task Test {
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.Run.Path = Join-Path -Path $SourcePath -ChildPath 'Tests'
     $pesterConfig.Run.Exit = $false
+    $pesterConfig.Run.PassThru = $true
     $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.TestResult.Enabled = $true
     $pesterConfig.TestResult.OutputPath = Join-Path -Path $TestResultsPath -ChildPath 'TestResults.xml'
@@ -119,7 +120,7 @@ Task Test {
     $testResult = Invoke-Pester -Configuration $pesterConfig
 
     if (($testResult.FailedCount + $testResult.FailedBlocksCount + $testResult.FailedContainersCount) -gt 0) {
-        throw "Pester tests failed: $($testResult.FailedCount) of $($testResult.TotalCount) tests failed"
+        throw "Pester run failed: $($testResult.FailedCount) failed test(s), $($testResult.FailedBlocksCount) failed block(s), $($testResult.FailedContainersCount) failed container(s), of $($testResult.TotalCount) total tests"
     }
 
     Write-Build Green "All $($testResult.PassedCount) tests passed"
