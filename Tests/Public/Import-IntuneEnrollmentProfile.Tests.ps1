@@ -378,6 +378,76 @@ Describe 'Import-IntuneEnrollmentProfile' {
                 $Method -eq 'POST' -and $Uri -like '*deviceEnrollmentConfigurations*'
             }
         }
+
+        It 'Should use Graph error message when ESP profile creation fails' {
+            Mock Get-GraphErrorMessage { return 'Detailed ESP Graph error' } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    throw 'Generic wrapper error'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
+            $result[0].Status | Should -Be 'Detailed ESP Graph error'
+            Should -Invoke Get-GraphErrorMessage -ModuleName IntuneHydrationKit -Times 1
+        }
+    }
+
+    Context 'Create Mode - macOS DEP Profile' {
+        BeforeEach {
+            Mock Get-FilteredTemplates {
+                @([PSCustomObject]@{
+                        FullName = 'TestPath\macOS-DEP-Profile.json'
+                        Name     = 'macOS-DEP-Profile.json'
+                    })
+            } -ModuleName IntuneHydrationKit
+
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.depMacOSEnrollmentProfile",
+    "displayName": "macOS DEP Profile",
+    "description": "macOS DEP enrollment profile"
+}
+'@
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should use Graph error message when macOS DEP profile creation fails' {
+            Mock Get-GraphErrorMessage { return 'Detailed DEP Graph error' } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings') {
+                    return @{
+                        value = @(
+                            @{ id = 'token-1'; displayName = 'DEP Token 1' }
+                        )
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles') {
+                    throw 'Generic wrapper error'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform macOS
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
+            $result[0].Status | Should -Be 'Detailed DEP Graph error'
+            Should -Invoke Get-GraphErrorMessage -ModuleName IntuneHydrationKit -Times 1
+        }
     }
 
     Context 'Create Mode - Autopilot Device Preparation' {

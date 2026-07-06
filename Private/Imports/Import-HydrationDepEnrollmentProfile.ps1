@@ -67,7 +67,8 @@ function Import-HydrationDepEnrollmentProfile {
         Write-HydrationLog -Message "  Created: $ProfileName" -Level Info
         return New-HydrationResult -Name $ProfileName -Type 'MacOSDEPEnrollmentProfile' -Id $newProfile.id -Action 'Created' -Status 'Success'
     } catch {
-        Write-HydrationLog -Message "  Failed: $ProfileName - $($_.Exception.Message)" -Level Warning
-        return New-HydrationResult -Name $ProfileName -Type 'MacOSDEPEnrollmentProfile' -Action 'Failed' -Status $_.Exception.Message
+        $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+        Write-HydrationLog -Message "  Failed: $ProfileName - $errMessage" -Level Warning
+        return New-HydrationResult -Name $ProfileName -Type 'MacOSDEPEnrollmentProfile' -Action 'Failed' -Status $errMessage
     }
 }

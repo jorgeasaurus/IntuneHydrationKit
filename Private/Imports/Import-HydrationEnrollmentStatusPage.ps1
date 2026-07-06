@@ -78,7 +78,8 @@ function Import-HydrationEnrollmentStatusPage {
         Write-HydrationLog -Message "  Created: $ProfileName" -Level Info
         return New-HydrationResult -Name $ProfileName -Type 'EnrollmentStatusPage' -Id $newESP.id -Action 'Created' -Status 'Success'
     } catch {
-        Write-HydrationLog -Message "  Failed: $ProfileName - $($_.Exception.Message)" -Level Warning
-        return New-HydrationResult -Name $ProfileName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status $_.Exception.Message
+        $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+        Write-HydrationLog -Message "  Failed: $ProfileName - $errMessage" -Level Warning
+        return New-HydrationResult -Name $ProfileName -Type 'EnrollmentStatusPage' -Action 'Failed' -Status $errMessage
     }
 }
