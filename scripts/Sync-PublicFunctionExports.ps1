@@ -61,28 +61,56 @@ if ($publicFunctions.Count -eq 0) {
     throw 'No public function files were found under Public/.'
 }
 
-$functionListText = ($publicFunctions | ForEach-Object { "        '$_'" }) -join ",`n"
-
 $manifestContent = Get-Content -Path $manifestPath -Raw -Encoding utf8
 $moduleContent = Get-Content -Path $modulePath -Raw -Encoding utf8
 
-$manifestPattern = 'FunctionsToExport\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n\s*# Cmdlets to export from this module'
-$manifestReplacement = @"
-FunctionsToExport = @(
-$functionListText
+function Get-TextNewLine {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Content
     )
 
-    # Cmdlets to export from this module
-"@
+    if ($Content.Contains("`r`n")) {
+        return "`r`n"
+    }
+
+    return "`n"
+}
+
+function Join-ExportLine {
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$FunctionName,
+
+        [Parameter(Mandatory)]
+        [string]$NewLine
+    )
+
+    return ($FunctionName | ForEach-Object { "        '$_'" }) -join ",$NewLine"
+}
+
+$manifestNewLine = Get-TextNewLine -Content $manifestContent
+$moduleNewLine = Get-TextNewLine -Content $moduleContent
+$manifestFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $manifestNewLine
+$moduleFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $moduleNewLine
+
+$manifestPattern = 'FunctionsToExport\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n\s*# Cmdlets to export from this module'
+$manifestReplacement = @(
+    'FunctionsToExport = @('
+    $manifestFunctionListText
+    '    )'
+    ''
+    '    # Cmdlets to export from this module'
+) -join $manifestNewLine
 
 $modulePattern = '\$publicFunctions\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n# Export functions'
-$moduleReplacement = @"
-`$publicFunctions = @(
-$functionListText
-)
-
-# Export functions
-"@
+$moduleReplacement = @(
+    '$publicFunctions = @('
+    $moduleFunctionListText
+    ')'
+    ''
+    '# Export functions'
+) -join $moduleNewLine
 
 if (-not [regex]::IsMatch($manifestContent, $manifestPattern)) {
     throw "Could not locate FunctionsToExport block in module manifest: $manifestPath"
@@ -94,8 +122,8 @@ if (-not [regex]::IsMatch($moduleContent, $modulePattern)) {
 
 $newManifestContent = [regex]::Replace($manifestContent, $manifestPattern, $manifestReplacement)
 $newModuleContent = [regex]::Replace($moduleContent, $modulePattern, $moduleReplacement)
-$newManifestContent = $newManifestContent.TrimEnd() + [Environment]::NewLine
-$newModuleContent = $newModuleContent.TrimEnd() + [Environment]::NewLine
+$newManifestContent = $newManifestContent.TrimEnd("`r", "`n") + $manifestNewLine
+$newModuleContent = $newModuleContent.TrimEnd("`r", "`n") + $moduleNewLine
 
 if ($newManifestContent -eq $manifestContent -and $newModuleContent -eq $moduleContent) {
     Write-Information 'Public function exports are already in sync.' -InformationAction Continue

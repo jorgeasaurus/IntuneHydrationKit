@@ -33,6 +33,62 @@ Describe 'Build configuration' {
         $LASTEXITCODE | Should -Be 0
     }
 
+    It 'Should treat CRLF-normalized public function exports as in sync' {
+        $fixtureRoot = Join-Path $TestDrive 'ExportSyncCrlf'
+        $scriptDirectory = Join-Path $fixtureRoot 'scripts'
+        $publicDirectory = Join-Path $fixtureRoot 'Public'
+        $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+
+        New-Item -Path $scriptDirectory -ItemType Directory -Force | Out-Null
+        New-Item -Path $publicDirectory -ItemType Directory -Force | Out-Null
+        Copy-Item -Path (Join-Path $script:RepoRoot 'scripts/Sync-PublicFunctionExports.ps1') -Destination (Join-Path $scriptDirectory 'Sync-PublicFunctionExports.ps1')
+
+        [System.IO.File]::WriteAllText(
+            (Join-Path $publicDirectory 'Invoke-Example.ps1'),
+            "function Invoke-Example {}`r`n",
+            $utf8NoBom
+        )
+
+        $expectedExports = @(
+            'Get-GraphErrorMessage'
+            'Get-ObfuscatedTenantId'
+            'Get-ResultSummary'
+            'Invoke-Example'
+            'New-HydrationResult'
+            'Test-HydrationKitObject'
+        ) | Sort-Object -Unique
+
+        $newLine = "`r`n"
+        $functionListText = ($expectedExports | ForEach-Object { "        '$_'" }) -join ",$newLine"
+        $manifestContent = @(
+            '@{'
+            '    FunctionsToExport = @('
+            $functionListText
+            '    )'
+            ''
+            '    # Cmdlets to export from this module'
+            '    CmdletsToExport = @()'
+            '}'
+            ''
+        ) -join $newLine
+        $moduleContent = @(
+            '$publicFunctions = @('
+            $functionListText
+            ')'
+            ''
+            '# Export functions'
+            ''
+        ) -join $newLine
+
+        [System.IO.File]::WriteAllText((Join-Path $fixtureRoot 'IntuneHydrationKit.psd1'), $manifestContent, $utf8NoBom)
+        [System.IO.File]::WriteAllText((Join-Path $fixtureRoot 'IntuneHydrationKit.psm1'), $moduleContent, $utf8NoBom)
+
+        $output = & pwsh -NoLogo -NoProfile -File (Join-Path $scriptDirectory 'Sync-PublicFunctionExports.ps1') -CheckOnly 2>&1
+
+        $output | Out-String | Should -Match 'already in sync'
+        $LASTEXITCODE | Should -Be 0
+    }
+
     It 'Should preserve intentional helper exports in the sync script' {
         $syncScript = Get-Content -Path (Join-Path $script:RepoRoot 'scripts/Sync-PublicFunctionExports.ps1') -Raw
 
