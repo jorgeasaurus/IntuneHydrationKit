@@ -253,6 +253,101 @@ Describe 'Import-IntuneEnrollmentProfile' {
             }
         }
 
+        It 'Should create ESP profile with the computed profile display name' {
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    return @{ id = 'new-esp-id'; displayName = 'Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*' -and
+                $Body.displayName -eq '[IHD] Default ESP Profile'
+            }
+        }
+
+        It 'Should not double-prefix ESP profile names from prefixed templates' {
+            Mock Get-Content {
+                '{"@odata.type":"#microsoft.graph.windows10EnrollmentCompletionPageConfiguration","displayName":"[IHD] Default ESP Profile","description":"Enrollment status page configuration"}'
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    return @{ id = 'new-esp-id'; displayName = '[IHD] Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*' -and
+                $Body.displayName -eq '[IHD] Default ESP Profile'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'GET' -and
+                $Uri -like '*deviceEnrollmentConfigurations?*' -and
+                ([string]$Uri).Contains('[IHD] [IHD]')
+            }
+        }
+
+        It 'Should match legacy unprefixed ESP profiles when template names are prefixed' {
+            Mock Get-Content {
+                '{"@odata.type":"#microsoft.graph.windows10EnrollmentCompletionPageConfiguration","displayName":"[IHD] Default ESP Profile","description":"Enrollment status page configuration"}'
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations?*') {
+                    return @{
+                        value = @(
+                            @{
+                                id           = 'existing-legacy-esp-id'
+                                displayName  = 'Default ESP Profile'
+                                description  = 'Imported by Intune Hydration Kit'
+                                '@odata.type' = '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
+                            }
+                        )
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations/existing-legacy-esp-id') {
+                    return @{ id = 'existing-legacy-esp-id'; displayName = 'Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Id | Should -Be 'existing-legacy-esp-id'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $decodedUri = [System.Uri]::UnescapeDataString([string]$Uri)
+                $Method -eq 'GET' -and
+                $Uri -like '*deviceEnrollmentConfigurations?*' -and
+                $decodedUri.Contains("displayName eq 'Default ESP Profile'")
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*'
+            }
+        }
+
         It 'Should skip ESP profile when existing object with same name is not tagged by kit' {
             Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
 

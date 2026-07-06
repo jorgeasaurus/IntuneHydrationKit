@@ -176,7 +176,17 @@ function Import-IntuneEnrollmentProfile {
         }
         # Some templates use displayName, others use name (configurationPolicies)
         $templateBaseName = if ($template.displayName) { $template.displayName } else { $template.name }
-        $profileName = "$($script:ImportPrefix)$templateBaseName"
+        $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { [string]$script:ImportPrefix }
+        $templateBaseName = [string]$templateBaseName
+        $isPrefixedTemplateName = $templateBaseName.StartsWith($importPrefix, [System.StringComparison]::OrdinalIgnoreCase)
+        $profileName = if ($isPrefixedTemplateName) {
+            $templateBaseName
+        } else {
+            "$importPrefix$templateBaseName"
+        }
+        if ($isPrefixedTemplateName) {
+            $templateBaseName = $templateBaseName.Substring($importPrefix.Length)
+        }
         $odataType = $template.'@odata.type'
         if ($template.technologies -eq 'enrollment') { $odataType = '#microsoft.graph.deviceManagementConfigurationPolicy' }
 

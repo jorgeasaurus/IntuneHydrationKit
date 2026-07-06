@@ -60,7 +60,7 @@ function Import-HydrationEnrollmentStatusPage {
         $espDescriptionText = New-HydrationDescription -ExistingText $Template.description
         $espBody = @{
             "@odata.type"                           = "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration"
-            displayName                             = "$($script:ImportPrefix)$($Template.displayName)"
+            displayName                             = $ProfileName
             description                             = $espDescriptionText
             showInstallationProgress                = $Template.showInstallationProgress
             blockDeviceSetupRetryByUser             = $Template.blockDeviceSetupRetryByUser
