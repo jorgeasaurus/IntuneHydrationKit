@@ -161,6 +161,23 @@ Describe 'New-IntuneDynamicGroup' {
 
             $script:capturedBody.membershipRule | Should -Be $rule
         }
+
+        It 'Should make mailNickname deterministic and collision-resistant after sanitizing displayName' {
+            $script:capturedNicknames = @()
+            Mock Invoke-MgGraphRequest {
+                param($Body)
+                $script:capturedNicknames += $Body.mailNickname
+                @{ id = [guid]::NewGuid().ToString(); displayName = $Body.displayName }
+            } -ModuleName IntuneHydrationKit
+
+            New-IntuneDynamicGroup -DisplayName 'Test-Group' -MembershipRule "(device.operatingSystem -eq 'Windows')"
+            New-IntuneDynamicGroup -DisplayName 'Test_Group' -MembershipRule "(device.operatingSystem -eq 'Windows')"
+
+            $script:capturedNicknames | Should -HaveCount 2
+            $script:capturedNicknames[0] | Should -Not -Be $script:capturedNicknames[1]
+            $script:capturedNicknames[0].Length | Should -BeLessOrEqual 64
+            $script:capturedNicknames[1].Length | Should -BeLessOrEqual 64
+        }
     }
 
     Context 'Description tagging' {

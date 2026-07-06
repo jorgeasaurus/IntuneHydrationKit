@@ -36,13 +36,16 @@ function Remove-IntuneWinGetApps {
     $appsToDelete = [System.Collections.Generic.List[hashtable]]::new()
 
     foreach ($existingApp in $ExistingApps.Items) {
-        if (-not $existingApp.IsOwned) {
-            continue
-        }
-
-        if (-not (Test-HydrationMobileAppNameInSet -DisplayName $existingApp.DisplayName -NameSet $KnownTemplateNames)) {
-            Write-Verbose "Skipping '$($existingApp.DisplayName)' - not in current WinGet templates"
-            Write-Debug "Delete decision: skipping '$($existingApp.DisplayName)' because it is WinGet-owned but not in the current template set."
+        $deleteDecision = Resolve-HydrationDeleteDecision `
+            -Name $existingApp.DisplayName `
+            -KnownTemplateNames $KnownTemplateNames `
+            -MobileAppName `
+            -RequireOwnership `
+            -IsOwned ([bool]$existingApp.IsOwned) `
+            -OwnershipFailureMessage 'not owned by WinGet hydration importer'
+        if (-not $deleteDecision.IsMatch) {
+            Write-Verbose "Skipping '$($existingApp.DisplayName)' - $($deleteDecision.Message)"
+            Write-Debug "Delete decision: skipping '$($existingApp.DisplayName)' ($($deleteDecision.Reason))."
             continue
         }
 

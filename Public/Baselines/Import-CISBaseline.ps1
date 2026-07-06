@@ -132,7 +132,7 @@ function Import-CISBaseline {
             $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
 
-        $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -NameProperty 'name' -Recurse
+        $knownTemplateNames = Get-CISBaselineTemplateNameSet -Path $BaselinePath -Platform $Platform -PlatformValueMapping $platformValueMapping
         if (-not $knownTemplateNames -or $knownTemplateNames.Count -eq 0) {
             $errorRecord = [System.Management.Automation.ErrorRecord]::new(
                 [System.Exception]::new("Unable to load CIS baseline template names from '$BaselinePath'. Deletion is blocked to avoid removing hydration-marked objects without template matching."),
@@ -152,7 +152,7 @@ function Import-CISBaseline {
             'beta/deviceManagement/deviceConfigurations'
         )
 
-        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames -RequireTemplateMatch
+        $policiesToDelete = @(Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames)
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No CIS baseline policies found to delete"
@@ -336,30 +336,17 @@ function Import-CISBaseline {
                 continue
             }
 
-            # Platform filtering based on JSON platforms property
+            # Platform filtering is resolved through the same helper used for delete scoping.
             if ($Platform -and $Platform -notcontains 'All') {
-                $policyPlatformValues = @($policyContent.platforms | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-                if ($policyPlatformValues.Count -gt 0) {
-                    $mappedPlatforms = @()
-                    foreach ($policyPlatformValue in $policyPlatformValues) {
-                        $mappedPlatform = $platformValueMapping[[string]$policyPlatformValue]
-                        if ($null -ne $mappedPlatform) {
-                            $mappedPlatforms += $mappedPlatform
-                        }
-                    }
+                $mappedPlatforms = @(Resolve-CISBaselineTemplatePlatform -TemplateContent $policyContent -TemplateFile $jsonFile -BaselinePath $BaselinePath -PlatformValueMapping $platformValueMapping)
+                if ($mappedPlatforms.Count -eq 0) {
+                    Write-Verbose "  Skipping $policyName - platform could not be resolved for scoped import"
+                    continue
+                }
 
-                    if ($mappedPlatforms.Count -eq 0) {
-                        $platformLabel = $policyPlatformValues -join ', '
-                        Write-Warning "Skipping $policyName - unrecognized platform value '$platformLabel' (not in platform mapping)"
-                        $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "CISBaseline/$category" -Action 'Skipped' -Status "Unrecognized platform: $platformLabel"
-                        continue
-                    }
-
-                    if (-not ($mappedPlatforms | Where-Object { $_ -in $Platform })) {
-                        $platformLabel = $policyPlatformValues -join ', '
-                        Write-Verbose "  Skipping $policyName - platform '$platformLabel' not in filter"
-                        continue
-                    }
+                if (-not ($mappedPlatforms | Where-Object { $_ -in $Platform })) {
+                    Write-Verbose "  Skipping $policyName - platform '$($mappedPlatforms -join ', ')' not in filter"
+                    continue
                 }
             }
 

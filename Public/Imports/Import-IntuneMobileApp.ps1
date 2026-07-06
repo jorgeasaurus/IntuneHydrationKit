@@ -126,13 +126,14 @@ function Import-IntuneMobileApp {
         foreach ($appName in $existingApps.Keys) {
             $appInfo = $existingApps[$appName]
 
-            if (-not (Test-HydrationKitObject -Notes $appInfo.Notes -ObjectName $appName)) {
-                Write-Verbose "Skipping '$appName' - not created by Intune Hydration Kit"
-                continue
-            }
-
-            if (-not (Test-HydrationMobileAppNameInSet -DisplayName $appName -NameSet $knownTemplateNames)) {
-                Write-Verbose "Skipping '$appName' - not in this kit's templates (may be from another tool)"
+            $deleteDecision = Resolve-HydrationMarkedDeleteCandidate `
+                -Name $appName `
+                -Notes $appInfo.Notes `
+                -KnownTemplateNames $knownTemplateNames `
+                -FullObjectUri "beta/deviceAppManagement/mobileApps/$($appInfo.Id)" `
+                -MobileAppName
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$appName' - $($deleteDecision.Message)"
                 continue
             }
 

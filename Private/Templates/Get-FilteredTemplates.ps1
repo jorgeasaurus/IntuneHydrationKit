@@ -41,6 +41,11 @@ function Get-FilteredTemplates {
         [string]$ResourceType = "template"
     )
 
+    if ($PSBoundParameters.ContainsKey('Platform') -and @($Platform).Count -eq 0) {
+        Write-Verbose "No $ResourceType templates in scope because the platform filter is empty"
+        return @()
+    }
+
     # Get all templates first
     $allTemplates = Get-HydrationTemplates -Path $Path -Recurse:$Recurse -ResourceType $ResourceType
 

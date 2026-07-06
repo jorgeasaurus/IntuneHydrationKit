@@ -100,24 +100,9 @@ function Import-IntuneConditionalAccessPolicy {
 
     $templateNameSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($templateFile in $templateFiles) {
-        $policyName = "$Prefix$([System.IO.Path]::GetFileNameWithoutExtension($templateFile.Name))"
+        $policyName = [System.IO.Path]::GetFileNameWithoutExtension($templateFile.Name)
         $null = $templateNameSet.Add($policyName)
-    }
-
-    $escapedPrefix = [regex]::Escape($Prefix)
-
-    function Test-IsTemplateManagedPolicyName {
-        param(
-            [Parameter(Mandatory)]
-            [string]$PolicyName
-        )
-
-        if ($templateNameSet.Contains($PolicyName)) {
-            return $true
-        }
-
-        $nameWithoutPrefix = $PolicyName -replace "^$escapedPrefix", ''
-        return $templateNameSet.Contains("$Prefix$nameWithoutPrefix")
+        $null = $templateNameSet.Add("$Prefix$policyName")
     }
 
     # Prefetch existing CA policies
@@ -142,7 +127,9 @@ function Import-IntuneConditionalAccessPolicy {
             $skipResults = @()
 
             foreach ($policyName in $CurrentPolicies.Keys) {
-                if (-not (Test-IsTemplateManagedPolicyName -PolicyName $policyName)) {
+                $deleteDecision = Resolve-HydrationDeleteDecision -Name $policyName -KnownTemplateNames $templateNameSet -NameOnly
+                if (-not $deleteDecision.IsMatch) {
+                    Write-Verbose "Skipping '$policyName' - $($deleteDecision.Message)"
                     continue
                 }
 
@@ -240,9 +227,17 @@ function Import-IntuneConditionalAccessPolicy {
                 continue
             }
 
-            # Check if policy already exists using prefetched list
-            if ($existingPolicies.ContainsKey($displayName)) {
-                $existingPolicy = $existingPolicies[$displayName]
+            # Check if policy already exists using prefetched list.
+            # Check both current prefixed and legacy unprefixed names to avoid duplicates.
+            $existingPolicyName = if ($existingPolicies.ContainsKey($displayName)) {
+                $displayName
+            } elseif ($policyName -and $existingPolicies.ContainsKey($policyName)) {
+                $policyName
+            } else {
+                $null
+            }
+            if ($existingPolicyName) {
+                $existingPolicy = $existingPolicies[$existingPolicyName]
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Type 'ConditionalAccessPolicy' -Id $existingPolicy.Id -Action 'Skipped' -Status 'Already exists' -State $existingPolicy.State
                 continue

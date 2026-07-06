@@ -257,10 +257,15 @@ Describe 'Import-IntuneDeviceFilter' {
 
     Context 'Delete Mode' {
         BeforeAll {
+            $script:deleteFilterTemplateDir = Join-Path ([System.IO.Path]::GetTempPath()) "IHK-FilterDelete-$([guid]::NewGuid().ToString('N'))"
+            New-Item -Path $script:deleteFilterTemplateDir -ItemType Directory -Force | Out-Null
+            $script:deleteFilterTemplateFile = Join-Path $script:deleteFilterTemplateDir 'Windows-Filters.json'
+            '{"filters":[]}' | Set-Content -Path $script:deleteFilterTemplateFile -Encoding utf8
+
             # Mock template path as existing but empty - RemoveExisting still needs to fetch existing filters
             Mock Test-Path { return $true } -ModuleName IntuneHydrationKit
             Mock Get-FilteredTemplates {
-                @([PSCustomObject]@{ FullName = 'TestPath\Windows-Filters.json'; Name = 'Windows-Filters.json' })
+                @(Get-Item -Path $script:deleteFilterTemplateFile)
             } -ModuleName IntuneHydrationKit
             Mock Get-Content {
                 '{"filters": []}'
@@ -271,6 +276,10 @@ Describe 'Import-IntuneDeviceFilter' {
                 @('Filter 1', 'Hydration Filter', 'Manual Filter', 'Test Filter') | ForEach-Object { [void]$names.Add($_) }
                 return $names
             } -ModuleName IntuneHydrationKit
+        }
+
+        AfterAll {
+            Remove-Item -Path $script:deleteFilterTemplateDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         It 'Should list existing filters when RemoveExisting is specified' {
@@ -346,6 +355,68 @@ Describe 'Import-IntuneDeviceFilter' {
             $deletedItems = @($result | Where-Object { $_.Action -eq 'Deleted' })
             $deletedItems.Count | Should -Be 1
             $deletedItems[0].Name | Should -Be 'Test Filter'
+        }
+
+        It 'Should verify the full filter object when the list response omits description' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/assignmentFilters/filter-1') {
+                    return @{ id = 'filter-1'; displayName = 'Test Filter'; description = 'Imported by Intune Hydration Kit' }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*assignmentFilters?*') {
+                    return @{
+                        value = @(
+                            @{ id = 'filter-1'; displayName = 'Test Filter' }
+                        )
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 204 }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneDeviceFilter -RemoveExisting -Confirm:$false
+
+            $deletedItems = @($result | Where-Object { $_.Action -eq 'Deleted' })
+            $deletedItems | Should -HaveCount 1
+            $deletedItems[0].Name | Should -Be 'Test Filter'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/assignmentFilters/filter-1'
+            }
+        }
+
+        It 'Should only delete filters from platform-filtered templates' {
+            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                [void]$names.Add('Windows Filter')
+                return $names
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{
+                        value = @(
+                            @{ id = 'filter-1'; displayName = '[IHD] Windows Filter'; description = 'Imported by Intune Hydration Kit' },
+                            @{ id = 'filter-2'; displayName = '[IHD] iOS Filter'; description = 'Imported by Intune Hydration Kit' }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneDeviceFilter -Platform Windows -RemoveExisting -WhatIf
+
+            $wouldDelete = @($result | Where-Object { $_.Action -eq 'WouldDelete' })
+            $wouldDelete.Count | Should -Be 1
+            $wouldDelete[0].Name | Should -Be '[IHD] Windows Filter'
+            Should -Invoke Get-TemplateDisplayNames -ModuleName IntuneHydrationKit -ParameterFilter {
+                $TemplateFiles.Count -eq 1
+            } -Times 1
         }
     }
 

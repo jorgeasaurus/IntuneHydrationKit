@@ -19,6 +19,7 @@ $TestResultsPath = Join-Path -Path $BuildPath -ChildPath 'TestResults'
 $ModuleFiles = @(
     'IntuneHydrationKit.psd1'
     'IntuneHydrationKit.psm1'
+    'settings.schema.json'
 )
 
 $ModuleFolders = @(

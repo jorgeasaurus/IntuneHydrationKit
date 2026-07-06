@@ -2,6 +2,7 @@
 
 BeforeAll {
     . $PSScriptRoot/../../Private/Utilities/ConvertTo-HydrationBoolValue.ps1
+    . $PSScriptRoot/../../Private/Utilities/Resolve-HydrationTemplateChildPath.ps1
     . $PSScriptRoot/../../Private/WinGet/ConvertTo-IntuneWinRequirementRule.ps1
 }
 
@@ -14,6 +15,7 @@ Describe 'ConvertTo-IntuneWinRequirementRule' {
 
         $null = New-Item -Path $script:artifactRoot -ItemType Directory -Force
         'Write-Output 1' | Set-Content -Path (Join-Path $script:artifactRoot 'requirement.ps1')
+        'Write-Output 2' | Set-Content -Path (Join-Path $script:artifactRoot '../outside-requirement.ps1')
     }
 
     AfterAll {
@@ -73,5 +75,15 @@ Describe 'ConvertTo-IntuneWinRequirementRule' {
                     Value           = '1'
                 })
         } | Should -Throw "*ScriptRootPath is required for script requirement rule 'requirement.ps1'*"
+    }
+
+    It 'Should reject script files outside the script root' {
+        {
+            ConvertTo-IntuneWinRequirementRule -Rule ([pscustomobject]@{
+                    RequirementType = 'Script'
+                    ScriptFile      = '../outside-requirement.ps1'
+                    Value           = '1'
+                }) -ScriptRootPath $script:artifactRoot
+        } | Should -Throw "*resolves outside template root*"
     }
 }

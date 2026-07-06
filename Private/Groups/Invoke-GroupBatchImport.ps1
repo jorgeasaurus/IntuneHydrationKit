@@ -41,45 +41,10 @@ function Invoke-GroupBatchImport {
         [System.Collections.Generic.HashSet[string]]$KnownNames
     )
 
-    # Helper function to build group request body from definition
-    function ConvertTo-GroupBody {
-        param(
-            [Parameter(Mandatory)]
-            [object]$GroupDef,
-            [Parameter(Mandatory)]
-            [string]$GroupType
-        )
-
-        $description = New-HydrationDescription -ExistingText $GroupDef.description
-
-        # Generate safe mailNickname (alphanumeric only, max 64 chars)
-        $mailNickname = ($GroupDef.displayName -replace '[^a-zA-Z0-9]', '')
-        if ($mailNickname.Length -gt 64) {
-            $mailNickname = $mailNickname.Substring(0, 64)
-        }
-        if ([string]::IsNullOrWhiteSpace($mailNickname)) {
-            $mailNickname = "group" + [guid]::NewGuid().ToString("N").Substring(0, 8)
-        }
-
-        $body = @{
-            displayName     = $GroupDef.displayName
-            description     = $description
-            mailEnabled     = $false
-            mailNickname    = $mailNickname
-            securityEnabled = $true
-        }
-
-        if ($GroupType -eq 'Dynamic') {
-            $body['groupTypes'] = @('DynamicMembership')
-            $body['membershipRule'] = $GroupDef.membershipRule
-            $body['membershipRuleProcessingState'] = 'On'
-        }
-
-        return $body
-    }
-
     $results = @()
     $maxBatchSize = if ($script:MaxBatchSize) { $script:MaxBatchSize } else { 10 }
+    $maxRetries = 3
+    $retryDelaySeconds = 2
 
     # Early return if no groups to process in create mode
     if (-not $Delete -and $GroupDefinitions.Count -eq 0) {
@@ -111,28 +76,21 @@ function Invoke-GroupBatchImport {
         # Avoids ProcessItems scriptblock scope issue ($var += inside & {} creates a local copy).
         $groupsToDelete = @()
         $headers = @{ 'ConsistencyLevel' = 'eventual' }
-        $importPrefix = if ([string]::IsNullOrEmpty($script:ImportPrefix)) { '[IHD] ' } else { $script:ImportPrefix }
 
         try {
             $allGroups = Get-GraphPagedResults -Uri "beta/groups?`$filter=$typeFilter&`$select=id,displayName,description&`$count=true" -Headers $headers
             foreach ($group in $allGroups) {
-                if (Test-HydrationKitObject -Description $group.description -ObjectName $group.displayName) {
-                    # If KnownNames provided, only delete groups that match a template name
-                    if ($KnownNames -and $KnownNames.Count -gt 0) {
-                        $unprefixedName = if ($group.displayName -and $group.displayName.StartsWith($importPrefix)) {
-                            $group.displayName.Substring($importPrefix.Length)
-                        } else {
-                            $group.displayName
-                        }
-                        if (-not $KnownNames.Contains($unprefixedName)) {
-                            Write-Verbose "  Skipping '$($group.displayName)' - not in current template set"
-                            continue
-                        }
-                    }
-                    $groupsToDelete += $group
-                } else {
-                    Write-Verbose "  Skipping '$($group.displayName)' - not created by Intune Hydration Kit"
+                $deleteDecision = Resolve-HydrationMarkedDeleteCandidate `
+                    -Name $group.displayName `
+                    -Description $group.description `
+                    -KnownTemplateNames $KnownNames `
+                    -FullObjectUri "beta/groups/$($group.id)"
+                if (-not $deleteDecision.IsMatch) {
+                    Write-Verbose "  Skipping '$($group.displayName)' - $($deleteDecision.Message)"
+                    continue
                 }
+
+                $groupsToDelete += $group
             }
         } catch {
             Write-Warning "Failed to list $GroupType groups: $_"
@@ -156,98 +114,15 @@ function Invoke-GroupBatchImport {
             return $results
         }
 
-        # Batch delete groups
-        for ($batchStart = 0; $batchStart -lt $groupsToDelete.Count; $batchStart += $maxBatchSize) {
-            $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $groupsToDelete.Count) - 1
-            $currentBatch = $groupsToDelete[$batchStart..$batchEnd]
-
-            $batchRequests = @()
-            for ($i = 0; $i -lt $currentBatch.Count; $i++) {
-                $group = $currentBatch[$i]
-                $batchRequests += @{
-                    id     = ($i + 1).ToString()
-                    method = "DELETE"
-                    url    = "/groups/$($group.id)"
-                }
-            }
-
-            # Submit batch delete request
-            $batchBody = @{ requests = $batchRequests }
-            try {
-                $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-                $seenResponseIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-
-                # Process responses
-                foreach ($resp in $batchResponse.responses) {
-                    if ($resp.id) {
-                        $seenResponseIds.Add([string]$resp.id) | Out-Null
-                    }
-
-                    $requestIndex = $null
-                    $group = $null
-                    if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
-                        $requestIndex = $requestIndex - 1
-                        if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
-                            $group = $currentBatch[$requestIndex]
-                        }
-                    }
-
-                    # Skip if we can't find the matching group
-                    if (-not $group -or -not $group.displayName) {
-                        Write-Verbose "Skipping response with id=$($resp.id) - no matching group"
-                        continue
-                    }
-
-                    if ($resp.status -eq 204 -or $resp.status -eq 200) {
-                        # Deleted successfully
-                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Deleted' -Status 'Success'
-                        Write-Verbose "  Deleted: $($group.displayName)"
-                    } elseif ($resp.status -eq 404) {
-                        # Already deleted (race condition)
-                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Action 'Skipped' -Status 'Already deleted'
-                        Write-Verbose "  Skipped: $($group.displayName) (already deleted)"
-                    } else {
-                        # Deletion failed
-                        $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
-                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Delete failed: $errorMessage"
-                        Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
-                    }
-                }
-
-                foreach ($request in $batchRequests) {
-                    if ($seenResponseIds.Contains([string]$request.id)) {
-                        continue
-                    }
-
-                    $requestIndex = [int]$request.id - 1
-                    $group = $currentBatch[$requestIndex]
-                    Write-Warning "Missing batch delete response for '$($group.displayName)' - retrying directly"
-
-                    try {
-                        $null = Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
-                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Deleted' -Status 'Success'
-                        Write-Verbose "  Deleted: $($group.displayName) (direct retry)"
-                    } catch {
-                        $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
-                        if ($errorMessage -like '*404*' -or $errorMessage -like '*Not Found*') {
-                            $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Action 'Skipped' -Status 'Already deleted'
-                            Write-Verbose "  Skipped: $($group.displayName) (already deleted)"
-                            continue
-                        }
-
-                        $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Delete failed: $errorMessage"
-                        Write-Warning "  Failed to delete: $($group.displayName) - $errorMessage"
-                    }
-                }
-            } catch {
-                # Batch request failed - log individual failures
-                Write-Warning "Batch delete failed: $_"
-                foreach ($group in $currentBatch) {
-                    $results += New-HydrationResult -Type $resultTypeName -Name $group.displayName -Id $group.id -Action 'Failed' -Status "Batch delete failed: $_"
-                }
+        $deleteItems = @()
+        foreach ($group in $groupsToDelete) {
+            $deleteItems += @{
+                Name = $group.displayName
+                Id   = $group.id
             }
         }
 
+        $results += Invoke-GraphBatchOperation -Items $deleteItems -Operation 'DELETE' -BaseUrl '/groups' -ResultType $resultTypeName
         return $results
     }
 
@@ -278,55 +153,37 @@ function Invoke-GroupBatchImport {
         $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $prefixedDefinitions.Count) - 1
         $currentBatch = $prefixedDefinitions[$batchStart..$batchEnd]
 
-        $batchRequests = @()
+        $batchEntries = @()
         for ($i = 0; $i -lt $currentBatch.Count; $i++) {
             $groupDef = $currentBatch[$i]
-            # Escape single quotes for OData filter - both prefixed and original (legacy) names
-            $safePrefixedName = $groupDef.displayName -replace "'", "''"
-            $safeOriginalName = $groupDef._OriginalDisplayName -replace "'", "''"
-
-            if ($safePrefixedName -ne $safeOriginalName) {
-                $filterUri = "/groups?`$filter=displayName eq '$safePrefixedName' or displayName eq '$safeOriginalName'&`$select=id,displayName,description"
-            } else {
-                $filterUri = "/groups?`$filter=displayName eq '$safePrefixedName'&`$select=id,displayName,description"
-            }
-
-            $batchRequests += @{
+            $request = @{
                 id     = ($i + 1).ToString()
                 method = "GET"
-                url    = $filterUri
+                url    = Get-HydrationGroupLookupUri -GroupDefinition $groupDef
+            }
+            $batchEntries += [pscustomobject]@{
+                Id      = [string]$request.id
+                Request = $request
+                Item    = $groupDef
+                Index   = $i
             }
         }
 
         # Submit batch request
-        $batchBody = @{ requests = $batchRequests }
+        $batchBody = @{ requests = @($batchEntries | ForEach-Object { $_.Request }) }
         try {
             $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
+            $responseState = Resolve-HydrationBatchResponse -BatchEntries $batchEntries -Responses @(Get-HydrationGroupBatchResponses -BatchResponse $batchResponse)
+            $results += New-HydrationBatchCorrelationFailure -ResponseState $responseState -ResultTypeName $resultTypeName -StatusPrefix 'Existence check'
 
             # Process responses
-            foreach ($resp in $batchResponse.responses) {
-                $requestIndex = $null
-                $groupDef = $null
-                if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
-                    $requestIndex = $requestIndex - 1
-                    if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
-                        $groupDef = $currentBatch[$requestIndex]
-                    }
-                }
-
-                # Skip if we can't find the matching group definition
-                if (-not $groupDef -or -not $groupDef.displayName) {
-                    Write-Verbose "Skipping response with id=$($resp.id) - no matching group definition"
-                    continue
-                }
+            foreach ($resolvedResponse in $responseState.Matched) {
+                $resp = $resolvedResponse.Response
+                $groupDef = $resolvedResponse.Item
 
                 if ($resp.status -eq 200 -and $resp.body.value.Count -gt 0) {
                     # Group exists - prefer the prefixed name match when multiple results
-                    $matchingGroup = $resp.body.value | Where-Object { $_.displayName -eq $groupDef.displayName } | Select-Object -First 1
-                    if (-not $matchingGroup) {
-                        $matchingGroup = $resp.body.value[0]
-                    }
-                    $existingGroups[$groupDef.displayName] = $matchingGroup
+                    $existingGroups[$groupDef.displayName] = Select-HydrationGroupLookupMatch -LookupResult $resp.body -GroupDefinition $groupDef
                 } elseif ($resp.status -eq 200) {
                     # Group does not exist - add to creation list
                     $groupsToCreate += $groupDef
@@ -334,6 +191,18 @@ function Invoke-GroupBatchImport {
                     # Error checking existence - log and skip
                     Write-Warning "Failed to check existence of '$($groupDef.displayName)': HTTP $($resp.status)"
                     $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'Failed' -Status "Existence check failed: HTTP $($resp.status)"
+                }
+            }
+
+            foreach ($missingRequest in $responseState.Missing) {
+                $missingResolution = Resolve-HydrationMissingGroupExistence -MissingRequest $missingRequest -ResultTypeName $resultTypeName
+                if ($missingResolution.ExistingGroup) {
+                    $existingGroups[$missingRequest.Item.displayName] = $missingResolution.ExistingGroup
+                } elseif ($missingResolution.GroupToCreate) {
+                    $groupsToCreate += $missingResolution.GroupToCreate
+                }
+                if ($missingResolution.Result) {
+                    $results += $missingResolution.Result
                 }
             }
         } catch {
@@ -389,39 +258,77 @@ function Invoke-GroupBatchImport {
         $batchEnd = [Math]::Min($batchStart + $maxBatchSize, $regularGroups.Count) - 1
         $currentBatch = $regularGroups[$batchStart..$batchEnd]
 
-        $batchRequests = @()
-        for ($i = 0; $i -lt $currentBatch.Count; $i++) {
-            $groupDef = $currentBatch[$i]
-            $batchRequests += @{
-                id      = ($i + 1).ToString()
-                method  = "POST"
-                url     = "/groups"
-                headers = @{ "Content-Type" = "application/json" }
-                body    = ConvertTo-GroupBody -GroupDef $groupDef -GroupType $GroupType
-            }
-        }
+        $pendingGroups = @($currentBatch)
+        $retryCount = 0
 
-        # Submit batch creation request
-        $batchBody = @{ requests = $batchRequests }
-        try {
-            $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
-
-            # Process responses
-            foreach ($resp in $batchResponse.responses) {
-                $requestIndex = $null
-                $groupDef = $null
-                if ([int]::TryParse([string]$resp.id, [ref]$requestIndex)) {
-                    $requestIndex = $requestIndex - 1
-                    if ($requestIndex -ge 0 -and $requestIndex -lt $currentBatch.Count) {
-                        $groupDef = $currentBatch[$requestIndex]
+        while ($pendingGroups.Count -gt 0 -and $retryCount -le $maxRetries) {
+            if ($retryCount -gt 0) {
+                $maxRetryAfter = 0
+                foreach ($groupDef in $pendingGroups) {
+                    if ($groupDef.RetryAfter) {
+                        $parsedRetryAfter = 0
+                        if ([int]::TryParse([string]$groupDef.RetryAfter, [ref]$parsedRetryAfter) -and $parsedRetryAfter -gt $maxRetryAfter) {
+                            $maxRetryAfter = $parsedRetryAfter
+                        }
+                        $groupDef.PSObject.Properties.Remove('RetryAfter')
                     }
                 }
+                $delay = if ($maxRetryAfter -gt 0) { $maxRetryAfter } else { $retryDelaySeconds * [Math]::Pow(2, $retryCount - 1) }
+                Start-Sleep -Seconds $delay
+            }
 
-                # Skip if we can't find the matching group definition
-                if (-not $groupDef -or -not $groupDef.displayName) {
-                    Write-Verbose "Skipping response with id=$($resp.id) - no matching group definition"
+            $batchEntries = @()
+            for ($i = 0; $i -lt $pendingGroups.Count; $i++) {
+                $groupDef = $pendingGroups[$i]
+                $request = @{
+                    id      = ($i + 1).ToString()
+                    method  = "POST"
+                    url     = "/groups"
+                    headers = @{ "Content-Type" = "application/json" }
+                    body    = ConvertTo-HydrationGroupBody -GroupDefinition $groupDef -GroupType $GroupType
+                }
+                $batchEntries += [pscustomobject]@{
+                    Id      = [string]$request.id
+                    Request = $request
+                    Item    = $groupDef
+                    Index   = $i
+                }
+            }
+
+            $itemsToRetry = @()
+            $batchBody = @{ requests = @($batchEntries | ForEach-Object { $_.Request }) }
+            try {
+                $batchResponse = Invoke-MgGraphRequest -Method POST -Uri "beta/`$batch" -Body $batchBody -ErrorAction Stop
+            } catch {
+                $statusCode = Get-GraphStatusCode -ErrorRecord $_
+                if ($statusCode -eq 429) {
+                    if ($retryCount -lt $maxRetries) {
+                        $itemsToRetry = $pendingGroups
+                    } else {
+                        foreach ($groupDef in $pendingGroups) {
+                            $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'Failed' -Status "Creation failed: batch request throttled after retries: $_"
+                        }
+                    }
+                    $pendingGroups = $itemsToRetry
+                    $retryCount++
                     continue
                 }
+
+                $reason = "Batch creation request failed before responses: $_"
+                Write-Warning $reason
+                foreach ($groupDef in $pendingGroups) {
+                    $results += Resolve-HydrationIndeterminateGroupCreate -GroupDefinition $groupDef -ResultTypeName $resultTypeName -Reason $reason
+                }
+                break
+            }
+
+            $responseState = Resolve-HydrationBatchResponse -BatchEntries $batchEntries -Responses @(Get-HydrationGroupBatchResponses -BatchResponse $batchResponse)
+            $results += New-HydrationBatchCorrelationFailure -ResponseState $responseState -ResultTypeName $resultTypeName -StatusPrefix 'Creation'
+
+            # Process responses
+            foreach ($resolvedResponse in $responseState.Matched) {
+                $resp = $resolvedResponse.Response
+                $groupDef = $resolvedResponse.Item
 
                 if ($resp.status -eq 201) {
                     # Created successfully
@@ -431,6 +338,15 @@ function Invoke-GroupBatchImport {
                     # Conflict - group was created between existence check and creation (race condition)
                     $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'Skipped' -Status 'Group already exists (race condition)'
                     Write-Verbose "  Skipped: $($groupDef.displayName) (race condition)"
+                } elseif ((Test-HydrationBatchStatusRetryable -Status $resp.status -Operation 'POST') -and $retryCount -lt $maxRetries) {
+                    $retryAfterSeconds = Get-HydrationBatchRetryAfterSeconds -Headers $resp.headers -Body $resp.body
+                    if ($retryAfterSeconds) {
+                        $groupDef | Add-Member -NotePropertyName RetryAfter -NotePropertyValue $retryAfterSeconds -Force
+                    }
+                    $itemsToRetry += $groupDef
+                } elseif ($resp.status -ge 500 -and $resp.status -lt 600) {
+                    $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
+                    $results += Resolve-HydrationIndeterminateGroupCreate -GroupDefinition $groupDef -ResultTypeName $resultTypeName -Reason "Batch creation returned $errorMessage"
                 } else {
                     # Creation failed
                     $errorMessage = if ($resp.body.error.message) { $resp.body.error.message } else { "HTTP $($resp.status)" }
@@ -438,12 +354,13 @@ function Invoke-GroupBatchImport {
                     Write-Warning "  Failed: $($groupDef.displayName) - $errorMessage"
                 }
             }
-        } catch {
-            # Batch request failed - log individual failures
-            Write-Warning "Batch creation failed: $_"
-            foreach ($groupDef in $currentBatch) {
-                $results += New-HydrationResult -Type $resultTypeName -Name $groupDef.displayName -Action 'Failed' -Status "Batch creation failed: $_"
+
+            foreach ($missingRequest in $responseState.Missing) {
+                $results += Resolve-HydrationIndeterminateGroupCreate -GroupDefinition $missingRequest.Item -ResultTypeName $resultTypeName -Reason 'No response received from Graph API'
             }
+
+            $pendingGroups = $itemsToRetry
+            $retryCount++
         }
     }
 
@@ -483,7 +400,7 @@ function Invoke-GroupBatchImport {
         # Create each SP owner group sequentially (need to add owner after creation)
         foreach ($groupDef in $spOwnerGroups) {
             try {
-                $groupBody = ConvertTo-GroupBody -GroupDef $groupDef -GroupType 'Static'
+                $groupBody = ConvertTo-HydrationGroupBody -GroupDefinition $groupDef -GroupType 'Static'
                 $newGroup = Invoke-MgGraphRequest -Method POST -Uri "v1.0/groups" -Body $groupBody -ErrorAction Stop
 
                 # Add service principal as owner if available

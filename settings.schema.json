@@ -141,7 +141,7 @@
         },
         "platforms": {
             "type": "array",
-            "description": "Filter imports by platform. Affects: ComplianceTemplates, DeviceFilters, AppProtection, MobileApps, EnrollmentProfiles, OpenIntuneBaseline. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.",
+            "description": "Filter platform-scoped imports by platform. Platform-neutral imports are unaffected during create runs and skipped during platform-scoped delete runs.",
             "items": {
                 "type": "string",
                 "enum": ["Windows", "macOS", "iOS", "Android", "Linux", "All"]

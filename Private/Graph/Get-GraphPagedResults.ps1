@@ -35,6 +35,7 @@ function Get-GraphPagedResults {
 
     $results = [System.Collections.Generic.List[object]]::new()
     $listUri = $Uri
+    # Retries after the initial attempt.
     $maxRetries = 3
     $baseRetryDelay = 2
 

@@ -15,7 +15,7 @@ function Test-HydrationMobileAppsIncludeWinGet {
 
     $selectedPlatforms = @($Platforms | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($selectedPlatforms.Count -eq 0) {
-        $selectedPlatforms = @('All')
+        return $false
     }
 
     if (-not ($selectedPlatforms -contains 'All' -or $selectedPlatforms -contains 'Windows')) {

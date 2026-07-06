@@ -72,7 +72,7 @@ function New-IntuneDynamicGroup {
                 displayName                   = $finalDisplayName
                 description                   = $fullDescription
                 mailEnabled                   = $false
-                mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')
+                mailNickname                  = New-HydrationGroupMailNickname -DisplayName $DisplayName
                 securityEnabled               = $true
                 groupTypes                    = @('DynamicMembership')
                 membershipRule                = $MembershipRule

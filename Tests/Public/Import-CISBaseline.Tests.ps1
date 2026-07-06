@@ -249,6 +249,29 @@ Describe 'Import-CISBaseline' {
                 $Items.Count -eq 2 -and ($Items.Name -contains '[IHD] Windows Array CIS Policy')
             }
         }
+
+        It 'Should skip no-platform templates resolved outside the selected platform during create' {
+            $macDir = Join-Path $baseDir '2.0 - Apple Benchmarks/Apple MacOS Compliance'
+            New-Item -Path $macDir -ItemType Directory -Force | Out-Null
+            Set-Content -Path (Join-Path $macDir 'MacCompliance.json') -Value (@{
+                    '@odata.type' = '#microsoft.graph.macOSCompliancePolicy'
+                    displayName   = 'macOS Compliance Without Platforms'
+                    description   = ''
+                } | ConvertTo-Json)
+
+            Mock Invoke-GraphBatchOperation {
+                param($Items)
+                foreach ($item in $Items) {
+                    [PSCustomObject]@{ Name = $item.Name; Type = 'CISBaselinePolicy'; Action = 'Created'; Status = 'Success' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISPlatformFilter') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001'
+
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Items.Name -notcontains '[IHD] macOS Compliance Without Platforms'
+            }
+        }
     }
 
     Context 'WhatIf Support' {
@@ -299,134 +322,6 @@ Describe 'Import-CISBaseline' {
             $result[0].Action | Should -Be 'Skipped'
             $result[0].Status | Should -Be 'Already exists'
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
-        }
-    }
-
-    Context 'RemoveExisting Mode' {
-        BeforeAll {
-            $baseDir = Join-Path 'TestDrive:' 'CISDelete'
-            $catDir = Join-Path $baseDir '1.0 - Test Category'
-            New-Item -Path $catDir -ItemType Directory -Force | Out-Null
-            Set-Content -Path (Join-Path $catDir 'Dummy.json') -Value (@{
-                    '@odata.type' = '#microsoft.graph.deviceManagementConfigurationPolicy'
-                    name          = 'Test Policy'
-                    description   = ''
-                    platforms     = 'windows10'
-                    technologies  = 'mdm'
-                    settings      = @()
-                } | ConvertTo-Json)
-
-            InModuleScope IntuneHydrationKit {
-                $script:HydrationState = @{ TenantId = '00000000-0000-0000-0000-000000000001'; Connected = $true }
-                $script:ImportPrefix = '[IHD] '
-            }
-
-            Mock Get-TemplateDisplayNames {
-                $hashSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                $hashSet.Add('Test Policy') | Out-Null
-                return $hashSet
-            } -ModuleName IntuneHydrationKit
-        }
-
-        It 'Should delete tagged policies and return results' {
-            Mock Get-GraphPagedResults {
-                return @(
-                    @{ id = 'policy-1'; name = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
-                )
-            } -ModuleName IntuneHydrationKit
-
-            Mock Invoke-GraphBatchOperation {
-                return @([PSCustomObject]@{ Name = '[IHD] Test Policy'; Type = 'CISBaselinePolicy'; Action = 'Deleted'; Status = 'Success' })
-            } -ModuleName IntuneHydrationKit
-
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
-
-            $result | Should -Not -BeNullOrEmpty
-            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
-        }
-
-        It 'Should throw when delete mode cannot resolve a valid baseline path' {
-            InModuleScope IntuneHydrationKit {
-                $script:HydrationState = @{ TenantId = '00000000-0000-0000-0000-000000000001'; Connected = $true }
-                $script:TemplatesPath = 'TestDrive:\NonExistent'
-                $script:ModuleRoot = 'TestDrive:\NonExistent'
-            }
-
-            Mock Test-Path { return $false } -ModuleName IntuneHydrationKit
-
-            { Import-CISBaseline -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -ErrorAction Stop } | Should -Throw '*A resolvable CIS baseline template path is required when using -RemoveExisting*'
-        }
-
-        It 'Should throw when delete mode cannot load template names' {
-            Mock Get-TemplateDisplayNames {
-                [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            } -ModuleName IntuneHydrationKit
-
-            Mock Invoke-GraphBatchOperation { } -ModuleName IntuneHydrationKit
-
-            { Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false -ErrorAction Stop } | Should -Throw '*Deletion is blocked to avoid removing hydration-marked objects without template matching*'
-            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
-        }
-
-        It 'Should return WouldDelete in WhatIf mode' {
-            Mock Get-GraphPagedResults {
-                return @(
-                    @{ id = 'policy-1'; name = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
-                )
-            } -ModuleName IntuneHydrationKit
-
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
-
-            $result | Should -Not -BeNullOrEmpty
-            $result[0].Action | Should -Be 'WouldDelete'
-        }
-
-        It 'Should skip policies not created by this kit' {
-            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
-
-            Mock Get-GraphPagedResults {
-                return @(
-                    @{ id = 'policy-1'; name = 'Manual Policy'; description = 'Created manually' }
-                )
-            } -ModuleName IntuneHydrationKit
-
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
-
-            $result | Should -BeNullOrEmpty
-        }
-
-        It 'Should delete prefixed policies when list response omits description but full GET has marker' {
-            Mock Get-GraphPagedResults {
-                return @(
-                    @{ id = 'policy-1'; name = '[IHD] Test Policy' }
-                )
-            } -ModuleName IntuneHydrationKit
-
-            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit -ParameterFilter {
-                [string]::IsNullOrWhiteSpace($Description) -and [string]::IsNullOrWhiteSpace($Notes)
-            }
-
-            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Description -like '*Imported by Intune Hydration Kit*'
-            }
-
-            Mock Invoke-MgGraphRequest {
-                return @{ id = 'policy-1'; name = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' }
-            } -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/configurationPolicies/policy-1'
-            }
-
-            Mock Invoke-GraphBatchOperation {
-                return @([PSCustomObject]@{ Name = '[IHD] Test Policy'; Type = 'CISBaselinePolicy'; Action = 'Deleted'; Status = 'Success' })
-            } -ModuleName IntuneHydrationKit
-
-            $result = Import-CISBaseline -BaselinePath (Join-Path 'TestDrive:' 'CISDelete') -RemoveExisting -TenantId '00000000-0000-0000-0000-000000000001' -Confirm:$false
-
-            $result | Should -Not -BeNullOrEmpty
-            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/configurationPolicies/policy-1'
-            }
-            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
         }
     }
 

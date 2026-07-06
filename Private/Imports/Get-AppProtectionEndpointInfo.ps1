@@ -20,6 +20,10 @@ function Get-AppProtectionEndpointInfo {
         }
     )
 
+    if ($PSBoundParameters.ContainsKey('Platform') -and @($Platform).Count -eq 0) {
+        return @()
+    }
+
     if (-not $Platform -or $Platform -contains 'All') {
         return $endpointInfo
     }

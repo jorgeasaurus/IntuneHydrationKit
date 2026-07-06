@@ -4,6 +4,7 @@ BeforeAll {
     . $PSScriptRoot/../../Private/Utilities/Get-ConfigurationSection.ps1
     . $PSScriptRoot/../../Private/Utilities/Resolve-MinimumSupportedOperatingSystem.ps1
     . $PSScriptRoot/../../Private/Utilities/Resolve-ApplicableArchitecture.ps1
+    . $PSScriptRoot/../../Private/Utilities/Resolve-HydrationTemplateChildPath.ps1
     . $PSScriptRoot/../../Private/Utilities/ConvertTo-HydrationBoolValue.ps1
     . $PSScriptRoot/../../Private/WinGet/ConvertTo-IntuneWinDetectionRule.ps1
     . $PSScriptRoot/../../Private/WinGet/ConvertTo-IntuneWinRequirementRule.ps1

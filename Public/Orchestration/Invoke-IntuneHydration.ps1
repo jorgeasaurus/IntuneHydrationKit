@@ -65,8 +65,8 @@ function Invoke-IntuneHydration {
     .PARAMETER Platform
         Filter imports by platform. Valid values: Windows, macOS, iOS, Android, Linux, All.
         Defaults to 'All' which imports resources for all platforms.
-        This affects: ComplianceTemplates, DeviceFilters, AppProtection, MobileApps, EnrollmentProfiles, OpenIntuneBaseline.
-        Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.
+        Platform-scoped imports are pruned by the workload plan. Platform-neutral imports are unaffected
+        during create runs, and skipped during platform-scoped delete runs.
     .PARAMETER ReportOutputPath
         Output directory for reports
     .PARAMETER ReportFormats
@@ -259,6 +259,7 @@ function Invoke-IntuneHydration {
             SettingsPath          = $SettingsPath
             Force                 = $Force
             Platform              = $Platform
+            PlatformSpecified     = $PSBoundParameters.ContainsKey('Platform')
             TenantId              = $TenantId
             TenantName            = $TenantName
             Interactive           = $Interactive
@@ -289,6 +290,17 @@ function Invoke-IntuneHydration {
         }
         $settings = Resolve-HydrationExecutionSettings @resolveSettingsParams
 
+        $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
+        $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
+        if ($settings.options.verbose -eq $true -and $VerbosePreference -ne 'Continue') {
+            $VerbosePreference = 'Continue'
+            Write-Verbose 'Verbose output enabled for this hydration run'
+        }
+
+        $workloadPlan = Resolve-HydrationWorkloadPlan -Imports $settings.imports -Platforms $settings.platforms -DeleteEnabled:($settings.options.delete -eq $true)
+        $platformFilters = $workloadPlan.PlatformFilters
+        $settings.imports = $workloadPlan.Imports
+
         if ($PSCmdlet.ParameterSetName -eq 'InteractiveTui') {
             $null = Show-HydrationTuiReview -Settings $settings
             $confirmed = Confirm-HydrationTuiChoice -Prompt 'Run hydration with these settings?' -Default:$false -ClearScreen:$false
@@ -299,14 +311,7 @@ function Invoke-IntuneHydration {
         }
 
         Write-HydrationExecutionSettingsSummary -Settings $settings
-        $platformFilters = Get-HydrationPlatformFilters -Platforms $settings.platforms
         $preflightMobileAppConfiguration = Get-MobileAppImportConfiguration -Settings $settings
-        $effectiveWhatIfEnabled = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
-        $effectiveVerboseEnabled = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
-        if ($settings.options.verbose -eq $true -and $VerbosePreference -ne 'Continue') {
-            $VerbosePreference = 'Continue'
-            Write-Verbose 'Verbose output enabled for this hydration run'
-        }
 
         # Apply options from settings
         $createEnabled = $settings.options.create -eq $true
