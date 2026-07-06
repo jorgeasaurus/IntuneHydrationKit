@@ -2,6 +2,7 @@
 
 BeforeAll {
     . $PSScriptRoot/../../Private/WinGet/Get-IntuneWinUploadChunkLength.ps1
+    . $PSScriptRoot/../../Private/WinGet/Get-UploadUriForLogging.ps1
     . $PSScriptRoot/../../Private/WinGet/Invoke-IntuneWinAzureStorageBlockUpload.ps1
     . $PSScriptRoot/../../Private/WinGet/Send-IntuneWinAzureStorageChunkedUpload.ps1
 }

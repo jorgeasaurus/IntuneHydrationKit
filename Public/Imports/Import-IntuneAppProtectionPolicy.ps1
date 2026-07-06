@@ -91,22 +91,20 @@ function Import-IntuneAppProtectionPolicy {
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Load template names to scope deletes to only policies this kit would create
-        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -Recurse
+        $knownTemplateNames = Get-TemplateDisplayNames -TemplateFiles $templateFiles
 
         # Group policies by endpoint for batch deletion
         $policiesByEndpoint = @{}
         foreach ($policyName in $existingPolicies.Keys) {
             $policyInfo = $existingPolicies[$policyName]
 
-            if (-not (Test-HydrationKitObject -Description $policyInfo.Description -ObjectName $policyName)) {
-                Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
-                continue
-            }
-
-            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-            $nameForLookup = $policyName -replace "^$escapedPrefix", ''
-            if (-not ($knownTemplateNames.Contains($policyName) -or $knownTemplateNames.Contains($nameForLookup))) {
-                Write-Verbose "Skipping '$policyName' - not in this kit's templates (may be from another tool)"
+            $deleteDecision = Resolve-HydrationMarkedDeleteCandidate `
+                -Name $policyName `
+                -Description $policyInfo.Description `
+                -KnownTemplateNames $knownTemplateNames `
+                -FullObjectUri "$($policyInfo.Endpoint)/$($policyInfo.Id)"
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$policyName' - $($deleteDecision.Message)"
                 continue
             }
 
@@ -166,17 +164,24 @@ function Import-IntuneAppProtectionPolicy {
                 continue
             }
 
-            # Check for existing policy using prefetched list - only skip if tagged by kit
-            if ($existingPolicies.ContainsKey($displayName) -and $existingPolicies[$displayName].IsTagged) {
+            # Check for existing policy using prefetched list - only skip if tagged by kit.
+            # Check both current prefixed and legacy unprefixed names to avoid duplicates.
+            $matchedExistingName = $null
+            foreach ($lookupName in @($displayName, $template.displayName)) {
+                if ($lookupName -and $existingPolicies.ContainsKey($lookupName) -and $existingPolicies[$lookupName].IsTagged) {
+                    $matchedExistingName = $lookupName
+                    break
+                }
+            }
+            if ($matchedExistingName) {
                 Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
-                $results += New-HydrationResult -Name $displayName -Id $existingPolicies[$displayName].Id -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status 'Already exists'
+                $results += New-HydrationResult -Name $displayName -Id $existingPolicies[$matchedExistingName].Id -Path $templateFile.FullName -Type 'AppProtection' -Action 'Skipped' -Status 'Already exists'
                 continue
             }
 
             # Prepare body (remove read-only properties)
             $importBody = Copy-DeepObject -InputObject $template
             Remove-ReadOnlyGraphProperties -InputObject $importBody -AdditionalProperties @(
-                'apps',
                 'assignments',
                 'targetedAppManagementLevels'
             )

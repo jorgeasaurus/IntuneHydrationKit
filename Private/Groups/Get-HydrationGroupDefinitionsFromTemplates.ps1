@@ -12,6 +12,14 @@ function Get-HydrationGroupDefinitionsFromTemplates {
         return $null
     }
 
+    if (@($Platforms).Count -eq 0) {
+        return @{
+            All            = @()
+            Filtered       = @()
+            DeleteFiltered = @()
+        }
+    }
+
     $allGroupDefs = @()
     $getChildItemParams = @{
         Path   = $TemplatePath
@@ -38,9 +46,14 @@ function Get-HydrationGroupDefinitionsFromTemplates {
         $platform = if ($_.platform) { $_.platform } else { 'All' }
         ($Platforms -contains 'All') -or ($platform -eq 'All') -or ($platform -in $Platforms)
     }
+    $deleteFilteredGroups = $allGroupDefs | Where-Object {
+        $platform = if ($_.platform) { $_.platform } else { 'All' }
+        ($Platforms -contains 'All') -or ($platform -in $Platforms)
+    }
 
     return @{
-        All      = $allGroupDefs
-        Filtered = @($filteredGroups)
+        All            = $allGroupDefs
+        Filtered       = @($filteredGroups)
+        DeleteFiltered = @($deleteFilteredGroups)
     }
 }

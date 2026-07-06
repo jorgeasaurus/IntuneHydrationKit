@@ -29,10 +29,13 @@ function Get-TemplateDisplayNames {
     .EXAMPLE
         Get-TemplateDisplayNames -Path './Templates/Filters' -ArrayProperty 'filters' -Recurse
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Path')]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, ParameterSetName = 'Path')]
         [string]$Path,
+
+        [Parameter(Mandatory, ParameterSetName = 'Files')]
+        [System.IO.FileInfo[]]$TemplateFiles,
 
         [Parameter()]
         [string]$NameProperty = 'displayName',
@@ -52,15 +55,20 @@ function Get-TemplateDisplayNames {
 
     $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
-    if (-not (Test-Path -Path $Path)) {
+    if ($PSCmdlet.ParameterSetName -eq 'Path' -and -not (Test-Path -Path $Path)) {
         Write-Verbose "Template path not found: $Path"
         return , $names
     }
 
-    $templateFiles = Get-ChildItem -Path $Path -Filter "*.json" -File -Recurse:$Recurse
+    $templateFiles = if ($PSCmdlet.ParameterSetName -eq 'Files') {
+        @($TemplateFiles | Where-Object { $_.Extension -eq '.json' })
+    } else {
+        Get-ChildItem -Path $Path -Filter "*.json" -File -Recurse:$Recurse
+    }
 
     if (-not $templateFiles -or $templateFiles.Count -eq 0) {
-        Write-Verbose "No template files found in: $Path"
+        $sourceDescription = if ($PSCmdlet.ParameterSetName -eq 'Files') { 'provided file list' } else { $Path }
+        Write-Verbose "No template files found in: $sourceDescription"
         return , $names
     }
 
@@ -107,7 +115,8 @@ function Get-TemplateDisplayNames {
         }
     }
 
-    Write-Verbose "Loaded $($names.Count) template name(s) from $Path"
+    $sourceDescription = if ($PSCmdlet.ParameterSetName -eq 'Files') { 'provided file list' } else { $Path }
+    Write-Verbose "Loaded $($names.Count) template name(s) from $sourceDescription"
 
     # Comma operator prevents PowerShell from enumerating the HashSet on output.
     # Without it, an empty HashSet is enumerated to nothing and the caller gets $null.

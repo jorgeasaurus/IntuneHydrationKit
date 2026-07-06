@@ -42,9 +42,20 @@ if (-not (Test-Path -Path $publicPath -PathType Container)) {
     throw "Public function directory not found: $publicPath"
 }
 
-$publicFunctions = Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse |
+$intentionalHelperExports = @(
+    'New-HydrationResult'
+    'Get-ResultSummary'
+    'Get-GraphErrorMessage'
+    'Test-HydrationKitObject'
+    'Get-ObfuscatedTenantId'
+)
+
+$publicFunctions = @(
+    Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse |
     Sort-Object -Property BaseName |
     ForEach-Object { $_.BaseName }
+    $intentionalHelperExports
+) | Sort-Object -Unique
 
 if ($publicFunctions.Count -eq 0) {
     throw 'No public function files were found under Public/.'
@@ -83,6 +94,8 @@ if (-not [regex]::IsMatch($moduleContent, $modulePattern)) {
 
 $newManifestContent = [regex]::Replace($manifestContent, $manifestPattern, $manifestReplacement)
 $newModuleContent = [regex]::Replace($moduleContent, $modulePattern, $moduleReplacement)
+$newManifestContent = $newManifestContent.TrimEnd() + [Environment]::NewLine
+$newModuleContent = $newModuleContent.TrimEnd() + [Environment]::NewLine
 
 if ($newManifestContent -eq $manifestContent -and $newModuleContent -eq $moduleContent) {
     Write-Information 'Public function exports are already in sync.' -InformationAction Continue
@@ -96,7 +109,8 @@ if ($CheckOnly) {
 
 if ($PSCmdlet.ShouldProcess($manifestPath, 'Update FunctionsToExport list') -and
     $PSCmdlet.ShouldProcess($modulePath, 'Update $publicFunctions export list')) {
-    Set-Content -Path $manifestPath -Value $newManifestContent -Encoding utf8
-    Set-Content -Path $modulePath -Value $newModuleContent -Encoding utf8
+    # -NoNewline keeps the write byte-identical to the compared string (idempotent check)
+    Set-Content -Path $manifestPath -Value $newManifestContent -Encoding utf8 -NoNewline
+    Set-Content -Path $modulePath -Value $newModuleContent -Encoding utf8 -NoNewline
     Write-Information 'Updated IntuneHydrationKit.psd1 and IntuneHydrationKit.psm1 from Public/**/*.ps1.' -InformationAction Continue
 }

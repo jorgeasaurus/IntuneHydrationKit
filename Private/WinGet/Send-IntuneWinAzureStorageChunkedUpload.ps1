@@ -30,15 +30,6 @@ function Send-IntuneWinAzureStorageChunkedUpload {
         [int]$CommitTimeoutSec = 120
     )
 
-    function Get-UploadUriForLogging {
-        param(
-            [Parameter(Mandatory)]
-            [string]$Uri
-        )
-
-        return ($Uri -split '\?', 2)[0]
-    }
-
     $fileSize = [int64](Get-Item -Path $FilePath).Length
     $chunkSize = [int64]$ChunkSizeBytes
     $chunkCount = [int][Math]::Ceiling($fileSize / $chunkSize)

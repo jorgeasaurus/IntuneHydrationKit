@@ -58,26 +58,14 @@ function Import-IntuneNotificationTemplate {
     # Note: Notification templates don't support description field, so we match by name
     if ($RemoveExisting) {
         # Build list of template names from our JSON files for name-based matching
-        $templateNames = @{}
-        foreach ($templateFile in $templateFiles) {
-            try {
-                $templateContent = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
-                if ($templateContent.displayName) {
-                    $templateNames[$templateContent.displayName] = $true
-                }
-            } catch {
-                Write-Verbose "Could not read template file: $($templateFile.FullName)"
-            }
-        }
+        $templateNames = Get-TemplateDisplayNames -TemplateFiles $templateFiles
 
         foreach ($templateName in $existingTemplates.Keys) {
             $templateInfo = $existingTemplates[$templateName]
 
-            # Safety check: Only delete if the name matches one of our template files
-            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-            $nameForLookup = $templateName -replace "^$escapedPrefix", ''
-            if (-not ($templateNames.ContainsKey($templateName) -or $templateNames.ContainsKey($nameForLookup))) {
-                Write-Verbose "Skipping '$templateName' - not in hydration kit templates"
+            $deleteDecision = Resolve-HydrationDeleteDecision -Name $templateName -KnownTemplateNames $templateNames -NameOnly
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$templateName' - $($deleteDecision.Message)"
                 continue
             }
 
@@ -174,24 +162,32 @@ function Import-IntuneNotificationTemplate {
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
                 # Create localized messages if present
-                $localizedMessageFailures = [System.Collections.Generic.List[string]]::new()
+                $localizedMessageFailures = [System.Collections.Generic.List[hashtable]]::new()
                 foreach ($loc in $localizedMessages) {
                     try {
                         $locBody = $loc | ConvertTo-Json -Depth 20
                         Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
                     } catch {
                         $locale = if ($loc.locale) { $loc.locale } else { 'unknown-locale' }
-                        $localizedMessageFailures.Add($locale)
-                        Write-HydrationLog -Message "  Failed to add localized message ($locale): $($_.Exception.Message)" -Level Warning
+                        $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
+                        $localizedMessageFailures.Add(@{
+                                Locale = $locale
+                                Error  = $errorMessage
+                            })
+                        Write-HydrationLog -Message "  Failed to add localized message ($locale): $errorMessage" -Level Warning
                     }
                 }
 
                 $status = if ($localizedMessageFailures.Count -eq 0) {
                     'Success'
                 } else {
-                    "PartialSuccess - $($localizedMessageFailures.Count) localized message failure(s): $($localizedMessageFailures -join ', ')"
+                    $failedLocales = @($localizedMessageFailures | ForEach-Object { $_.Locale })
+                    "PartialSuccess - $($localizedMessageFailures.Count) localized message failure(s): $($failedLocales -join ', ')"
                 }
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status $status
+                foreach ($failure in $localizedMessageFailures) {
+                    $results += New-HydrationResult -Name "$displayName [$($failure.Locale)]" -Path $templateFile.FullName -Type 'NotificationTemplateLocalizedMessage' -Action 'Failed' -Status "Localized message create failed: $($failure.Error)"
+                }
             } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'WouldCreate' -Status 'DryRun'

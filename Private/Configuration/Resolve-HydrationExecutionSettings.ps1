@@ -14,6 +14,9 @@ function Resolve-HydrationExecutionSettings {
         [string[]]$Platform,
 
         [Parameter()]
+        [bool]$PlatformSpecified,
+
+        [Parameter()]
         [string]$TenantId,
 
         [Parameter()]
@@ -137,8 +140,12 @@ function Resolve-HydrationExecutionSettings {
         }
 
         $settings.options.force = $Force.IsPresent -or ($settings.options.Contains('force') -and $settings.options.force)
+        if ($Delete.IsPresent) {
+            $settings.options.create = $false
+            $settings.options.delete = $true
+        }
 
-        if ($Platform -and $Platform -notcontains 'All') {
+        if ($PlatformSpecified) {
             $settings['platforms'] = $Platform
         } elseif (-not $settings.platforms) {
             $settings['platforms'] = @('All')

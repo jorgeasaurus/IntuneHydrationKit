@@ -114,21 +114,11 @@ function New-IntuneStaticGroup {
         if ($PSCmdlet.ShouldProcess($finalDisplayName, "Create static group")) {
             $fullDescription = New-HydrationDescription -ExistingText $Description
 
-            # Generate a safe mailNickname (alphanumeric only, max 64 chars)
-            $mailNickname = ($DisplayName -replace '[^a-zA-Z0-9]', '')
-            if ($mailNickname.Length -gt 64) {
-                $mailNickname = $mailNickname.Substring(0, 64)
-            }
-            # Ensure mailNickname is not empty
-            if ([string]::IsNullOrWhiteSpace($mailNickname)) {
-                $mailNickname = "group" + [guid]::NewGuid().ToString("N").Substring(0, 8)
-            }
-
             $groupBody = @{
                 displayName     = $finalDisplayName
                 description     = $fullDescription
                 mailEnabled     = $false
-                mailNickname    = $mailNickname
+                mailNickname    = New-HydrationGroupMailNickname -DisplayName $DisplayName
                 securityEnabled = $true
             }
 

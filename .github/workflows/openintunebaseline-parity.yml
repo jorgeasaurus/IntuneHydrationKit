@@ -19,106 +19,121 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      UPSTREAM_REPOSITORY: https://github.com/SkipToTheEndpoint/OpenIntuneBaseline.git
+      UPSTREAM_BRANCH: main
+      BASELINE_PATH: Templates/OpenIntuneBaseline
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4.2.2
 
-      - name: Run OpenIntuneBaseline comparison
-        shell: pwsh
+      - name: Sync upstream templates
+        shell: bash
         run: |
-          $null = New-Item -Path ./build -ItemType Directory -Force
-          ./scripts/Compare-OpenIntuneBaseline.ps1 `
-            -OutputPath ./build/openintunebaseline-comparison.json `
-            2>&1 | Tee-Object -FilePath ./build/openintunebaseline-comparison.log
+          set -euo pipefail
+
+          mkdir -p build
+          upstream_path="build/openintunebaseline-upstream"
+          rm -rf "$upstream_path"
+
+          git clone --depth 1 --branch "$UPSTREAM_BRANCH" "$UPSTREAM_REPOSITORY" "$upstream_path"
+
+          find "$BASELINE_PATH" -type f -name '*.json' \
+            ! -path '*/NativeImport/*' \
+            ! -path '*/Scripts/*' \
+            -delete
+
+          while IFS= read -r -d '' file; do
+            relative_path="${file#"$upstream_path"/}"
+            case "$relative_path" in
+              NativeImport/*|*/NativeImport/*|Scripts/*|*/Scripts/*)
+                continue
+                ;;
+            esac
+
+            destination="$BASELINE_PATH/$relative_path"
+            mkdir -p "$(dirname "$destination")"
+            cp "$file" "$destination"
+          done < <(find "$upstream_path" -type f -name '*.json' -print0)
+
+          # Make new upstream files visible to git diff without staging content.
+          git add -N -- "$BASELINE_PATH"
 
       - name: Evaluate comparison result
         id: comparison
-        shell: pwsh
+        shell: bash
         run: |
-          $result = Get-Content -Path ./build/openintunebaseline-comparison.json -Raw | ConvertFrom-Json
-          "has_differences=$($result.HasDifferences.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
-          "difference_count=$($result.DifferenceCount)" >> $env:GITHUB_OUTPUT
-          "modified_count=$($result.ModifiedCount)" >> $env:GITHUB_OUTPUT
-          "only_upstream_count=$($result.OnlyUpstreamCount)" >> $env:GITHUB_OUTPUT
-          "only_local_count=$($result.OnlyLocalCount)" >> $env:GITHUB_OUTPUT
+          set -euo pipefail
+
+          git diff --stat -- "$BASELINE_PATH" | tee build/openintunebaseline.diffstat
+          git diff --name-status -- "$BASELINE_PATH" | tee build/openintunebaseline.name-status
+          git diff -- "$BASELINE_PATH" > build/openintunebaseline.diff
+
+          if git diff --quiet -- "$BASELINE_PATH"; then
+            echo "has_differences=false" >> "$GITHUB_OUTPUT"
+            echo "difference_count=0" >> "$GITHUB_OUTPUT"
+          else
+            difference_count="$(git diff --name-only -- "$BASELINE_PATH" | wc -l | tr -d ' ')"
+            echo "has_differences=true" >> "$GITHUB_OUTPUT"
+            echo "difference_count=$difference_count" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create or update GitHub issue
         if: steps.comparison.outputs.has_differences == 'true'
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          $title = 'Update bundled OpenIntuneBaseline templates'
-          $result = Get-Content -Path ./build/openintunebaseline-comparison.json -Raw | ConvertFrom-Json
-          $issueBodyPath = Join-Path -Path $env:RUNNER_TEMP -ChildPath 'openintunebaseline-issue.md'
+          set -euo pipefail
 
-          function Add-FileList {
-              param(
-                  [Parameter(Mandatory)]
-                  [string]$Title,
+          title='Update bundled OpenIntuneBaseline templates'
+          issue_body_path="$RUNNER_TEMP/openintunebaseline-issue.md"
 
-                  [Parameter()]
-                  [object[]]$Files
-              )
+          {
+            echo "The weekly OpenIntuneBaseline parity check found ${{ steps.comparison.outputs.difference_count }} changed file(s) after syncing upstream \`$UPSTREAM_REPOSITORY\` branch \`$UPSTREAM_BRANCH\` into \`$BASELINE_PATH\`."
+            echo
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo '## Git diff summary'
+            echo
+            echo '```'
+            cat build/openintunebaseline.diffstat
+            echo '```'
+            echo
+            echo '## Changed files'
+            echo
+            echo '```'
+            cat build/openintunebaseline.name-status
+            echo '```'
+            echo
+            echo 'Download the workflow artifact for the full `git diff` patch.'
+            echo
+            echo 'Please review the upstream release and update `Templates/OpenIntuneBaseline/` as needed.'
+          } > "$issue_body_path"
 
-              Add-Content -Path $issueBodyPath -Value "## $Title"
-              if ($Files.Count -eq 0) {
-                  Add-Content -Path $issueBodyPath -Value '_None_'
-                  Add-Content -Path $issueBodyPath -Value ''
-                  return
-              }
+          existing_issue="$(gh issue list \
+            --state open \
+            --search "\"$title\" in:title" \
+            --json number \
+            --jq '.[0].number // ""')"
 
-              foreach ($file in $Files) {
-                  Add-Content -Path $issueBodyPath -Value "- ``$file``"
-              }
-              Add-Content -Path $issueBodyPath -Value ''
-          }
+          if [[ -n "$existing_issue" ]]; then
+            gh issue comment "$existing_issue" --body-file "$issue_body_path"
+            echo "Updated existing issue #$existing_issue."
+          else
+            gh issue create --title "$title" --body-file "$issue_body_path"
+          fi
 
-          $bodyLines = @(
-              "The weekly OpenIntuneBaseline parity check found $($result.DifferenceCount) difference(s) between the bundled templates and upstream ``$($result.UpstreamRepository)`` ``$($result.Branch)``.",
-              '',
-              '| Category | Count |',
-              '| --- | ---: |',
-              "| Modified files | $($result.ModifiedCount) |",
-              "| Only in upstream | $($result.OnlyUpstreamCount) |",
-              "| Only in local | $($result.OnlyLocalCount) |",
-              "| Local bundled files | $($result.TotalLocal) |",
-              "| Upstream files | $($result.TotalUpstream) |",
-              '',
-              "Workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID",
-              ''
-          )
-          Set-Content -Path $issueBodyPath -Value $bodyLines
-
-          Add-FileList -Title 'Modified files' -Files $result.Modified
-          Add-FileList -Title 'Only in upstream' -Files $result.OnlyUpstream
-          Add-FileList -Title 'Only in local' -Files $result.OnlyLocal
-
-          Add-Content -Path $issueBodyPath -Value 'Please review the upstream release and update `Templates/OpenIntuneBaseline/` as needed.'
-
-          $existingIssue = gh issue list `
-              --state open `
-              --search "`"$title`" in:title" `
-              --json number `
-              --jq '.[0].number // ""'
-
-          if ($existingIssue) {
-              gh issue comment $existingIssue --body-file $issueBodyPath
-              Write-Host "Updated existing issue #$existingIssue."
-          } else {
-              gh issue create --title $title --body-file $issueBodyPath
-          }
-
-      - name: Upload comparison artifacts
+      - name: Upload git diff artifacts
         if: always()
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: openintunebaseline-comparison
+          name: openintunebaseline-git-diff
           path: |
-            build/openintunebaseline-comparison.json
-            build/openintunebaseline-comparison.log
+            build/openintunebaseline.diff
+            build/openintunebaseline.diffstat
+            build/openintunebaseline.name-status
           if-no-files-found: warn

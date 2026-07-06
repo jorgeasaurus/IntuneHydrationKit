@@ -20,14 +20,8 @@ function Resolve-ApplicableArchitecture {
         return $null
     }
 
-    $architectureMap = @{
-        'x64'   = 'x64'
-        'x86'   = 'x86'
-        'arm64' = 'arm64'
-    }
-
-    if ($architectureMap.ContainsKey($Architecture)) {
-        return $architectureMap[$Architecture]
+    if ($Architecture -in @('x64', 'x86', 'arm64')) {
+        return $Architecture
     }
 
     return $null

@@ -2,6 +2,7 @@
 
 BeforeAll {
     . $PSScriptRoot/../../Private/Utilities/ConvertTo-HydrationBoolValue.ps1
+    . $PSScriptRoot/../../Private/Utilities/Resolve-HydrationTemplateChildPath.ps1
     . $PSScriptRoot/../../Private/WinGet/ConvertTo-IntuneWinDetectionRule.ps1
 }
 
@@ -14,6 +15,7 @@ Describe 'ConvertTo-IntuneWinDetectionRule' {
 
         $null = New-Item -Path $script:artifactRoot -ItemType Directory -Force
         'Write-Output ''detected''' | Set-Content -Path (Join-Path $script:artifactRoot 'detection.ps1')
+        'Write-Output ''outside''' | Set-Content -Path (Join-Path $script:artifactRoot '../outside-detection.ps1')
     }
 
     AfterAll {
@@ -110,5 +112,14 @@ Describe 'ConvertTo-IntuneWinDetectionRule' {
                     ScriptFile    = 'detection.ps1'
                 })
         } | Should -Throw "*ScriptRootPath is required for script detection rule 'detection.ps1'*"
+    }
+
+    It 'Should reject script files outside the script root' {
+        {
+            ConvertTo-IntuneWinDetectionRule -Rule ([pscustomobject]@{
+                    DetectionType = 'Script'
+                    ScriptFile    = '../outside-detection.ps1'
+                }) -ScriptRootPath $script:artifactRoot
+        } | Should -Throw "*resolves outside template root*"
     }
 }

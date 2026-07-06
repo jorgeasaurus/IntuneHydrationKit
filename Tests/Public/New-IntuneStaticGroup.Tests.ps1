@@ -159,6 +159,25 @@ Describe 'New-IntuneStaticGroup' {
 
             $script:capturedBody.Keys | Should -Not -Contain 'groupTypes'
         }
+
+        It 'Should make mailNickname deterministic and collision-resistant after sanitizing displayName' {
+            $script:capturedNicknames = @()
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'POST' -and $Uri -eq 'v1.0/groups') {
+                    $script:capturedNicknames += $Body.mailNickname
+                }
+                @{ id = [guid]::NewGuid().ToString(); displayName = $Body.displayName }
+            } -ModuleName IntuneHydrationKit
+
+            New-IntuneStaticGroup -DisplayName 'Test-Group'
+            New-IntuneStaticGroup -DisplayName 'Test_Group'
+
+            $script:capturedNicknames | Should -HaveCount 2
+            $script:capturedNicknames[0] | Should -Not -Be $script:capturedNicknames[1]
+            $script:capturedNicknames[0].Length | Should -BeLessOrEqual 64
+            $script:capturedNicknames[1].Length | Should -BeLessOrEqual 64
+        }
     }
 
     Context 'With RequiresServicePrincipalOwner when group does not exist' {

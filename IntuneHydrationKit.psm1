@@ -73,37 +73,30 @@ if (Test-Path -Path $publicPath) {
 
 # Define public functions to export (must match FunctionsToExport in .psd1)
 $publicFunctions = @(
-    # Main entry point
-    'Invoke-IntuneHydration',
-    # Core hydration functions
-    'Connect-IntuneHydration',
-    'Test-IntunePrerequisites',
-    # Import functions
-    'New-IntuneDynamicGroup',
-    'New-IntuneStaticGroup',
-    'Get-OpenIntuneBaseline',
-    'Import-IntuneBaseline',
-    'Import-CISBaseline',
-    'Import-IntuneCompliancePolicy',
-    'Import-IntuneAppProtectionPolicy',
-    'Import-IntuneNotificationTemplate',
-    'Import-IntuneEnrollmentProfile',
-    'Import-IntuneDeviceFilter',
-    'Import-IntuneConditionalAccessPolicy',
-    'Import-IntuneMobileApp',
-    'Import-IntuneWinGetApp',
-    # Helper functions
-    'Initialize-HydrationLogging',
-    'Write-HydrationLog',
-    'Import-HydrationSettings',
-    # Result helpers (used by orchestrator)
-    'New-HydrationResult',
-    'Get-ResultSummary',
-    'Get-GraphErrorMessage',
-    # Safety helpers (used by orchestrator for deletion safety checks)
-    'Test-HydrationKitObject',
-    # Utility helpers
-    'Get-ObfuscatedTenantId'
+        'Connect-IntuneHydration',
+        'Get-GraphErrorMessage',
+        'Get-ObfuscatedTenantId',
+        'Get-OpenIntuneBaseline',
+        'Get-ResultSummary',
+        'Import-CISBaseline',
+        'Import-HydrationSettings',
+        'Import-IntuneAppProtectionPolicy',
+        'Import-IntuneBaseline',
+        'Import-IntuneCompliancePolicy',
+        'Import-IntuneConditionalAccessPolicy',
+        'Import-IntuneDeviceFilter',
+        'Import-IntuneEnrollmentProfile',
+        'Import-IntuneMobileApp',
+        'Import-IntuneNotificationTemplate',
+        'Import-IntuneWinGetApp',
+        'Initialize-HydrationLogging',
+        'Invoke-IntuneHydration',
+        'New-HydrationResult',
+        'New-IntuneDynamicGroup',
+        'New-IntuneStaticGroup',
+        'Test-HydrationKitObject',
+        'Test-IntunePrerequisites',
+        'Write-HydrationLog'
 )
 
 # Export functions

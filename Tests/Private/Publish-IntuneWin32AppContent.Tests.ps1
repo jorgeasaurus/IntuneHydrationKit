@@ -2,6 +2,7 @@
 
 BeforeAll {
     . $PSScriptRoot/../../Private/WinGet/Get-IntuneWin32RenewedUploadUri.ps1
+    . $PSScriptRoot/../../Private/WinGet/Get-UploadUriForLogging.ps1
     . $PSScriptRoot/../../Private/WinGet/Publish-IntuneWin32AppContent.ps1
 }
 

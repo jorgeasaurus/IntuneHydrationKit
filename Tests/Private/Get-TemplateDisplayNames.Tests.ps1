@@ -25,6 +25,16 @@ Describe 'Get-TemplateDisplayNames' {
             $result | Should -Contain 'Policy Beta'
         }
 
+        It 'Should extract names from an explicit filtered file list' {
+            $selectedFile = Get-Item -Path (Join-Path $script:tempDir 'alpha.json')
+
+            $result = Get-TemplateDisplayNames -TemplateFiles @($selectedFile)
+
+            $result | Should -HaveCount 1
+            $result | Should -Contain 'Policy Alpha'
+            $result | Should -Not -Contain 'Policy Beta'
+        }
+
         It 'Should return a HashSet of strings' {
             $result = Get-TemplateDisplayNames -Path $script:tempDir
             $result.GetType().Name | Should -Be 'HashSet`1'

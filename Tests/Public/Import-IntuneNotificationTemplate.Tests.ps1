@@ -220,6 +220,13 @@ Describe 'Import-IntuneNotificationTemplate' {
             $created = @($result | Where-Object { $_.Action -eq 'Created' })
             $created.Count | Should -Be 1
             $created[0].Status | Should -BeLike 'PartialSuccess*'
+
+            $failedLocalizedMessages = @($result | Where-Object {
+                    $_.Action -eq 'Failed' -and
+                    $_.Type -eq 'NotificationTemplateLocalizedMessage'
+                })
+            $failedLocalizedMessages.Count | Should -Be 1
+            $failedLocalizedMessages[0].Status | Should -BeLike 'Localized message create failed:*'
         }
     }
 
@@ -265,13 +272,11 @@ Describe 'Import-IntuneNotificationTemplate' {
                 displayName     = 'Delete Template'
                 brandingOptions = 'includeCompanyLogo'
             } | ConvertTo-Json -Depth 10
-            Set-Content -Path (Join-Path $notifDir 'DeleteTemplate.json') -Value $templateJson
+            $script:notifDeleteTemplateFile = Join-Path $notifDir 'DeleteTemplate.json'
+            Set-Content -Path $script:notifDeleteTemplateFile -Value $templateJson
 
             Mock Get-HydrationTemplates {
-                @([PSCustomObject]@{
-                        FullName = (Join-Path 'TestDrive:' 'NotifDelete\DeleteTemplate.json')
-                        Name     = 'DeleteTemplate.json'
-                    })
+                @(Get-Item -Path $script:notifDeleteTemplateFile)
             } -ModuleName IntuneHydrationKit
         }
 

@@ -112,7 +112,6 @@ Describe 'Invoke-IntuneWinGetAppTemplate' {
                 Mock New-IntuneWinPackage { } -ParameterFilter { $PackagingContext }
                 Mock New-WinGetOwnershipNotes { '' }
                 Mock Get-WinGetDetectionRules { @() }
-                Mock Get-PrimaryArchitecture { 'x64' }
                 Mock Get-RequirementArchitecture { 'x64' }
                 Mock New-IntuneWin32AppPayload { [pscustomobject]@{ appVersion = '1.0.0' } }
                 Mock Invoke-HydrationGraphRequest { [pscustomobject]@{ id = '00000000-0000-0000-0000-000000000001' } }

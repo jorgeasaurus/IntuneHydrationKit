@@ -161,6 +161,77 @@ Describe 'Import-IntuneCompliancePolicy' {
 
             Import-IntuneCompliancePolicy -Platform Windows
         }
+
+        It 'Should not route a Windows-scoped template to Linux when JSON platform metadata is wrong' {
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "displayName": "Windows 10 Compliance Policy",
+    "description": "Mis-authored platform metadata",
+    "platforms": "linux",
+    "technologies": "linuxMdm"
+}
+'@
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $batchObj = $Body | ConvertFrom-Json
+                    $batchObj.requests[0].url | Should -Be '/deviceManagement/deviceCompliancePolicies'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-policy-id'; displayName = '[IHD] Windows 10 Compliance Policy' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $warnings = @()
+            Import-IntuneCompliancePolicy -Platform Windows -WarningVariable warnings
+
+            ($warnings | Out-String) | Should -Match 'does not match file platform'
+        }
+
+        It 'Should warn when platform metadata mixes the filename platform with another platform' {
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "displayName": "Windows 10 Compliance Policy",
+    "description": "Mixed platform metadata",
+    "platforms": [ "windows10", "linux" ],
+    "technologies": [ "mdm", "linuxMdm" ]
+}
+'@
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*$batch*') {
+                    $batchObj = $Body | ConvertFrom-Json
+                    $batchObj.requests[0].url | Should -Be '/deviceManagement/deviceCompliancePolicies'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 201; body = @{ id = 'new-policy-id'; displayName = '[IHD] Windows 10 Compliance Policy' } }
+                        )
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $warnings = @()
+            Import-IntuneCompliancePolicy -Platform Windows -WarningVariable warnings
+
+            ($warnings | Out-String) | Should -Match 'Windows, Linux'
+            ($warnings | Out-String) | Should -Match 'does not match file platform'
+        }
     }
 
     Context 'Create Mode - Linux Compliance Policy' {
@@ -339,13 +410,22 @@ Describe 'Import-IntuneCompliancePolicy' {
 
     Context 'Delete Mode' {
         BeforeAll {
+            $script:deleteComplianceTemplateDir = Join-Path ([System.IO.Path]::GetTempPath()) "IHK-ComplianceDelete-$([guid]::NewGuid().ToString('N'))"
+            New-Item -Path $script:deleteComplianceTemplateDir -ItemType Directory -Force | Out-Null
+            $script:deleteComplianceTemplateFile = Join-Path $script:deleteComplianceTemplateDir 'Windows-Compliance.json'
+            '{"@odata.type":"#microsoft.graph.windows10CompliancePolicy","displayName":"Test Policy"}' | Set-Content -Path $script:deleteComplianceTemplateFile -Encoding utf8
+
             Mock Test-Path { return $true } -ModuleName IntuneHydrationKit
             Mock Get-FilteredTemplates {
-                @([PSCustomObject]@{ FullName = 'TestPath\Windows-Compliance.json'; Name = 'Windows-Compliance.json' })
+                @(Get-Item -Path $script:deleteComplianceTemplateFile)
             } -ModuleName IntuneHydrationKit
             Mock Get-Content {
                 '{"@odata.type": "#microsoft.graph.windows10CompliancePolicy", "displayName": "Test Policy"}'
             } -ModuleName IntuneHydrationKit
+        }
+
+        AfterAll {
+            Remove-Item -Path $script:deleteComplianceTemplateDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         It 'Should list existing policies when RemoveExisting is specified' {
@@ -378,7 +458,7 @@ Describe 'Import-IntuneCompliancePolicy' {
                 if ($Method -eq 'GET') {
                     return @{
                         value = @(
-                            @{ id = 'policy-1'; displayName = 'Hydration Policy'; description = 'Imported by Intune Hydration Kit' },
+                            @{ id = 'policy-1'; displayName = 'Test Policy'; description = 'Imported by Intune Hydration Kit' },
                             @{ id = 'policy-2'; displayName = 'Manual Policy'; description = 'Created manually' }
                         )
                     }
@@ -389,7 +469,7 @@ Describe 'Import-IntuneCompliancePolicy' {
 
             $deletedPolicies = $result | Where-Object { $_.Action -eq 'WouldDelete' }
             $deletedPolicies.Count | Should -Be 1
-            $deletedPolicies[0].Name | Should -Be 'Hydration Policy'
+            $deletedPolicies[0].Name | Should -Be 'Test Policy'
         }
 
         It 'Should delete policies when RemoveExisting is specified' {
@@ -418,6 +498,34 @@ Describe 'Import-IntuneCompliancePolicy' {
             $deletedItems = @($result | Where-Object { $_.Action -eq 'Deleted' })
             $deletedItems.Count | Should -Be 1
             $deletedItems[0].Name | Should -Be 'Test Policy'
+        }
+
+        It 'Should only delete policies from platform-filtered templates and endpoints' {
+            Mock Test-HydrationKitObject { return $true } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*deviceCompliancePolicies*') {
+                    return @{
+                        value = @(
+                            @{ id = 'policy-1'; displayName = '[IHD] Test Policy'; description = 'Imported by Intune Hydration Kit' },
+                            @{ id = 'policy-2'; displayName = '[IHD] Linux Policy'; description = 'Imported by Intune Hydration Kit' }
+                        )
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*deviceManagement/compliancePolicies*') {
+                    throw 'Linux compliance endpoint should not be queried for Windows scope'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneCompliancePolicy -Platform Windows -RemoveExisting -WhatIf
+
+            $wouldDelete = @($result | Where-Object { $_.Action -eq 'WouldDelete' })
+            $wouldDelete.Count | Should -Be 1
+            $wouldDelete[0].Name | Should -Be '[IHD] Test Policy'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*deviceManagement/compliancePolicies*'
+            }
         }
     }
 

@@ -19,15 +19,6 @@ function New-IntuneWinPackage {
         [psobject]$PackagingContext
     )
 
-    function ConvertTo-Base64 {
-        param(
-            [Parameter(Mandatory)]
-            [byte[]]$Value
-        )
-
-        return [Convert]::ToBase64String($Value)
-    }
-
     function Format-DetectionXml {
         param(
             [Parameter(Mandatory)]
@@ -154,12 +145,12 @@ function New-IntuneWinPackage {
             $outputStream.Flush()
 
             return @{
-                EncryptionKey        = ConvertTo-Base64 -Value $encryptionAlgorithm.Key
-                MacKey               = ConvertTo-Base64 -Value $macAlgorithm.Key
-                InitializationVector = ConvertTo-Base64 -Value $initializationVector
-                Mac                  = ConvertTo-Base64 -Value $mac
+                EncryptionKey        = [Convert]::ToBase64String($encryptionAlgorithm.Key)
+                MacKey               = [Convert]::ToBase64String($macAlgorithm.Key)
+                InitializationVector = [Convert]::ToBase64String($initializationVector)
+                Mac                  = [Convert]::ToBase64String($mac)
                 ProfileIdentifier    = 'ProfileVersion1'
-                FileDigest           = ConvertTo-Base64 -Value $fileDigest
+                FileDigest           = [Convert]::ToBase64String($fileDigest)
                 FileDigestAlgorithm  = 'SHA256'
             }
         } finally {

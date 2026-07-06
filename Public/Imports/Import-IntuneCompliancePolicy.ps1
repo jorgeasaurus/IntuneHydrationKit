@@ -47,10 +47,16 @@ function Import-IntuneCompliancePolicy {
     # Store full policy objects so we can check descriptions later
     $existingPolicies = @{}
     # Each endpoint has different property names - use endpoint-specific $select
-    $endpointsToList = @(
-        @{ Uri = "beta/deviceManagement/deviceCompliancePolicies"; Select = "id,displayName,description" },
-        @{ Uri = "beta/deviceManagement/compliancePolicies"; Select = "id,name,description" }
-    )
+    $includeAllPlatforms = -not $Platform -or $Platform -contains 'All'
+    $includeLinuxCompliance = $includeAllPlatforms -or $Platform -contains 'Linux'
+    $includeClassicCompliance = $includeAllPlatforms -or @($Platform | Where-Object { $_ -ne 'Linux' }).Count -gt 0
+    $endpointsToList = @()
+    if ($includeClassicCompliance) {
+        $endpointsToList += @{ Uri = "beta/deviceManagement/deviceCompliancePolicies"; Select = "id,displayName,description" }
+    }
+    if ($includeLinuxCompliance) {
+        $endpointsToList += @{ Uri = "beta/deviceManagement/compliancePolicies"; Select = "id,name,description" }
+    }
     foreach ($ep in $endpointsToList) {
         $listUri = "$($ep.Uri)`?`$select=$($ep.Select)"
         try {
@@ -96,14 +102,20 @@ function Import-IntuneCompliancePolicy {
     # Remove existing policies if requested
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
-        # Collect policies to delete (only those with hydration marker)
+        $knownTemplateNames = Get-TemplateDisplayNames -TemplateFiles $templateFiles
+
+        # Collect policies to delete (only those with hydration marker and matching template name)
         $policiesToDelete = @()
         foreach ($policyName in $existingPolicies.Keys) {
             $policyInfo = $existingPolicies[$policyName]
 
-            # Safety check: Only delete if created by this kit (has hydration marker in description)
-            if (-not (Test-HydrationKitObject -Description $policyInfo.Description -ObjectName $policyName)) {
-                Write-Verbose "Skipping '$policyName' - not created by Intune Hydration Kit"
+            $deleteDecision = Resolve-HydrationMarkedDeleteCandidate `
+                -Name $policyName `
+                -Description $policyInfo.Description `
+                -KnownTemplateNames $knownTemplateNames `
+                -FullObjectUri "$($policyInfo.Endpoint)/$($policyInfo.Id)"
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$policyName' - $($deleteDecision.Message)"
                 continue
             }
 
@@ -148,8 +160,28 @@ function Import-IntuneCompliancePolicy {
                 continue
             }
 
-            # Choose endpoint: Linux uses compliancePolicies, others use deviceCompliancePolicies
-            $isLinuxCompliance = $template.platforms -eq 'linux' -and $template.technologies -eq 'linuxMdm'
+            $filenamePlatform = $null
+            foreach ($platformName in @('Windows', 'macOS', 'iOS', 'Android', 'Linux')) {
+                if ($templateFile.Name -like "$platformName-*") {
+                    $filenamePlatform = $platformName
+                    break
+                }
+            }
+
+            $templatePlatformValues = @($template.platforms | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            $platformLabels = @{ windows = 'Windows'; windows10 = 'Windows'; macos = 'macOS'; ios = 'iOS'; android = 'Android'; linux = 'Linux' }
+            $metadataPlatforms = @($templatePlatformValues | ForEach-Object { $platformLabels[$_.ToLowerInvariant()] } | Where-Object { $_ } | Select-Object -Unique)
+            if ($filenamePlatform -and $metadataPlatforms.Count -gt 0 -and
+                ($metadataPlatforms -notcontains $filenamePlatform -or $metadataPlatforms.Count -gt 1)) {
+                Write-Warning "Template platform metadata '$($metadataPlatforms -join ', ')' does not match file platform '$filenamePlatform': $($templateFile.FullName)"
+            }
+
+            # Choose endpoint: Linux uses compliancePolicies, others use deviceCompliancePolicies.
+            # If the filename scoped the template to a non-Linux platform, do not let contradictory JSON route it to Linux.
+            $templateTechnologies = @($template.technologies | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            $isLinuxCompliance = (-not $filenamePlatform -or $filenamePlatform -eq 'Linux') -and
+                $templatePlatformValues.Count -eq 1 -and $templatePlatformValues[0] -eq 'linux' -and
+                $templateTechnologies.Count -eq 1 -and $templateTechnologies[0] -eq 'linuxMdm'
             $endpoint = if ($isLinuxCompliance) {
                 "deviceManagement/compliancePolicies"
             } else {

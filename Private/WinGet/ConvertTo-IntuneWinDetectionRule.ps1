@@ -120,8 +120,8 @@ function ConvertTo-IntuneWinDetectionRule {
                 throw "ScriptRootPath is required for script detection rule '$scriptFile'."
             }
 
-            $scriptPath = Join-Path -Path $ScriptRootPath -ChildPath $scriptFile
-            $scriptContent = Get-Content -Path $scriptPath -Raw -ErrorAction Stop
+            $resolvedScriptPath = Resolve-HydrationTemplateChildPath -RootPath $ScriptRootPath -ChildPath $scriptFile -PathLabel 'Script file'
+            $scriptContent = Get-Content -Path $resolvedScriptPath -Raw -ErrorAction Stop
             $encodedScriptContent = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($scriptContent))
             $scriptRule = @{
                 '@odata.type'         = '#microsoft.graph.win32LobAppPowerShellScriptRule'

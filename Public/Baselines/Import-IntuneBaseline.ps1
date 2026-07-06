@@ -129,7 +129,12 @@ function Import-IntuneBaseline {
     # SAFETY: Only delete policies that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Load template names to scope deletes to only policies this kit would create
-        $knownTemplateNames = Get-TemplateDisplayNames -Path $BaselinePath -Recurse
+        $deleteTemplateFiles = Get-FilteredTemplates -Path $BaselinePath -Platform $Platform -FilterMode 'Folder' -Recurse -ResourceType "OpenIntuneBaseline template"
+        if (-not $deleteTemplateFiles -or $deleteTemplateFiles.Count -eq 0) {
+            Write-Verbose "No OpenIntuneBaseline templates in scope for deletion"
+            return $results
+        }
+        $knownTemplateNames = Get-TemplateDisplayNames -TemplateFiles $deleteTemplateFiles
 
         # Delete from all endpoints used by baselines
         # Shared endpoints always included; platform-specific endpoints scoped by -Platform
@@ -150,7 +155,7 @@ function Import-IntuneBaseline {
             $deleteEndpoints += 'beta/deviceAppManagement/iosManagedAppProtections'
         }
 
-        $policiesToDelete = Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames -RequireTemplateMatch
+        $policiesToDelete = @(Get-HydrationDeleteCandidates -Endpoint $deleteEndpoints -KnownTemplateNames $knownTemplateNames)
 
         if ($policiesToDelete.Count -eq 0) {
             Write-Verbose "No baseline policies found to delete"
@@ -385,8 +390,11 @@ function Import-IntuneBaseline {
                         "$($script:ImportPrefix)$policyName"
                     }
 
-                    # Check if policy exists using pre-fetched cache
-                    $existingPolicy = $endpointPolicyCache[$typeEndpoint].ContainsKey($displayName)
+                    # Check if policy exists using pre-fetched cache. Check both prefixed and
+                    # legacy unprefixed names to avoid duplicates from older kit versions.
+                    $legacyDisplayName = if ($policyContent.displayName) { $policyContent.displayName } else { $policyName }
+                    $existingPolicy = $endpointPolicyCache[$typeEndpoint].ContainsKey($displayName) -or
+                    ($legacyDisplayName -and $endpointPolicyCache[$typeEndpoint].ContainsKey($legacyDisplayName))
 
                     if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
                         Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
@@ -565,8 +573,17 @@ function Import-IntuneBaseline {
                     "$($script:ImportPrefix)$policyName"
                 }
 
-                # Check if policy exists using cached list
-                $existingPolicy = $existingPolicies.ContainsKey($displayName)
+                # Check if policy exists using cached list. Check both prefixed and
+                # legacy unprefixed names to avoid duplicates from older kit versions.
+                $legacyDisplayName = if ($policyContent.displayName) {
+                    $policyContent.displayName
+                } elseif ($policyContent.name) {
+                    $policyContent.name
+                } else {
+                    $policyName
+                }
+                $existingPolicy = $existingPolicies.ContainsKey($displayName) -or
+                ($legacyDisplayName -and $existingPolicies.ContainsKey($legacyDisplayName))
 
                 if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
                     Write-HydrationLog -Message "  Skipped: $displayName" -Level Info

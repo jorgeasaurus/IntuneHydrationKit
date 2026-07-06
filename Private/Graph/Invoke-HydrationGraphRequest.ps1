@@ -163,7 +163,7 @@ function Invoke-HydrationGraphRequest {
             }
 
             $candidateStatusCode = Get-GraphStatusCode -ErrorRecord $candidateRecord
-            if ($candidateStatusCode) {
+            if ($null -ne $candidateStatusCode) {
                 return $candidateRecord
             }
         }
@@ -193,20 +193,23 @@ function Invoke-HydrationGraphRequest {
     $bodySummary = Get-GraphBodySummary -Value $Body -ResolvedContentType $ContentType
     Write-Debug "Invoking Graph request Method='$Method', Uri='$uriForLogging', $bodySummary."
 
-    for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+    # MaxRetries means retries after the initial attempt.
+    for ($attempt = 0; $attempt -le $MaxRetries; $attempt++) {
         try {
             return Invoke-MgGraphRequest @invokeParams
         } catch {
             $graphErrorRecord = Resolve-GraphErrorRecord -ErrorRecord $_
             $statusCode = Get-GraphStatusCode -ErrorRecord $graphErrorRecord
             $isRetryableStatusCode = $null -ne $statusCode -and ($statusCode -eq 429 -or ($statusCode -ge 500 -and $statusCode -lt 600))
-            Write-Debug "Graph request failed Method='$Method', Uri='$uriForLogging', StatusCode='$statusCode', Attempt=$attempt/$MaxRetries, Retryable=$isRetryableStatusCode, Error='$($_.Exception.Message)'."
-            if (-not $isRetryableStatusCode -or $attempt -eq $MaxRetries) {
+            $attemptNumber = $attempt + 1
+            Write-Debug "Graph request failed Method='$Method', Uri='$uriForLogging', StatusCode='$statusCode', Attempt=$attemptNumber, MaxRetries=$MaxRetries, Retryable=$isRetryableStatusCode, Error='$($_.Exception.Message)'."
+            if (-not $isRetryableStatusCode -or $attempt -ge $MaxRetries) {
                 throw
             }
 
-            $delaySeconds = Get-RetryDelay -ErrorRecord $graphErrorRecord -Attempt $attempt -BaseDelaySeconds $RetryDelaySeconds
-            Write-Verbose "Graph request failed with HTTP $statusCode. Retrying in $delaySeconds second(s) (attempt $attempt of $MaxRetries)."
+            $retryNumber = $attempt + 1
+            $delaySeconds = Get-RetryDelay -ErrorRecord $graphErrorRecord -Attempt $retryNumber -BaseDelaySeconds $RetryDelaySeconds
+            Write-Verbose "Graph request failed with HTTP $statusCode. Retrying in $delaySeconds second(s) (retry $retryNumber of $MaxRetries)."
             Start-Sleep -Seconds $delaySeconds
         }
     }

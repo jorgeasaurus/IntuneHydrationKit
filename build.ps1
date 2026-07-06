@@ -7,12 +7,12 @@
     Installs required build dependencies (InvokeBuild, Pester, PSScriptAnalyzer)
     and optionally invokes the build process.
 .PARAMETER Task
-    The build task(s) to run. If not specified, only bootstraps dependencies.
+    The build task(s) to run. If not specified, runs the default validation task.
 .PARAMETER NoBuild
     Only install dependencies, don't run any build tasks.
 .EXAMPLE
     ./build.ps1
-    Installs dependencies only.
+    Installs dependencies and runs the default validation task.
 .EXAMPLE
     ./build.ps1 -Task Build
     Installs dependencies and runs the Build task.
@@ -60,8 +60,12 @@ foreach ($module in $requiredModules) {
 
 Write-Information "Bootstrap complete."
 
-# Run build if tasks specified and not NoBuild
-if ($Task -and -not $NoBuild) {
+# Run build unless explicitly disabled
+if (-not $NoBuild) {
+    if (-not $Task) {
+        $Task = @('.')
+    }
+
     Write-Information ""
     Write-Information "Running build tasks: $($Task -join ', ')"
 

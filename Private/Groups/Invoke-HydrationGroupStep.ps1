@@ -27,15 +27,27 @@ function Invoke-HydrationGroupStep {
     }
     Write-HydrationLog @logParams
 
+    if (@($Platforms).Count -eq 0) {
+        Write-Verbose "No $GroupType groups in scope for the selected platform filter"
+        return @()
+    }
+
+    $groupData = Get-HydrationGroupDefinitionsFromTemplates -TemplatePath $TemplatePath -Platforms $Platforms
+    if ($null -eq $groupData) {
+        $logParams = @{
+            Message = "$GroupType Groups template directory not found"
+            Level   = 'Warning'
+        }
+        Write-HydrationLog @logParams
+        return @()
+    }
+
     if ($RemoveExisting) {
-        $knownNames = if (Test-Path -Path $TemplatePath) {
-            $templateNameParams = @{
-                Path          = $TemplatePath
-                ArrayProperty = 'groups'
+        $knownNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($group in $groupData.DeleteFiltered) {
+            if ($group.displayName) {
+                [void]$knownNames.Add($group.displayName)
             }
-            Get-TemplateDisplayNames @templateNameParams
-        } else {
-            $null
         }
 
         $deleteGroupParams = @{
@@ -56,20 +68,6 @@ function Invoke-HydrationGroupStep {
         }
 
         return $deleteResults
-    }
-
-    $groupDataParams = @{
-        TemplatePath = $TemplatePath
-        Platforms    = $Platforms
-    }
-    $groupData = Get-HydrationGroupDefinitionsFromTemplates @groupDataParams
-    if ($null -eq $groupData) {
-        $logParams = @{
-            Message = "$GroupType Groups template directory not found"
-            Level   = 'Warning'
-        }
-        Write-HydrationLog @logParams
-        return @()
     }
 
     if ($groupData.Filtered.Count -lt $groupData.All.Count) {

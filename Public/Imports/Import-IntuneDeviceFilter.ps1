@@ -87,23 +87,20 @@ function Import-IntuneDeviceFilter {
     # SAFETY: Only delete filters that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Load template names to scope deletes to only filters this kit would create
-        $knownTemplateNames = Get-TemplateDisplayNames -Path $TemplatePath -ArrayProperty 'filters' -Recurse
+        $knownTemplateNames = Get-TemplateDisplayNames -TemplateFiles $templateFiles -ArrayProperty 'filters'
 
         # Collect filters to delete (only those with hydration marker AND matching a template name)
         $filtersToDelete = @()
         foreach ($filterName in $existingFilters.Keys) {
             $filterInfo = $existingFilters[$filterName]
 
-            # Safety check: Only delete if created by this kit (has hydration marker in description)
-            if (-not (Test-HydrationKitObject -Description $filterInfo.Description -ObjectName $filterName)) {
-                Write-Verbose "Skipping '$filterName' - not created by Intune Hydration Kit"
-                continue
-            }
-
-            $escapedPrefix = [regex]::Escape($script:ImportPrefix)
-            $nameForLookup = $filterName -replace "^$escapedPrefix", ''
-            if (-not ($knownTemplateNames.Contains($filterName) -or $knownTemplateNames.Contains($nameForLookup))) {
-                Write-Verbose "Skipping '$filterName' - not in this kit's templates (may be from another tool)"
+            $deleteDecision = Resolve-HydrationMarkedDeleteCandidate `
+                -Name $filterName `
+                -Description $filterInfo.Description `
+                -KnownTemplateNames $knownTemplateNames `
+                -FullObjectUri "beta/deviceManagement/assignmentFilters/$($filterInfo.Id)"
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$filterName' - $($deleteDecision.Message)"
                 continue
             }
 

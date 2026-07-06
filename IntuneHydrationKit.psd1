@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.1.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -32,37 +32,30 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
-        # Main entry point
-        'Invoke-IntuneHydration',
-        # Core hydration functions
         'Connect-IntuneHydration',
-        'Test-IntunePrerequisites',
-        # Import functions
+        'Get-GraphErrorMessage',
+        'Get-ObfuscatedTenantId',
+        'Get-OpenIntuneBaseline',
+        'Get-ResultSummary',
+        'Import-CISBaseline',
+        'Import-HydrationSettings',
+        'Import-IntuneAppProtectionPolicy',
+        'Import-IntuneBaseline',
+        'Import-IntuneCompliancePolicy',
+        'Import-IntuneConditionalAccessPolicy',
+        'Import-IntuneDeviceFilter',
+        'Import-IntuneEnrollmentProfile',
+        'Import-IntuneMobileApp',
+        'Import-IntuneNotificationTemplate',
+        'Import-IntuneWinGetApp',
+        'Initialize-HydrationLogging',
+        'Invoke-IntuneHydration',
+        'New-HydrationResult',
         'New-IntuneDynamicGroup',
         'New-IntuneStaticGroup',
-        'Get-OpenIntuneBaseline',
-        'Import-IntuneBaseline',
-        'Import-CISBaseline',
-        'Import-IntuneCompliancePolicy',
-        'Import-IntuneAppProtectionPolicy',
-        'Import-IntuneNotificationTemplate',
-        'Import-IntuneEnrollmentProfile',
-        'Import-IntuneDeviceFilter',
-        'Import-IntuneConditionalAccessPolicy',
-        'Import-IntuneMobileApp',
-        'Import-IntuneWinGetApp',
-        # Helper functions
-        'Initialize-HydrationLogging',
-        'Write-HydrationLog',
-        'Import-HydrationSettings',
-        # Result helpers (used by orchestrator)
-        'New-HydrationResult',
-        'Get-ResultSummary',
-        'Get-GraphErrorMessage',
-        # Safety helpers (used by orchestrator for deletion safety checks)
         'Test-HydrationKitObject',
-        # Utility helpers
-        'Get-ObfuscatedTenantId'
+        'Test-IntunePrerequisites',
+        'Write-HydrationLog'
     )
 
     # Cmdlets to export from this module
@@ -92,11 +85,15 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.1.0
+## v1.1.1
 
-- **Device Filters:** Added Windows architecture assignment filters for x64, ARM64, and x86 devices using Intune's native `device.cpuArchitecture` property.
-- **Device Filters:** Added macOS architecture assignment filters for Apple Silicon and Intel devices using Intune's native `device.cpuArchitecture` property.
-- **Template contracts:** Added coverage for bundled dynamic group and device filter templates, including architecture filter rule validation.
+- **Delete mode:** Tightened template-scoped deletes across hydration workloads so platform-scoped deletes fail closed and only known kit templates are removed.
+- **Enrollment profiles:** Fixed Autopilot and Enrollment Status Page idempotency to skip same-name existing profiles, including untagged profiles created before hydration tagging.
+- **Compliance and CIS baselines:** Fixed platform routing safeguards so mismatched template metadata warns instead of sending policies to the wrong Graph endpoint.
+- **Graph batching:** Improved batch response correlation, retry handling, and indeterminate create reporting for missing or transient Graph responses.
+- **WinGet apps:** Blocked detection and requirement script paths from escaping the template root.
+- **Groups:** Avoided generated mail nickname collisions with deterministic suffixes.
+- **OpenIntuneBaseline parity:** Switched the weekly parity workflow to direct `git diff` artifacts.
 
 '@
         }

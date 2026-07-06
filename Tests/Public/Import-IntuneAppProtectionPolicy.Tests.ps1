@@ -133,6 +133,43 @@ Describe 'Import-IntuneAppProtectionPolicy' {
             $created.Count | Should -Be 1
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
         }
+
+        It 'Should preserve targeted apps in the create payload' {
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.androidManagedAppProtection",
+    "displayName": "Android MAM Policy",
+    "description": "Test Android app protection",
+    "apps": [
+        {
+            "mobileAppIdentifier": {
+                "@odata.type": "#microsoft.graph.androidMobileAppIdentifier",
+                "packageId": "com.microsoft.office.outlook"
+            }
+        }
+    ]
+}
+'@
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') { return @{ value = @() } }
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-GraphBatchOperation {
+                param($Items)
+                $body = $Items[0].BodyJson | ConvertFrom-Json
+                $body.apps | Should -Not -BeNullOrEmpty
+                $body.apps[0].mobileAppIdentifier.packageId | Should -Be 'com.microsoft.office.outlook'
+                return @([PSCustomObject]@{ Name = '[IHD] Android MAM Policy'; Type = 'AppProtection'; Action = 'Created'; Status = 'Success' })
+            } -ModuleName IntuneHydrationKit
+
+            Import-IntuneAppProtectionPolicy | Out-Null
+
+            Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 1
+        }
     }
 
     Context 'WhatIf Support' {
@@ -184,13 +221,22 @@ Describe 'Import-IntuneAppProtectionPolicy' {
 
     Context 'Delete Mode' {
         BeforeAll {
+            $script:deleteAppProtectionTemplateDir = Join-Path ([System.IO.Path]::GetTempPath()) "IHK-AppProtectionDelete-$([guid]::NewGuid().ToString('N'))"
+            New-Item -Path $script:deleteAppProtectionTemplateDir -ItemType Directory -Force | Out-Null
+            $script:deleteAppProtectionTemplateFile = Join-Path $script:deleteAppProtectionTemplateDir 'Android-AppProtection.json'
+            '{"@odata.type":"#microsoft.graph.androidManagedAppProtection","displayName":"Test Policy"}' | Set-Content -Path $script:deleteAppProtectionTemplateFile -Encoding utf8
+
             Mock Get-FilteredTemplates {
-                @([PSCustomObject]@{ FullName = 'TestPath\Android-AppProtection.json'; Name = 'Android-AppProtection.json' })
+                @(Get-Item -Path $script:deleteAppProtectionTemplateFile)
             } -ModuleName IntuneHydrationKit
 
             Mock Get-Content {
                 '{"@odata.type": "#microsoft.graph.androidManagedAppProtection", "displayName": "Test Policy"}'
             } -ModuleName IntuneHydrationKit
+        }
+
+        AfterAll {
+            Remove-Item -Path $script:deleteAppProtectionTemplateDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         It 'Should only delete policies with hydration marker and matching template names' {

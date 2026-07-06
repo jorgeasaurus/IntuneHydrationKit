@@ -41,7 +41,7 @@ jobs:
 
       - name: Bootstrap Build Environment
         shell: pwsh
-        run: ./build.ps1
+        run: ./build.ps1 -NoBuild
 
       - name: Run PSScriptAnalyzer
         shell: pwsh

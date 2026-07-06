@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-06
+
+### Changed
+
+- **Delete mode**: Tightened template-scoped deletion across hydration workloads so platform-scoped deletes fail closed and only known kit templates are removed.
+- **Graph batching**: Improved batch response correlation, retry handling, and indeterminate create reporting for missing or transient Graph responses.
+- **OpenIntuneBaseline parity**: Replaced custom comparison output with direct `git diff` artifacts.
+
+### Fixed
+
+- **Enrollment profiles**: Fixed Autopilot and Enrollment Status Page imports to skip same-name existing profiles, including untagged profiles created before hydration tagging.
+- **Compliance and CIS baselines**: Fixed platform routing safeguards so mismatched template metadata warns instead of sending policies to the wrong Graph endpoint.
+- **WinGet apps**: Blocked detection and requirement script paths from escaping the template root.
+- **Groups**: Avoided generated `mailNickname` collisions with deterministic suffixes.
+
 ## [1.1.0] - 2026-06-26
 
 ### Added

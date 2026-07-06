@@ -546,6 +546,27 @@ Describe 'Invoke-IntuneHydration' {
             } -Times 1
         }
 
+        It 'Should let command-line Delete override settings-file create mode' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-delete-override.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; force = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ deviceFilters = $true }
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath -Delete -Force | Out-Null
+
+            Should -Invoke Import-IntuneDeviceFilter -ModuleName IntuneHydrationKit -ParameterFilter {
+                $RemoveExisting -eq $true
+            } -Times 1
+        }
+
         It 'Should pass baseline platform filters to prerequisite checks' {
             $testSettingsPath = Join-Path $script:TestTempPath 'settings-baseline-platforms.json'
             '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
@@ -566,6 +587,32 @@ Describe 'Invoke-IntuneHydration' {
 
             Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
                 $BaselinePlatforms.Count -eq 1 -and $BaselinePlatforms -contains 'Windows'
+            } -Times 1
+        }
+
+        It 'Should let command-line Platform All override settings-file platform filters' {
+            $testSettingsPath = Join-Path $script:TestTempPath 'settings-platform-all-override.json'
+            '{}' | Set-Content -Path $testSettingsPath -Encoding utf8
+
+            Mock Import-HydrationSettings {
+                @{
+                    tenant         = @{ tenantId = '12345678-1234-1234-1234-123456789abc' }
+                    authentication = @{ mode = 'interactive'; environment = 'Global' }
+                    options        = @{ create = $true; delete = $false; dryRun = $true; verbose = $false }
+                    imports        = @{ openIntuneBaseline = $true }
+                    platforms      = @('Windows')
+                    reporting      = @{ formats = @('markdown') }
+                }
+            } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneBaseline { @() } -ModuleName IntuneHydrationKit
+
+            Invoke-IntuneHydration -SettingsPath $testSettingsPath -Platform All | Out-Null
+
+            Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
+                $BaselinePlatforms.Count -eq 1 -and $BaselinePlatforms -contains 'All'
+            } -Times 1
+            Should -Invoke Import-IntuneBaseline -ModuleName IntuneHydrationKit -ParameterFilter {
+                @($Platform).Count -eq 1 -and $Platform[0] -eq 'All'
             } -Times 1
         }
     }
@@ -766,6 +813,29 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
                 @($Platform).Count -eq 1 -and $Platform[0] -eq 'macOS'
             }
+        }
+
+        It 'Should skip MobileApps when selected platform is unsupported for mobile app imports' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Delete -MobileApps -Platform iOS -Force -WhatIf
+
+            Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Import-IntuneMobileApp -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Imports.mobileApps -eq $false
+            } -Times 1
+        }
+
+        It 'Should skip platform-neutral delete workloads when a specific platform is selected' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Delete -All -Platform Linux -Force -WhatIf
+
+            Should -Invoke Import-IntuneNotificationTemplate -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Test-IntunePrerequisites -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Imports.notificationTemplates -eq $false -and
+                $Imports.conditionalAccess -eq $false -and
+                $Imports.complianceTemplates -eq $true -and
+                $Imports.cisBaselines -eq $true
+            } -Times 1
         }
 
         It 'Should call all import functions when -All is specified' {

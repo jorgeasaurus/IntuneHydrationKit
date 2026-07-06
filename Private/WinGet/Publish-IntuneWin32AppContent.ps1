@@ -21,15 +21,6 @@ function Publish-IntuneWin32AppContent {
         [int]$TimeoutSeconds = 180
     )
 
-    function Get-UploadUriForLogging {
-        param(
-            [Parameter(Mandatory)]
-            [string]$Uri
-        )
-
-        return ($Uri -split '\?', 2)[0]
-    }
-
     if (-not $Metadata) {
         $Metadata = Get-IntuneWinPackageMetadata -IntuneWinPath $IntuneWinPath
     }
