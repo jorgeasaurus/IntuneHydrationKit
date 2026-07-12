@@ -406,6 +406,38 @@ Describe 'Import-IntuneCompliancePolicy' {
 
             $result[0].Action | Should -Be 'WouldCreate'
         }
+
+        It 'Should not create custom compliance script when WhatIf is specified' {
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+    "displayName": "Custom Compliance Policy",
+    "description": "",
+    "deviceCompliancePolicyScript": {},
+    "deviceCompliancePolicyScriptDefinition": {
+        "displayName": "Custom Compliance Script",
+        "detectionScriptContentBase64": "V3JpdGUtT3V0cHV0ICdPSyc=",
+        "rules": [
+            {
+                "SettingName": "Result",
+                "Operator": "IsEquals",
+                "DataType": "String",
+                "Operand": "OK"
+            }
+        ]
+    }
+}
+'@
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneCompliancePolicy -Platform Windows -WhatIf
+
+            $result[0].Action | Should -Be 'WouldCreate'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'POST'
+            } -Times 0
+        }
     }
 
     Context 'Delete Mode' {

@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.1.1'
+    ModuleVersion     = '1.1.2'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,15 +85,10 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.1.1
+## v1.1.2
 
-- **Delete mode:** Tightened template-scoped deletes across hydration workloads so platform-scoped deletes fail closed and only known kit templates are removed.
-- **Enrollment profiles:** Fixed Autopilot and Enrollment Status Page idempotency to skip same-name existing profiles, including untagged profiles created before hydration tagging.
-- **Compliance and CIS baselines:** Fixed platform routing safeguards so mismatched template metadata warns instead of sending policies to the wrong Graph endpoint.
-- **Graph batching:** Improved batch response correlation, retry handling, and indeterminate create reporting for missing or transient Graph responses.
-- **WinGet apps:** Blocked detection and requirement script paths from escaping the template root.
-- **Groups:** Avoided generated mail nickname collisions with deterministic suffixes.
-- **OpenIntuneBaseline parity:** Switched the weekly parity workflow to direct `git diff` artifacts.
+- **Conditional Access:** Fixed policy imports failing when templates contain prefixed OData annotations (e.g. `authenticationStrength@odata.context`); annotations are now stripped recursively while `@odata.type` is preserved.
+- **License detection:** Removed Defender for Cloud Apps (`ADALLOM_S_STANDALONE`) and Defender for Identity (`ATA`) service plans from Entra ID Premium P2 detection, so risk-based Conditional Access templates are correctly skipped on tenants without P2.
 
 '@
         }

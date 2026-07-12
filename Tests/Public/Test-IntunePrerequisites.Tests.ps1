@@ -826,6 +826,42 @@ Describe 'Test-IntunePrerequisites' {
             $messageData | Should -Contain "    ↳ 'Block high risk agent identities'"
             $messageData | Should -Contain "    ↳ 'Block access to Office365 apps for users with insider risk'"
         }
+
+        It 'Should not treat <ServicePlanName> as a Premium P2 license' -ForEach @(
+            @{ ServicePlanName = 'ADALLOM_S_STANDALONE' }
+            @{ ServicePlanName = 'ATA' }
+        ) {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                skuPartNumber    = $ServicePlanName
+                                servicePlans     = @(
+                                    @{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    },
+                                    @{
+                                        servicePlanName    = $ServicePlanName
+                                        provisioningStatus = 'Success'
+                                    }
+                                )
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $messages = @()
+            Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
+
+            $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
+        }
     }
 
     Context 'API Error Handling' {

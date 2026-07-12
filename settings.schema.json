@@ -33,10 +33,12 @@
                 },
                 "clientId": {
                     "type": ["string", "null"],
+                    "minLength": 1,
                     "description": "Application (client) ID for service principal authentication"
                 },
                 "clientSecret": {
                     "type": ["string", "null"],
+                    "minLength": 1,
                     "description": "Client secret for service principal authentication"
                 },
                 "environment": {
@@ -45,7 +47,31 @@
                     "default": "Global",
                     "description": "Azure cloud environment"
                 }
-            }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "mode": {
+                                "const": "clientSecret"
+                            }
+                        }
+                    },
+                    "then": {
+                        "required": ["clientId", "clientSecret"],
+                        "properties": {
+                            "clientId": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "clientSecret": {
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        }
+                    }
+                }
+            ]
         },
         "options": {
             "type": "object",

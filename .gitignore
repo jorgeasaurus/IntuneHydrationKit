@@ -57,3 +57,4 @@ tests-e2e/landing-page.spec.ts
 playwright-report/*
 package.json
 tasks/*
+testResults.xml

@@ -28,7 +28,6 @@ Describe 'Get-PremiumP2ServicePlans' {
         @{ Plan = 'EMSPREMIUM' }
         @{ Plan = 'M365EDU_A5_FACULTY' }
         @{ Plan = 'IDENTITY_THREAT_PROTECTION' }
-        @{ Plan = 'ATA' }
     ) {
         It 'Should contain <Plan>' {
             $result = Get-PremiumP2ServicePlans
@@ -41,6 +40,8 @@ Describe 'Get-PremiumP2ServicePlans' {
         @{ Plan = 'AAD_PREMIUM' }
         @{ Plan = 'SPE_E3' }
         @{ Plan = 'EXCHANGESTANDARD' }
+        @{ Plan = 'ADALLOM_S_STANDALONE' }
+        @{ Plan = 'ATA' }
     ) {
         It 'Should NOT contain <Plan>' {
             $result = Get-PremiumP2ServicePlans

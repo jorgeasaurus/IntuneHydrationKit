@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-07-12
+
+### Fixed
+
+- **Conditional Access**: Fixed policy imports failing when templates contain prefixed OData annotations (e.g. `authenticationStrength@odata.context`, present in 18 bundled templates); annotations are now removed recursively from the request body while `@odata.type` is preserved for polymorphic types.
+- **License detection**: Removed Defender for Cloud Apps (`ADALLOM_S_STANDALONE`) and Defender for Identity (`ATA`) service plans from Entra ID Premium P2 detection; these do not grant P2, so risk-based Conditional Access templates are now correctly skipped on tenants without P2 instead of failing at import.
+
 ## [1.1.1] - 2026-07-06
 
 ### Changed

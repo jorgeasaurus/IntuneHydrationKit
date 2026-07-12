@@ -42,12 +42,6 @@ function Get-PremiumP2ServicePlans {
         'EMS',                      # EMS E5 (alternate)
 
         # Identity & Threat Protection (standalone add-on)
-        'IDENTITY_THREAT_PROTECTION', # Microsoft 365 E5 Security
-
-        # Microsoft Defender for Cloud Apps (formerly MCAS) - includes some Identity Protection features
-        'ADALLOM_S_STANDALONE',     # Microsoft Defender for Cloud Apps
-
-        # Azure Advanced Threat Protection (now part of Defender for Identity)
-        'ATA'                       # Azure ATP
+        'IDENTITY_THREAT_PROTECTION' # Microsoft 365 E5 Security
     )
 }

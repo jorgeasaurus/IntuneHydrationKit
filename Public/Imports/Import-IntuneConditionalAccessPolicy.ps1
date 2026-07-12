@@ -256,10 +256,15 @@ function Import-IntuneConditionalAccessPolicy {
                 $policyBody.sessionControls = $policy.sessionControls
             }
 
-            # Remove any odata context properties that shouldn't be in create request
+            # Remove OData annotation properties (including prefixed ones like
+            # 'authenticationStrength@odata.context') that Graph rejects on create.
+            # Keeps '@odata.type' which is required for polymorphic types.
+            $null = Remove-ODataAnnotationProperty -InputObject $policyBody.conditions
+            $null = Remove-ODataAnnotationProperty -InputObject $policyBody.grantControls
+            if ($policyBody.ContainsKey('sessionControls')) {
+                $null = Remove-ODataAnnotationProperty -InputObject $policyBody.sessionControls
+            }
             $jsonBody = $policyBody | ConvertTo-Json -Depth 20 -Compress
-            $jsonBody = $jsonBody -replace '"@odata\.[^"]*":\s*"[^"]*",?\s*', ''
-            $jsonBody = $jsonBody -replace '"@odata\.[^"]*":\s*null,?\s*', ''
 
             $policiesToCreate += @{
                 Name     = $displayName
