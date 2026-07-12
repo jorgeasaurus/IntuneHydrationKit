@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '0.3.4'
+    ModuleVersion     = '1.1.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -14,7 +14,7 @@
     CompanyName       = 'Jorgeasaurus'
 
     # Copyright statement for this module
-    Copyright         = '(c) 2025 Jorgeasaurus. All rights reserved.'
+    Copyright         = '(c) 2026 Jorgeasaurus. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description       = 'Hydrates Microsoft Intune tenants with best-practice baseline configurations including policies, compliance packs, enrollment profiles, dynamic groups, security baselines, and conditional access starter packs.'
@@ -32,35 +32,30 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
-        # Main entry point
-        'Invoke-IntuneHydration',
-        # Core hydration functions
         'Connect-IntuneHydration',
-        'Test-IntunePrerequisites',
-        # Import functions
-        'New-IntuneDynamicGroup',
-        'New-IntuneStaticGroup',
+        'Get-GraphErrorMessage',
+        'Get-ObfuscatedTenantId',
         'Get-OpenIntuneBaseline',
+        'Get-ResultSummary',
+        'Import-CISBaseline',
+        'Import-HydrationSettings',
+        'Import-IntuneAppProtectionPolicy',
         'Import-IntuneBaseline',
         'Import-IntuneCompliancePolicy',
-        'Import-IntuneAppProtectionPolicy',
-        'Import-IntuneNotificationTemplate',
-        'Import-IntuneEnrollmentProfile',
-        'Import-IntuneDeviceFilter',
         'Import-IntuneConditionalAccessPolicy',
+        'Import-IntuneDeviceFilter',
+        'Import-IntuneEnrollmentProfile',
         'Import-IntuneMobileApp',
-        # Helper functions
+        'Import-IntuneNotificationTemplate',
+        'Import-IntuneWinGetApp',
         'Initialize-HydrationLogging',
-        'Write-HydrationLog',
-        'Import-HydrationSettings',
-        # Result helpers (used by orchestrator)
+        'Invoke-IntuneHydration',
         'New-HydrationResult',
-        'Get-ResultSummary',
-        'Get-GraphErrorMessage',
-        # Safety helpers (used by orchestrator for deletion safety checks)
+        'New-IntuneDynamicGroup',
+        'New-IntuneStaticGroup',
         'Test-HydrationKitObject',
-        # Utility helpers
-        'Get-ObfuscatedTenantId'
+        'Test-IntunePrerequisites',
+        'Write-HydrationLog'
     )
 
     # Cmdlets to export from this module
@@ -89,15 +84,16 @@
 
             # Release notes for this module
             ReleaseNotes = @'
-## v0.3.4
 
-- **Added:**
-  - **Windows Autopilot device preparation** support:
-    - New enrollment profile template: Windows Autopilot device preparation - User Driven
-    - New static group: Windows Autopilot device preparation (with Intune Provisioning Client as owner)
-    - Automatic group assignment for device preparation policy
-  - Platform filtering for template imports - filter baselines, compliance policies, and other imports by platform (Windows, macOS, iOS, Android, Linux)
-  - `settings.schema.json` for JSON schema validation of settings files
+## v1.1.1
+
+- **Delete mode:** Tightened template-scoped deletes across hydration workloads so platform-scoped deletes fail closed and only known kit templates are removed.
+- **Enrollment profiles:** Fixed Autopilot and Enrollment Status Page idempotency to skip same-name existing profiles, including untagged profiles created before hydration tagging.
+- **Compliance and CIS baselines:** Fixed platform routing safeguards so mismatched template metadata warns instead of sending policies to the wrong Graph endpoint.
+- **Graph batching:** Improved batch response correlation, retry handling, and indeterminate create reporting for missing or transient Graph responses.
+- **WinGet apps:** Blocked detection and requirement script paths from escaping the template root.
+- **Groups:** Avoided generated mail nickname collisions with deterministic suffixes.
+- **OpenIntuneBaseline parity:** Switched the weekly parity workflow to direct `git diff` artifacts.
 
 '@
         }

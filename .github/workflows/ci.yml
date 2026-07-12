@@ -28,6 +28,8 @@ jobs:
   build:
     name: Build and Test
     runs-on: ${{ matrix.os }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       fail-fast: true
       matrix:
@@ -35,11 +37,11 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Bootstrap Build Environment
         shell: pwsh
-        run: ./build.ps1
+        run: ./build.ps1 -NoBuild
 
       - name: Run PSScriptAnalyzer
         shell: pwsh
@@ -51,7 +53,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: test-results-${{ matrix.os }}
           path: build/TestResults/TestResults.xml
@@ -63,7 +65,7 @@ jobs:
 
       - name: Upload Build Artifacts
         if: success() && matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: module-build
           path: build/IntuneHydrationKit/
@@ -74,13 +76,15 @@ jobs:
     needs: build
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           name: module-build
           path: build/IntuneHydrationKit/

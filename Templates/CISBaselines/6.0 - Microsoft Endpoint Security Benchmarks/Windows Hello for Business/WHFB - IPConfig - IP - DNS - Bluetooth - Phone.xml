@@ -1,0 +1,10 @@
+<rule schemaVersion="1.0">
+<and>
+  <signal type="ipConfig">
+  <ipv4Prefix>10.10.10.0/24</ipv4Prefix>
+  <ipv4DnsServer>10.10.0.1</ipv4DnsServer>
+  <ipv4DnsServer>10.10.0.2</ipv4DnsServer>
+  </signal>
+  <signal type="bluetooth" scenario="Authentication" classOfDevice="512" rssiMin="-10" rssiMaxDelta="-10"/>
+</and>
+</rule>

@@ -56,6 +56,9 @@ Describe 'Import-HydrationSettings' {
                 options        = @{
                     create = $true
                 }
+                imports        = @{
+                    dynamicGroups = $true
+                }
             }
 
             $settingsPath = Join-Path $script:TestTempDir 'valid-settings.json'
@@ -74,9 +77,10 @@ Describe 'Import-HydrationSettings' {
                     tenantName = 'test.onmicrosoft.com'
                 }
                 authentication = @{
-                    mode        = 'clientSecret'
-                    clientId    = 'app-id'
-                    environment = 'USGov'
+                    mode         = 'clientSecret'
+                    clientId     = 'app-id'
+                    clientSecret = 'secret-value'
+                    environment  = 'USGov'
                 }
                 options        = @{
                     create  = $true
@@ -110,12 +114,175 @@ Describe 'Import-HydrationSettings' {
                 authentication = @{
                     mode = 'interactive'
                 }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
+                }
             }
 
             $settingsPath = Join-Path $script:TestTempDir 'missing-tenant.json'
             $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
 
             { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*tenantId*'
+        }
+
+        It 'Should apply schema defaults for optional settings' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'defaulted-settings.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            $result = Import-HydrationSettings -Path $settingsPath
+
+            $result.authentication.environment | Should -Be 'Global'
+            $result.options.delete | Should -Be $false
+            $result.options.force | Should -Be $false
+            $result.options.dryRun | Should -Be $false
+            $result.imports.mobileApps | Should -Be $true
+            $result.imports.cisBaselines | Should -Be $false
+            $result.mobileApps.presetId | Should -Be $null
+            $result.mobileApps.templateIds | Should -Be @()
+            $result.mobileApps.remediation.enabled | Should -Be $true
+            $result.platforms | Should -Be @('All')
+            $result.reporting.formats | Should -Be @('markdown')
+        }
+
+        It 'Should preserve mobile app settings overrides' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    mobileApps = $true
+                }
+                mobileApps     = @{
+                    presetId    = 'mobile-apps'
+                    templateIds = @('google-chrome', 'visual-studio-code')
+                    remediation = @{
+                        enabled = $false
+                    }
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'winget-settings.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            $result = Import-HydrationSettings -Path $settingsPath
+
+            $result.mobileApps.presetId | Should -Be 'mobile-apps'
+            $result.mobileApps.templateIds | Should -Be @('google-chrome', 'visual-studio-code')
+            $result.mobileApps.remediation.enabled | Should -Be $false
+        }
+
+        It 'Should throw when mobile app templateIds is not an array' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    mobileApps = $true
+                }
+                mobileApps     = @{
+                    templateIds = 'google-chrome'
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'winget-templateids-string.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*root.mobileApps.templateIds*must be an array*'
+        }
+
+        It 'Should throw when a required top-level section is missing' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'missing-imports.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*root.imports*'
+        }
+
+        It 'Should throw when environment is outside the schema enum' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode        = 'interactive'
+                    environment = 'Moon'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'bad-environment.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*must be one of*'
+        }
+
+        It 'Should throw when clientSecret authentication omits clientSecret' {
+            $settingsContent = @{
+                tenant         = @{
+                    tenantId = '12345678-1234-1234-1234-123456789abc'
+                }
+                authentication = @{
+                    mode     = 'clientSecret'
+                    clientId = 'app-id'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
+                }
+            }
+
+            $settingsPath = Join-Path $script:TestTempDir 'missing-client-secret.json'
+            $settingsContent | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath
+
+            { Import-HydrationSettings -Path $settingsPath } | Should -Throw '*clientSecret*'
         }
 
         It 'Should throw for invalid JSON' {
@@ -138,6 +305,12 @@ Describe 'Import-HydrationSettings' {
                 authentication = @{
                     mode = 'interactive'
                 }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
+                }
             }
 
             $settingsPath = Join-Path $script:TestTempDir 'utf8-settings.json'
@@ -158,6 +331,12 @@ Describe 'Import-HydrationSettings' {
                 }
                 authentication = @{
                     mode = 'interactive'
+                }
+                options        = @{
+                    create = $true
+                }
+                imports        = @{
+                    dynamicGroups = $true
                 }
             }
 

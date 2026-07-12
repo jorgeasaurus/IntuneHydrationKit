@@ -2,7 +2,7 @@
 
 BeforeAll {
     # Import the function under test
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Copy-DeepObject.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Utilities\Copy-DeepObject.ps1'
     . $functionPath
 }
 

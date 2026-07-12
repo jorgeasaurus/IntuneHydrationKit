@@ -19,16 +19,18 @@ $TestResultsPath = Join-Path -Path $BuildPath -ChildPath 'TestResults'
 $ModuleFiles = @(
     'IntuneHydrationKit.psd1'
     'IntuneHydrationKit.psm1'
+    'settings.schema.json'
 )
 
 $ModuleFolders = @(
     'Public'
     'Private'
+    'media'
     'Templates'
 )
 
 # Synopsis: Remove build artifacts
-task Clean {
+Task Clean {
     if (Test-Path -Path $BuildPath) {
         Write-Build Yellow "Removing build directory: $BuildPath"
         Remove-Item -Path $BuildPath -Recurse -Force
@@ -36,7 +38,7 @@ task Clean {
 }
 
 # Synopsis: Run PSScriptAnalyzer
-task Analyze {
+Task Analyze {
     Write-Build White "Running PSScriptAnalyzer..."
 
     $analyzerParams = @{
@@ -93,7 +95,7 @@ task Analyze {
 }
 
 # Synopsis: Run Pester tests
-task Test {
+Task Test {
     Write-Build White "Running Pester tests..."
 
     # Ensure test results directory exists
@@ -104,6 +106,7 @@ task Test {
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.Run.Path = Join-Path -Path $SourcePath -ChildPath 'Tests'
     $pesterConfig.Run.Exit = $false
+    $pesterConfig.Run.PassThru = $true
     $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.TestResult.Enabled = $true
     $pesterConfig.TestResult.OutputPath = Join-Path -Path $TestResultsPath -ChildPath 'TestResults.xml'
@@ -117,15 +120,15 @@ task Test {
 
     $testResult = Invoke-Pester -Configuration $pesterConfig
 
-    if ($testResult.FailedCount -gt 0) {
-        throw "Pester tests failed: $($testResult.FailedCount) of $($testResult.TotalCount) tests failed"
+    if (($testResult.FailedCount + $testResult.FailedBlocksCount + $testResult.FailedContainersCount) -gt 0) {
+        throw "Pester run failed: $($testResult.FailedCount) failed test(s), $($testResult.FailedBlocksCount) failed block(s), $($testResult.FailedContainersCount) failed container(s), of $($testResult.TotalCount) total tests"
     }
 
     Write-Build Green "All $($testResult.PassedCount) tests passed"
 }
 
 # Synopsis: Build the module for distribution
-task Build Clean, {
+Task Build Clean, {
     Write-Build White "Building module to: $ModuleBuildPath"
 
     # Create build directory
@@ -162,7 +165,7 @@ task Build Clean, {
 }
 
 # Synopsis: Publish module to PSGallery
-task Publish Build, {
+Task Publish Build, {
     Write-Build White "Publishing to PSGallery..."
 
     $apiKey = $env:PSGALLERY_API_KEY
@@ -181,7 +184,7 @@ task Publish Build, {
 }
 
 # Synopsis: Get module version from manifest
-task GetVersion {
+Task GetVersion {
     $manifestPath = Join-Path -Path $SourcePath -ChildPath 'IntuneHydrationKit.psd1'
     $manifestData = Import-PowerShellDataFile -Path $manifestPath
     $version = $manifestData.ModuleVersion
@@ -197,7 +200,7 @@ task GetVersion {
 }
 
 # Synopsis: Get release notes from manifest
-task GetReleaseNotes {
+Task GetReleaseNotes {
     $manifestPath = Join-Path -Path $SourcePath -ChildPath 'IntuneHydrationKit.psd1'
     $manifestData = Import-PowerShellDataFile -Path $manifestPath
     $releaseNotes = $manifestData.PrivateData.PSData.ReleaseNotes
@@ -215,10 +218,10 @@ task GetReleaseNotes {
 }
 
 # Synopsis: Default task - run tests and build
-task . Analyze, Test, Build
+Task . Analyze, Test, Build
 
 # Synopsis: CI task - full validation without publishing
-task CI Analyze, Test, Build
+Task CI Analyze, Test, Build
 
 # Synopsis: Release task - build and publish
-task Release Analyze, Test, Publish
+Task Release Analyze, Test, Publish

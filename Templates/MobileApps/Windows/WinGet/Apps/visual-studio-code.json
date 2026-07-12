@@ -1,0 +1,94 @@
+{
+    "$schema": "../Schemas/winGetAppTemplate.schema.json",
+    "schemaVersion": "1.0.0",
+    "templateId": "visual-studio-code",
+    "packageIdentifier": "Microsoft.VisualStudioCode",
+    "displayName": "Visual Studio Code",
+    "publisher": "Microsoft Corporation",
+    "description": "Starter-pack WinGet template for Visual Studio Code Win32 packaging.",
+    "package": {
+        "source": "WinGet",
+        "match": {
+            "packageIdentifier": "Microsoft.VisualStudioCode",
+            "architectures": [
+                "x64"
+            ],
+            "installerTypes": [
+                "exe",
+                "msix"
+            ],
+            "scope": "machine",
+            "locale": "en-US",
+            "channel": null
+        }
+    },
+    "install": {
+        "command": "winget install --id Microsoft.VisualStudioCode --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
+        "experience": "system",
+        "restartBehavior": "suppress"
+    },
+    "uninstall": {
+        "command": "winget uninstall --id Microsoft.VisualStudioCode --exact --scope machine --silent",
+        "behavior": "allow"
+    },
+    "detection": {
+        "strategy": "generated"
+    },
+    "requirements": {
+        "minimumSupportedWindowsRelease": "W10_22H2",
+        "architectures": [
+            "x64"
+        ],
+        "minimumFreeDiskSpaceInMB": null,
+        "minimumMemoryInMB": null
+    },
+    "icon": {
+        "sourceType": "file",
+        "fileName": "../Icons/visual-studio-code.png",
+        "notes": "Bundled from IntuneGet public icons."
+    },
+    "metadata": {
+        "categories": [
+            "StarterPack",
+            "Development"
+        ],
+        "tags": [
+            "starter-pack",
+            "development",
+            "editor"
+        ],
+        "notes": [],
+        "placeholders": {
+            "customNotes": [],
+            "owner": "",
+            "scopeTagIds": []
+        },
+        "markers": {
+            "hydration": "Imported by Intune Hydration Kit",
+            "source": "Imported from WinGet"
+        }
+    },
+    "resolvedPackage": {
+        "packageVersion": "latest",
+        "manifestSource": {
+            "repository": "microsoft/winget-pkgs",
+            "ref": "master",
+            "packagePath": "manifests/m/Microsoft/VisualStudioCode",
+            "versionPath": "manifests/m/Microsoft/VisualStudioCode",
+            "installerFile": null,
+            "localeFile": null
+        },
+        "selectedInstaller": {
+            "Architecture": "x64",
+            "Scope": "machine",
+            "InstallerLocale": "en-US",
+            "InstallerType": "exe",
+            "InstallerUrl": null,
+            "InstallerSha256": null,
+            "ProductCode": null,
+            "PackageFamilyName": null,
+            "NestedInstallerType": null,
+            "AppsAndFeaturesEntry": []
+        }
+    }
+}

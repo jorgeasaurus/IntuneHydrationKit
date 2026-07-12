@@ -1,0 +1,38 @@
+{
+    "$schema": "../Schemas/winGetAppPreset.schema.json",
+    "schemaVersion": "1.0.0",
+    "presetId": "starter-pack",
+    "displayName": "WinGet Starter Pack",
+    "description": "Initial curated WinGet Win32 app starter pack for Intune Hydration Kit schema and importer scaffolding.",
+    "selectionCriteria": {
+        "candidateSource": "WinGet Intune Publisher curated popular apps catalog",
+        "selectionBiases": [
+            "Prefer apps already modeled in IntuneAppFactory when available.",
+            "Favor a smaller verified starter pack over the full popular-app catalog."
+        ]
+    },
+    "appIds": [
+        "7-zip",
+        "google-chrome",
+        "mozilla-firefox",
+        "microsoft-edge",
+        "visual-studio-code",
+        "claude",
+        "claude-code",
+        "git-for-windows",
+        "notepad-plus-plus",
+        "vlc-media-player",
+        "zoom-workplace",
+        "putty",
+        "anysphere-cursor",
+        "microsoft-powertoys",
+        "github-desktop",
+        "docker-desktop",
+        "winscp",
+        "foxit-pdf-reader",
+        "everything-search",
+        "treesize-free",
+        "sharex",
+        "greenshot"
+    ]
+}

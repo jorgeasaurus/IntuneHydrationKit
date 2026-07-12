@@ -2,7 +2,7 @@
 
 BeforeAll {
     # Import the function under test
-    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Test-WindowsDriverUpdateLicense.ps1'
+    $functionPath = Join-Path $PSScriptRoot '..\..\Private\Auth\Test-WindowsDriverUpdateLicense.ps1'
     . $functionPath
 }
 

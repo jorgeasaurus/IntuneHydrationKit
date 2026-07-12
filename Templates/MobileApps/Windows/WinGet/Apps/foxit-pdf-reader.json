@@ -1,0 +1,94 @@
+{
+    "$schema": "../Schemas/winGetAppTemplate.schema.json",
+    "schemaVersion": "1.0.0",
+    "templateId": "foxit-pdf-reader",
+    "packageIdentifier": "Foxit.FoxitReader",
+    "displayName": "Foxit PDF Reader",
+    "publisher": "Foxit Software Inc.",
+    "description": "Starter-pack WinGet template for Foxit PDF Reader Win32 packaging.",
+    "package": {
+        "source": "WinGet",
+        "match": {
+            "packageIdentifier": "Foxit.FoxitReader",
+            "architectures": [
+                "x64"
+            ],
+            "installerTypes": [
+                "exe"
+            ],
+            "scope": "machine",
+            "locale": "en-US",
+            "channel": null
+        }
+    },
+    "install": {
+        "command": "winget install --id Foxit.FoxitReader --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
+        "experience": "system",
+        "restartBehavior": "suppress"
+    },
+    "uninstall": {
+        "command": "winget uninstall --id Foxit.FoxitReader --exact --scope machine --silent",
+        "behavior": "allow"
+    },
+    "detection": {
+        "strategy": "generated"
+    },
+    "requirements": {
+        "minimumSupportedWindowsRelease": "W10_22H2",
+        "architectures": [
+            "x64"
+        ],
+        "minimumFreeDiskSpaceInMB": null,
+        "minimumMemoryInMB": null
+    },
+    "icon": {
+        "sourceType": "file",
+        "fileName": "../Icons/foxit-pdf-reader.png",
+        "notes": "Bundled from IntuneGet public icons."
+    },
+    "metadata": {
+        "categories": [
+            "StarterPack",
+            "Productivity"
+        ],
+        "tags": [
+            "starter-pack",
+            "pdf",
+            "reader",
+            "productivity"
+        ],
+        "notes": [],
+        "placeholders": {
+            "customNotes": [],
+            "owner": "",
+            "scopeTagIds": []
+        },
+        "markers": {
+            "hydration": "Imported by Intune Hydration Kit",
+            "source": "Imported from WinGet"
+        }
+    },
+    "resolvedPackage": {
+        "packageVersion": "latest",
+        "manifestSource": {
+            "repository": "microsoft/winget-pkgs",
+            "ref": "master",
+            "packagePath": "manifests/f/Foxit/FoxitReader",
+            "versionPath": "manifests/f/Foxit/FoxitReader",
+            "installerFile": null,
+            "localeFile": null
+        },
+        "selectedInstaller": {
+            "Architecture": "x64",
+            "Scope": "machine",
+            "InstallerLocale": "en-US",
+            "InstallerType": "exe",
+            "InstallerUrl": null,
+            "InstallerSha256": null,
+            "ProductCode": null,
+            "PackageFamilyName": null,
+            "NestedInstallerType": null,
+            "AppsAndFeaturesEntry": []
+        }
+    }
+}

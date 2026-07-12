@@ -1,0 +1,96 @@
+{
+    "$schema": "../Schemas/winGetAppTemplate.schema.json",
+    "schemaVersion": "1.0.0",
+    "templateId": "winscp",
+    "packageIdentifier": "WinSCP.WinSCP",
+    "displayName": "WinSCP",
+    "publisher": "Martin Prikryl",
+    "description": "Starter-pack WinGet template for WinSCP Win32 packaging.",
+    "package": {
+        "source": "WinGet",
+        "match": {
+            "packageIdentifier": "WinSCP.WinSCP",
+            "architectures": [
+                "x64"
+            ],
+            "installerTypes": [
+                "inno",
+                "exe"
+            ],
+            "scope": "machine",
+            "locale": "en-US",
+            "channel": null
+        }
+    },
+    "install": {
+        "command": "winget install --id WinSCP.WinSCP --exact --silent --scope machine --accept-package-agreements --accept-source-agreements",
+        "experience": "system",
+        "restartBehavior": "suppress"
+    },
+    "uninstall": {
+        "command": "winget uninstall --id WinSCP.WinSCP --exact --scope machine --silent",
+        "behavior": "allow"
+    },
+    "detection": {
+        "strategy": "generated"
+    },
+    "requirements": {
+        "minimumSupportedWindowsRelease": "W10_22H2",
+        "architectures": [
+            "x64"
+        ],
+        "minimumFreeDiskSpaceInMB": null,
+        "minimumMemoryInMB": null
+    },
+    "icon": {
+        "sourceType": "file",
+        "fileName": "../Icons/winscp.png",
+        "notes": "Bundled from IntuneGet public icons."
+    },
+    "metadata": {
+        "categories": [
+            "StarterPack",
+            "Development",
+            "Utilities"
+        ],
+        "tags": [
+            "starter-pack",
+            "ssh",
+            "sftp",
+            "file-transfer"
+        ],
+        "notes": [],
+        "placeholders": {
+            "customNotes": [],
+            "owner": "",
+            "scopeTagIds": []
+        },
+        "markers": {
+            "hydration": "Imported by Intune Hydration Kit",
+            "source": "Imported from WinGet"
+        }
+    },
+    "resolvedPackage": {
+        "packageVersion": "latest",
+        "manifestSource": {
+            "repository": "microsoft/winget-pkgs",
+            "ref": "master",
+            "packagePath": "manifests/w/WinSCP/WinSCP",
+            "versionPath": "manifests/w/WinSCP/WinSCP",
+            "installerFile": null,
+            "localeFile": null
+        },
+        "selectedInstaller": {
+            "Architecture": "x64",
+            "Scope": "machine",
+            "InstallerLocale": "en-US",
+            "InstallerType": "inno",
+            "InstallerUrl": null,
+            "InstallerSha256": null,
+            "ProductCode": null,
+            "PackageFamilyName": null,
+            "NestedInstallerType": null,
+            "AppsAndFeaturesEntry": []
+        }
+    }
+}

@@ -38,13 +38,18 @@ Describe 'Connect-IntuneHydration' {
     }
 
     Context 'Parameter Validation' {
-        It 'Should require TenantId parameter' {
+        It 'Should require TenantId only for client secret authentication' {
             $command = Get-Command Connect-IntuneHydration
             $tenantIdParam = $command.Parameters['TenantId']
 
             $tenantIdParam | Should -Not -BeNullOrEmpty
-            $tenantIdParam.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } |
-                Select-Object -ExpandProperty Mandatory | Should -Contain $true
+            $interactiveSet = $tenantIdParam.Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.ParameterSetName -eq 'Interactive' }
+            $clientSecretSet = $tenantIdParam.Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.ParameterSetName -eq 'ClientSecret' }
+
+            $interactiveSet.Mandatory | Should -Be $false
+            $clientSecretSet.Mandatory | Should -Be $true
         }
 
         It 'Should have Interactive parameter set' {
@@ -101,8 +106,10 @@ Describe 'Connect-IntuneHydration' {
 
     Context 'Graph Environment Mapping' {
         BeforeAll {
-            # Mock Connect-MgGraph to prevent actual connections
-            Mock Connect-MgGraph { } -ModuleName IntuneHydrationKit
+            # Mock browser auth to prevent actual connections
+            Mock Connect-HydrationGraphViaBrowser {
+                [pscustomobject]@{ TenantId = '12345678-1234-1234-1234-123456789abc' }
+            } -ModuleName IntuneHydrationKit
             Mock Get-ObfuscatedTenantId { return '12345678****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
         }
 
@@ -139,20 +146,59 @@ Describe 'Connect-IntuneHydration' {
 
     Context 'Interactive Authentication' {
         BeforeAll {
-            Mock Connect-MgGraph { } -ModuleName IntuneHydrationKit
+            Mock Connect-HydrationGraphViaBrowser {
+                [pscustomobject]@{ TenantId = '12345678-1234-1234-1234-123456789abc' }
+            } -ModuleName IntuneHydrationKit
             Mock Get-ObfuscatedTenantId { return '12345678****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
         }
 
-        It 'Should call Connect-MgGraph with scopes for interactive auth' {
+        It 'Should call browser auth with scopes for interactive auth' {
             Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
 
-            Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Scopes -ne $null -and $Scopes.Count -gt 0
+            }
+        }
+
+        It 'Should use explicitly provided scopes for interactive auth' {
+            $selectedScopes = @('Organization.Read.All', 'DeviceManagementConfiguration.ReadWrite.All')
+
+            Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Scopes $selectedScopes
+
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Scopes.Count -eq 2 -and
+                $Scopes -contains 'Organization.Read.All' -and
+                $Scopes -contains 'DeviceManagementConfiguration.ReadWrite.All' -and
+                $Scopes -notcontains 'Group.ReadWrite.All'
+            }
+        }
+
+        It 'Should pass forced consent to browser auth when requested' {
+            Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -ForceConsent
+
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
+                $ForceConsent -eq $true
+            }
+        }
+
+        It 'Should call browser auth with organizations when interactive tenant is omitted' {
+            Connect-IntuneHydration -Interactive -Environment USGov
+
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
+                $TenantId -eq 'organizations' -and $Environment -eq 'USGov'
             }
         }
 
         It 'Should update HydrationState on successful connection' {
             Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
+
+            $state = Get-ModuleVariable -Name 'HydrationState'
+            $state.Connected | Should -Be $true
+            $state.TenantId | Should -Be '12345678-1234-1234-1234-123456789abc'
+        }
+
+        It 'Should store discovered tenant ID after tenantless interactive auth' {
+            Connect-IntuneHydration -Interactive
 
             $state = Get-ModuleVariable -Name 'HydrationState'
             $state.Connected | Should -Be $true
@@ -199,20 +245,20 @@ Describe 'Connect-IntuneHydration' {
     }
 
     Context 'Error Handling' {
-        It 'Should throw when Connect-MgGraph fails' {
-            Mock Connect-MgGraph { throw 'Connection failed' } -ModuleName IntuneHydrationKit
+        It 'Should throw when browser auth fails' {
+            Mock Connect-HydrationGraphViaBrowser { throw 'Connection failed' } -ModuleName IntuneHydrationKit
 
             { Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive } |
                 Should -Throw
         }
 
         It 'Should not update HydrationState when connection fails' {
-            Mock Connect-MgGraph { throw 'Connection failed' } -ModuleName IntuneHydrationKit
+            Mock Connect-HydrationGraphViaBrowser { throw 'Connection failed' } -ModuleName IntuneHydrationKit
 
             try {
                 Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
             } catch {
-                # Expected
+                $null = $_
             }
 
             $state = Get-ModuleVariable -Name 'HydrationState'
@@ -222,14 +268,16 @@ Describe 'Connect-IntuneHydration' {
 
     Context 'Required Scopes' {
         BeforeAll {
-            Mock Connect-MgGraph { } -ModuleName IntuneHydrationKit
+            Mock Connect-HydrationGraphViaBrowser {
+                [pscustomobject]@{ TenantId = '12345678-1234-1234-1234-123456789abc' }
+            } -ModuleName IntuneHydrationKit
             Mock Get-ObfuscatedTenantId { return '12345678****-****-****-123456789abc' } -ModuleName IntuneHydrationKit
         }
 
         It 'Should request DeviceManagementConfiguration.ReadWrite.All scope' {
             Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
 
-            Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Scopes -contains 'DeviceManagementConfiguration.ReadWrite.All'
             }
         }
@@ -237,7 +285,7 @@ Describe 'Connect-IntuneHydration' {
         It 'Should request Group.ReadWrite.All scope' {
             Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
 
-            Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Scopes -contains 'Group.ReadWrite.All'
             }
         }
@@ -245,7 +293,7 @@ Describe 'Connect-IntuneHydration' {
         It 'Should request Policy.ReadWrite.ConditionalAccess scope' {
             Connect-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive
 
-            Should -Invoke Connect-MgGraph -ModuleName IntuneHydrationKit -ParameterFilter {
+            Should -Invoke Connect-HydrationGraphViaBrowser -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Scopes -contains 'Policy.ReadWrite.ConditionalAccess'
             }
         }

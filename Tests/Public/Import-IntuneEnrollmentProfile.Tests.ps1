@@ -89,7 +89,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if profile already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -105,7 +105,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should skip profile if it already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @(@{ id = 'existing-id'; displayName = 'Default Autopilot Profile' }) }
                 }
@@ -117,9 +117,31 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $result[0].Action | Should -Be 'Skipped'
         }
 
-        It 'Should create profile if it does not exist' {
+        It 'Should skip profile when existing object with same name is not tagged by kit' {
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
+
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*windowsAutopilotDeploymentProfiles?*') {
+                    return @{ value = @(@{ id = 'existing-id'; displayName = 'Default Autopilot Profile'; description = 'Manually created profile' }) }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*windowsAutopilotDeploymentProfiles/existing-id') {
+                    return @{ id = 'existing-id'; displayName = 'Default Autopilot Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Skipped'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'POST' -and $Uri -like '*windowsAutopilotDeploymentProfiles*'
+            }
+        }
+
+        It 'Should create profile if it does not exist' {
+            Mock Invoke-MgGraphRequest {
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -139,12 +161,12 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should use custom device name template when provided' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST') {
-                    $Body.deviceNameTemplate | Should -Be 'CORP-%SERIAL%'
+                    ($Body | ConvertFrom-Json).deviceNameTemplate | Should -Be 'CORP-%SERIAL%'
                     return @{ id = 'new-profile-id'; displayName = 'Default Autopilot Profile' }
                 }
             } -ModuleName IntuneHydrationKit
@@ -154,12 +176,12 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should append hydration marker to description' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri, $Body)
+                param($Method, $Body)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
                 if ($Method -eq 'POST') {
-                    $Body.description | Should -BeLike '*Imported by Intune Hydration Kit*'
+                    ($Body | ConvertFrom-Json).description | Should -BeLike '*Imported by Intune Hydration Kit*'
                     return @{ id = 'new-profile-id'; displayName = 'Default Autopilot Profile' }
                 }
             } -ModuleName IntuneHydrationKit
@@ -199,7 +221,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if ESP profile already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -215,7 +237,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should create ESP profile to deviceEnrollmentConfigurations endpoint' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -229,6 +251,202 @@ Describe 'Import-IntuneEnrollmentProfile' {
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Method -eq 'POST' -and $Uri -like '*deviceEnrollmentConfigurations*'
             }
+        }
+
+        It 'Should create ESP profile with the computed profile display name' {
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    return @{ id = 'new-esp-id'; displayName = 'Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*' -and
+                $Body.displayName -eq '[IHD] Default ESP Profile'
+            }
+        }
+
+        It 'Should not double-prefix ESP profile names from prefixed templates' {
+            Mock Get-Content {
+                '{"@odata.type":"#microsoft.graph.windows10EnrollmentCompletionPageConfiguration","displayName":"[IHD] Default ESP Profile","description":"Enrollment status page configuration"}'
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    return @{ id = 'new-esp-id'; displayName = '[IHD] Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*' -and
+                $Body.displayName -eq '[IHD] Default ESP Profile'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'GET' -and
+                $Uri -like '*deviceEnrollmentConfigurations?*' -and
+                ([string]$Uri).Contains('[IHD] [IHD]')
+            }
+        }
+
+        It 'Should match legacy unprefixed ESP profiles when template names are prefixed' {
+            Mock Get-Content {
+                '{"@odata.type":"#microsoft.graph.windows10EnrollmentCompletionPageConfiguration","displayName":"[IHD] Default ESP Profile","description":"Enrollment status page configuration"}'
+            } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations?*') {
+                    return @{
+                        value = @(
+                            @{
+                                id           = 'existing-legacy-esp-id'
+                                displayName  = 'Default ESP Profile'
+                                description  = 'Imported by Intune Hydration Kit'
+                                '@odata.type' = '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
+                            }
+                        )
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations/existing-legacy-esp-id') {
+                    return @{ id = 'existing-legacy-esp-id'; displayName = 'Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Name | Should -Be '[IHD] Default ESP Profile'
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Id | Should -Be 'existing-legacy-esp-id'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $decodedUri = [System.Uri]::UnescapeDataString([string]$Uri)
+                $Method -eq 'GET' -and
+                $Uri -like '*deviceEnrollmentConfigurations?*' -and
+                $decodedUri.Contains("displayName eq 'Default ESP Profile'")
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'POST' -and
+                $Uri -like '*deviceEnrollmentConfigurations*'
+            }
+        }
+
+        It 'Should skip ESP profile when existing object with same name is not tagged by kit' {
+            Mock Test-HydrationKitObject { return $false } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations?*') {
+                    return @{
+                        value = @(
+                            @{
+                                id           = 'existing-esp-id'
+                                displayName  = 'Default ESP Profile'
+                                description  = 'Manually created ESP'
+                                '@odata.type' = '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
+                            }
+                        )
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations/existing-esp-id') {
+                    return @{ id = 'existing-esp-id'; displayName = 'Default ESP Profile' }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Skipped'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Method -eq 'POST' -and $Uri -like '*deviceEnrollmentConfigurations*'
+            }
+        }
+
+        It 'Should use Graph error message when ESP profile creation fails' {
+            Mock Get-GraphErrorMessage { return 'Detailed ESP Graph error' } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method)
+                if ($Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'POST') {
+                    throw 'Generic wrapper error'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
+            $result[0].Status | Should -Be 'Detailed ESP Graph error'
+            Should -Invoke Get-GraphErrorMessage -ModuleName IntuneHydrationKit -Times 1
+        }
+    }
+
+    Context 'Create Mode - macOS DEP Profile' {
+        BeforeEach {
+            Mock Get-FilteredTemplates {
+                @([PSCustomObject]@{
+                        FullName = 'TestPath\macOS-DEP-Profile.json'
+                        Name     = 'macOS-DEP-Profile.json'
+                    })
+            } -ModuleName IntuneHydrationKit
+
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.depMacOSEnrollmentProfile",
+    "displayName": "macOS DEP Profile",
+    "description": "macOS DEP enrollment profile"
+}
+'@
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should use Graph error message when macOS DEP profile creation fails' {
+            Mock Get-GraphErrorMessage { return 'Detailed DEP Graph error' } -ModuleName IntuneHydrationKit
+
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles') {
+                    return @{ value = @() }
+                }
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings') {
+                    return @{
+                        value = @(
+                            @{ id = 'token-1'; displayName = 'DEP Token 1' }
+                        )
+                    }
+                }
+                if ($Method -eq 'POST' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles') {
+                    throw 'Generic wrapper error'
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform macOS
+
+            $result | Should -Not -BeNullOrEmpty
+            $result[0].Action | Should -Be 'Failed'
+            $result[0].Status | Should -Be 'Detailed DEP Graph error'
+            Should -Invoke Get-GraphErrorMessage -ModuleName IntuneHydrationKit -Times 1
         }
     }
 
@@ -260,7 +478,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should check if device preparation policy already exists' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -276,7 +494,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
         It 'Should create device preparation policy to configurationPolicies endpoint' {
             Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
+                param($Method)
                 if ($Method -eq 'GET') {
                     return @{ value = @() }
                 }
@@ -350,7 +568,26 @@ Describe 'Import-IntuneEnrollmentProfile' {
 
     Context 'Delete Mode' {
         BeforeAll {
-            Mock Get-FilteredTemplates { @() } -ModuleName IntuneHydrationKit
+            $script:deleteEnrollmentTemplateDir = Join-Path ([System.IO.Path]::GetTempPath()) "IHK-EnrollmentDelete-$([guid]::NewGuid().ToString('N'))"
+            New-Item -Path $script:deleteEnrollmentTemplateDir -ItemType Directory -Force | Out-Null
+            $script:deleteEnrollmentWindowsTemplateFile = Join-Path $script:deleteEnrollmentTemplateDir 'Windows-Autopilot-Profile.json'
+            $script:deleteEnrollmentMacTemplateFile = Join-Path $script:deleteEnrollmentTemplateDir 'macOS-DEP-Profile.json'
+            '{"displayName":"Profile 1"}' | Set-Content -Path $script:deleteEnrollmentWindowsTemplateFile -Encoding utf8
+            '{"displayName":"macOS DEP Profile"}' | Set-Content -Path $script:deleteEnrollmentMacTemplateFile -Encoding utf8
+
+            Mock Get-FilteredTemplates {
+                @(Get-Item -Path $script:deleteEnrollmentWindowsTemplateFile)
+            } -ModuleName IntuneHydrationKit
+            # Return a HashSet that contains all test profile names
+            Mock Get-TemplateDisplayNames {
+                $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                @('Profile 1', 'Hydration Profile', 'Manual Profile', 'ESP 1', 'Policy 1', 'macOS DEP Profile') | ForEach-Object { [void]$names.Add($_) }
+                return $names
+            } -ModuleName IntuneHydrationKit
+        }
+
+        AfterAll {
+            Remove-Item -Path $script:deleteEnrollmentTemplateDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         It 'Should list existing Autopilot profiles when RemoveExisting is specified' {
@@ -391,6 +628,30 @@ Describe 'Import-IntuneEnrollmentProfile' {
             Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
                 $Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations*'
             }
+        }
+
+        It 'Should not delete non-ESP enrollment configurations from the ESP endpoint' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -like '*deviceEnrollmentConfigurations*') {
+                    return @{
+                        value = @(
+                            @{
+                                id           = 'limit-config-1'
+                                displayName  = 'ESP 1'
+                                description  = 'Imported by Intune Hydration Kit'
+                                '@odata.type' = '#microsoft.graph.deviceEnrollmentLimitConfiguration'
+                            }
+                        )
+                    }
+                }
+                return @{ value = @() }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -RemoveExisting -WhatIf
+
+            $espDeletes = @($result | Where-Object { $_.Action -eq 'WouldDelete' -and $_.Type -eq 'EnrollmentStatusPage' })
+            $espDeletes | Should -BeNullOrEmpty
         }
 
         It 'Should list existing device preparation policies when RemoveExisting is specified' {
@@ -439,85 +700,80 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $deletedProfiles[0].Name | Should -Be 'Hydration Profile'
         }
 
-        It 'Should process Autopilot profiles from later pages when RemoveExisting is specified' {
-            Mock Invoke-MgGraphRequest {
-                param($Method, $Uri)
-                if ($Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/windowsAutopilotDeploymentProfiles') {
-                    return @{
-                        value             = @()
-                        '@odata.nextLink' = 'next-autopilot-page'
-                    }
-                }
-                if ($Method -eq 'GET' -and $Uri -eq 'next-autopilot-page') {
-                    return @{
-                        value = @(
-                            @{ id = 'profile-page-2'; displayName = 'Hydration Profile Page 2'; description = 'Imported by Intune Hydration Kit' }
-                        )
-                    }
-                }
-                return @{ value = @() }
-            } -ModuleName IntuneHydrationKit
-
-            $result = Import-IntuneEnrollmentProfile -RemoveExisting -WhatIf
-
-            $deletedProfiles = $result | Where-Object { $_.Action -eq 'WouldDelete' -and $_.Type -eq 'AutopilotDeploymentProfile' }
-            $deletedProfiles.Count | Should -Be 1
-            $deletedProfiles[0].Name | Should -Be 'Hydration Profile Page 2'
-        }
-    }
-
-    Context 'Paged Duplicate Detection' {
-        BeforeEach {
+        It 'Should delete token-scoped macOS DEP profiles when platform scope is macOS' {
             Mock Get-FilteredTemplates {
-                @([PSCustomObject]@{
-                        FullName = 'TestPath\Windows-Autopilot-Device-Preparation.json'
-                        Name     = 'Windows-Autopilot-Device-Preparation.json'
-                    })
+                @(Get-Item -Path $script:deleteEnrollmentMacTemplateFile)
             } -ModuleName IntuneHydrationKit
-
-            Mock Get-Content {
-                @'
-{
-    "@odata.type": "#microsoft.graph.deviceManagementConfigurationPolicy",
-    "name": "Windows Autopilot device preparation - User Driven",
-    "description": "Device preparation policy",
-    "platforms": "windows10",
-    "technologies": "enrollment",
-    "templateReference": {
-        "templateId": "intune_autopilotDevicePreparation"
-    },
-    "settings": []
-}
-'@
-            } -ModuleName IntuneHydrationKit
-        }
-
-        It 'Should skip device preparation policy found on a later page' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri)
-                if ($Method -eq 'GET' -and $Uri -eq "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'") {
-                    return @{
-                        value             = @()
-                        '@odata.nextLink' = 'next-device-prep-page'
-                    }
+                if ($Uri -like '*windowsAutopilotDeploymentProfiles*' -or
+                    $Uri -like '*deviceEnrollmentConfigurations*' -or
+                    $Uri -like '*configurationPolicies*enrollment*') {
+                    throw 'Windows enrollment endpoint should not be queried'
                 }
-                if ($Method -eq 'GET' -and $Uri -eq 'next-device-prep-page') {
+
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles*') {
                     return @{
                         value = @(
-                            @{ id = 'policy-page-2'; name = 'Windows Autopilot device preparation - User Driven' }
+                            @{ id = 'mac-profile-1'; displayName = 'macOS DEP Profile'; description = 'Imported by Intune Hydration Kit' }
+                            @{ id = 'mac-profile-2'; displayName = 'Manual macOS DEP Profile'; description = 'Imported by Intune Hydration Kit' }
                         )
                     }
                 }
-                return @{ value = @() }
+
+                if ($Method -eq 'GET' -and $Uri -like '*depOnboardingSettings?*') {
+                    return @{
+                        value = @(
+                            @{ id = 'token-1'; displayName = 'DEP Token 1' }
+                        )
+                    }
+                }
+
+                if ($Method -eq 'DELETE' -and $Uri -like '*depOnboardingSettings/token-1/enrollmentProfiles/mac-profile-1') {
+                    return $null
+                }
+
+                if ($Method -eq 'POST' -and $Uri -like '*$batch') {
+                    $Body.requests | Should -HaveCount 1
+                    $Body.requests[0].method | Should -Be 'DELETE'
+                    $Body.requests[0].url | Should -Be '/deviceManagement/depOnboardingSettings/token-1/enrollmentProfiles/mac-profile-1'
+                    return @{
+                        responses = @(
+                            @{ id = '1'; status = 204; body = $null }
+                        )
+                    }
+                }
+
+                throw "Unexpected Graph request: $Method $Uri"
             } -ModuleName IntuneHydrationKit
 
-            $result = Import-IntuneEnrollmentProfile -Platform Windows
+            $result = Import-IntuneEnrollmentProfile -Platform macOS -RemoveExisting
 
-            $result[0].Action | Should -Be 'Skipped'
-            $result[0].Id | Should -Be 'policy-page-2'
-            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
-                $Method -eq 'POST'
-            } -Times 0
+            $deletedProfiles = @($result | Where-Object { $_.Action -eq 'Deleted' -and $_.Type -eq 'MacOSDEPEnrollmentProfile' })
+            $deletedProfiles | Should -HaveCount 1
+            $deletedProfiles[0].Name | Should -Be 'macOS DEP Profile'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0 -ParameterFilter {
+                $Uri -like '*windowsAutopilotDeploymentProfiles*' -or
+                $Uri -like '*deviceEnrollmentConfigurations*' -or
+                $Uri -like '*configurationPolicies*enrollment*'
+            }
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $Method -eq 'POST' -and $Uri -like '*$batch'
+            }
+        }
+
+        It 'Should skip macOS DEP delete when no macOS enrollment templates exist' {
+            Mock Get-FilteredTemplates { @() } -ModuleName IntuneHydrationKit
+            Mock Invoke-MgGraphRequest {
+                throw "Graph should not be queried without scoped macOS template names"
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform macOS -RemoveExisting
+
+            $skippedProfiles = @($result | Where-Object { $_.Action -eq 'Skipped' -and $_.Type -eq 'MacOSDEPEnrollmentProfile' })
+            $skippedProfiles | Should -HaveCount 1
+            $skippedProfiles[0].Status | Should -BeLike '*No macOS enrollment templates found*'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Times 0
         }
     }
 
@@ -597,7 +853,7 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $result = Import-IntuneEnrollmentProfile -Platform Windows
 
             $result | Should -Not -BeNullOrEmpty
-            $result[0].Name | Should -Be 'Test Profile'
+            $result[0].Name | Should -Be '[IHD] Test Profile'
             $result[0].Type | Should -Be 'AutopilotDeploymentProfile'
             $result[0].Id | Should -Be 'profile-123'
             $result[0].Action | Should -Be 'Created'

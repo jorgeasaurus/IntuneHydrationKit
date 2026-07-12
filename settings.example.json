@@ -27,16 +27,19 @@
         "staticGroups": true,
         "deviceFilters": true,
         "conditionalAccess": true,
-        "mobileApps": true
+        "mobileApps": true,
+        "cisBaselines": false
+    },
+    "mobileApps": {
+        "presetId": null,
+        "templateIds": [],
+        "remediation": {
+            "enabled": true
+        }
     },
     "platforms": [
         "All"
     ],
-    "openIntuneBaseline": {
-        "repoUrl": "https://github.com/jorgeasaurus/OpenIntuneBaseline",
-        "branch": "main",
-        "downloadPath": null
-    },
     "reporting": {
         "outputPath": "./Reports",
         "formats": [

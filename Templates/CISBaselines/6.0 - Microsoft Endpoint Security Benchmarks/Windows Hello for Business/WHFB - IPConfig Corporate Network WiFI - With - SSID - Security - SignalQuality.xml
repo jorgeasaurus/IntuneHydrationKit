@@ -1,0 +1,7 @@
+<rule schemaVersion="1.0">
+  <signal type="wifi">
+    <ssid>WolkenmanWiFI</ssid>
+    <security>WPA2-Enterprise</security>
+    <sig_quality>75</sig_quality>
+  </signal>
+</rule>

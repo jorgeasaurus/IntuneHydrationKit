@@ -156,13 +156,18 @@
                 "mobileApps": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Import mobile app templates"
+                    "description": "Import mobile apps. Windows apps use bundled WinGet-backed Win32 apps plus selected legacy fallback templates; macOS apps use bundled mobile app templates."
+                },
+                "cisBaselines": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Import CIS Benchmark baseline policies (728+ policies)"
                 }
             }
         },
         "platforms": {
             "type": "array",
-            "description": "Filter imports by platform. Affects: ComplianceTemplates, DeviceFilters, AppProtection, MobileApps, EnrollmentProfiles, OpenIntuneBaseline. Cross-platform resources (DynamicGroups, StaticGroups, ConditionalAccess, NotificationTemplates) are not filtered.",
+            "description": "Filter platform-scoped imports by platform. Platform-neutral imports are unaffected during create runs and skipped during platform-scoped delete runs.",
             "items": {
                 "type": "string",
                 "enum": ["Windows", "macOS", "iOS", "Android", "Linux", "All"]
@@ -175,23 +180,33 @@
                 ["iOS", "Android"]
             ]
         },
-        "openIntuneBaseline": {
+        "mobileApps": {
             "type": "object",
-            "description": "OpenIntuneBaseline configuration",
+            "description": "Windows mobile app import configuration for bundled WinGet-backed Win32 apps.",
             "properties": {
-                "repoUrl": {
-                    "type": "string",
-                    "default": "https://github.com/jorgeasaurus/OpenIntuneBaseline",
-                    "description": "GitHub repository URL for OpenIntuneBaseline"
-                },
-                "branch": {
-                    "type": "string",
-                    "default": "main",
-                    "description": "Git branch to use"
-                },
-                "downloadPath": {
+                "presetId": {
                     "type": ["string", "null"],
-                    "description": "Local path for OpenIntuneBaseline download"
+                    "default": null,
+                    "description": "Optional preset ID from Templates/MobileApps/Windows/WinGet/Presets. Leave null to import the full bundled WinGet catalog."
+                },
+                "templateIds": {
+                    "type": "array",
+                    "default": [],
+                    "description": "Optional bundled WinGet template IDs to import in addition to the selected preset.",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remediation": {
+                    "type": "object",
+                    "description": "Proactive remediation generation for the selected WinGet app set.",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Create or update WinGet proactive remediation scripts when mobile apps are included."
+                        }
+                    }
                 }
             }
         },

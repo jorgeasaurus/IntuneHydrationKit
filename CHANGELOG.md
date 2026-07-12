@@ -5,6 +5,154 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-06
+
+### Changed
+
+- **Delete mode**: Tightened template-scoped deletion across hydration workloads so platform-scoped deletes fail closed and only known kit templates are removed.
+- **Graph batching**: Improved batch response correlation, retry handling, and indeterminate create reporting for missing or transient Graph responses.
+- **OpenIntuneBaseline parity**: Replaced custom comparison output with direct `git diff` artifacts.
+
+### Fixed
+
+- **Enrollment profiles**: Fixed Autopilot and Enrollment Status Page imports to skip same-name existing profiles, including untagged profiles created before hydration tagging.
+- **Compliance and CIS baselines**: Fixed platform routing safeguards so mismatched template metadata warns instead of sending policies to the wrong Graph endpoint.
+- **WinGet apps**: Blocked detection and requirement script paths from escaping the template root.
+- **Groups**: Avoided generated `mailNickname` collisions with deterministic suffixes.
+
+## [1.1.0] - 2026-06-26
+
+### Added
+
+- **Device Filters**: Added Windows architecture assignment filters for x64, ARM64, and x86 devices using Intune's native `device.cpuArchitecture` property.
+- **Device Filters**: Added macOS architecture assignment filters for Apple Silicon and Intel devices using Intune's native `device.cpuArchitecture` property.
+- **Template contracts**: Added coverage for bundled dynamic group and device filter templates, including architecture filter rule validation.
+
+## [1.0.1] - 2026-06-20
+
+### Fixed
+
+- **Mobile Apps**: Fixed user-scope WinGet app installs for standard users by preferring the signed-in user's WinGet executable and avoiding SYSTEM bootstrap attempts in user context.
+- **WinGet logging**: Generated WinGet install, uninstall, and remediation scripts now fall back to user-writable log folders when the Intune Management Extension log directory is not writable.
+- **Template contracts**: Added coverage to keep user-scope WinGet templates aligned with `install.experience = user`, `--scope user`, and Graph `runAsAccount = user`.
+
+## [1.0.0] - 2026-05-30
+
+### Added
+
+- **Interactive TUI**: Added a zero-argument `Invoke-IntuneHydration` console wizard for Azure cloud, operation mode, workload targets, platform filtering, optional Graph consent prompting, verbose logging, and final confirmation. The tenant ID is discovered after browser sign-in.
+- **Dry-run first workflow**: Added a TUI dry-run create mode and review screen before Graph write calls.
+- **TUI documentation and media**: Updated README/help docs, screenshot, demo capture, and VHS source files for the guided console experience.
+
+### Changed
+
+- **Default invocation**: Bare module and repository-wrapper invocation now launch the TUI; settings-file and parameter-based automation modes remain available.
+- **Execution settings**: TUI selections now resolve through the same execution settings shape as parameter and settings-file runs.
+- **Common parameter handling**: `-WhatIf` and `-Verbose` now flow into TUI review and execution settings.
+- **Wrapper parity**: The repository wrapper now matches the module command parameter surface, including `-StaticGroups`, `-MobileApps`, `-CISBaselines`, and `-Platform`.
+
+## [0.8.1] - 2026-05-25
+
+### Added
+
+- **Authentication**: Added a themed browser PKCE interactive sign-in flow.
+- **Mobile Apps**: Added bundled WinGet app templates and WinGet-backed Win32 app import support under the Mobile Apps workflow.
+- **Pre-flight checks**: Added selected-workload access probing for Device Filters.
+
+### Changed
+
+- **Authentication**: Interactive auth retries with a fresh browser token and does not persist refresh tokens.
+- **Runtime permission checks**: Added selected-import access checks and clearer Global Administrator guidance for tenants where PIM-elevated roles may not be accepted by downstream Intune authorization.
+- **Sovereign clouds**: Centralized Graph environment metadata for consistent GCC High and DoD endpoint handling.
+
+### Fixed
+
+- **Mobile Apps**: Fixed new mobile app names to append ` - [IHD]` after the app name instead of prefixing `[IHD]`.
+- **Mobile Apps**: Fixed legacy Windows `TemplateId` matching for nested Store and M365 templates.
+
+## [0.7.1] - 2026-05-08
+
+### Changed
+
+- **OpenIntuneBaseline**: Updated to windows-v3.8.
+
+## [0.7.0] - 2026-04-22
+
+### Fixed
+
+- **Minor bug fixes and enhancements**: Included smaller reliability fixes and import-path improvements across CIS and related baseline workflows.
+
+### Changed
+
+- **CIS baseline coverage**: Added a substantial amount of new bundled CIS baseline templates across supported policy categories.
+- **General maintainability**: Included additional workflow and code-quality enhancements throughout the hydration process.
+
+## [0.6.1] - 2026-04-16
+
+### Changed
+
+- **Bundled Baselines by Default**: OpenIntuneBaseline policies now always import from the bundled `Templates/OpenIntuneBaseline/` directory instead of downloading from GitHub. Removed `BaselineRepoUrl`, `BaselineBranch`, and `BaselineDownloadPath` parameters from `Invoke-IntuneHydration` and the wrapper script. The `openIntuneBaseline` configuration section has been removed from the settings schema and example files. `Get-OpenIntuneBaseline` remains available as a standalone utility for manual downloads, and `Import-IntuneBaseline -BaselinePath` still accepts a custom path override.
+
+## [0.6.0] - 2026-04-04
+
+### Added
+
+- **Retry-After Header Support**: `Invoke-GraphBatchOperation` now captures `Retry-After` headers from individual 429/503 batch responses and honors the longest delay before retrying, falling back to exponential backoff when the header is absent
+- **Paginated Query Retry Logic**: `Get-GraphPagedResults` now retries on 429/5xx transient errors with Retry-After support and exponential backoff (max 3 retries per page)
+- **`[OutputType()]` Annotations**: Added to 8 private helpers: `Get-FilteredTemplates`, `Get-GraphErrorMessage`, `Get-HydrationTemplates`, `Get-ResultSummary`, `New-HydrationDescription`, `New-HydrationResult`, `Remove-ReadOnlyGraphProperties`, `Test-HydrationKitObject`
+- **Comment-Based Help**: Completed `.DESCRIPTION` and `.EXAMPLE` sections for `Write-HydrationLog`, `Initialize-HydrationLogging`, and `Import-HydrationSettings`
+- **Test Coverage**: Expanded from 458 to 648 tests (+190) with 13 new test files:
+  - 9 private function tests: `Get-GraphErrorMessage`, `Get-HydrationTemplates`, `Get-ObfuscatedTenantId`, `Get-PremiumP2ServicePlans`, `Get-ResultSummary`, `New-HydrationResult`, `Remove-ReadOnlyGraphProperties`, `Test-ConditionalAccessPolicyRequiresP2`, `Test-ConditionalAccessPolicyRequiresPreview`
+  - 4 public function tests: `Import-IntuneBaseline`, `Import-IntuneAppProtectionPolicy`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneNotificationTemplate`
+  - 429 throttle with Retry-After header test for `Invoke-GraphBatchOperation`
+
+### Changed
+
+- **Error Handling**: Replaced bare `throw` and `Write-Error` with `$PSCmdlet.ThrowTerminatingError()` and `$PSCmdlet.WriteError()` in 9 public functions (`Connect-IntuneHydration`, `Get-OpenIntuneBaseline`, `Import-HydrationSettings`, `Import-IntuneBaseline`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Invoke-IntuneHydration`, `New-IntuneDynamicGroup`, `Test-IntunePrerequisites`) - all errors now include structured ErrorRecord objects with error IDs, categories, and target objects
+- **Graph API Performance**: Added `$select` query parameter to 8+ GET requests across `Import-IntuneCompliancePolicy`, `Import-IntuneConditionalAccessPolicy`, `Import-IntuneEnrollmentProfile`, `Test-IntunePrerequisites`, and `Test-WindowsDriverUpdateLicense` to reduce response payload size
+- **Centralized Hydration Marker**: Marker strings (`"Imported by Intune Hydration Kit"` and hyphenated variant) consolidated into `$script:HydrationMarker` and `$script:HydrationMarkerAlt` module-scoped variables in `IntuneHydrationKit.psm1`, used by `Test-HydrationKitObject` and `New-HydrationDescription`
+
+## [0.5.0] - 2026-03-29
+
+### Added
+
+- **`[IHD]` Name Prefix**: All imported objects are now prefixed with `[IHD]` for easy identification and filtering in the Intune portal
+- **Batch Graph API Operations**: Groups, policies, filters, and apps now use batched API calls (up to 10 per batch) for significantly faster execution (~61% improvement)
+- **Bundled OpenIntuneBaseline Templates**: OIB templates are now included in the module - no external download required at runtime
+- **Notification Template Support**: Import and delete notification message templates (`Templates/Notifications/`)
+
+### Changed
+
+- **Performance**: Full hydration runs reduced from ~180s to ~70s via batch operations
+- Delete mode now identifies objects by both `[IHD]` name prefix and description marker for more reliable matching
+- `Get-TemplateDisplayNames` returns `HashSet[string]` (case-insensitive) instead of plain collection - help text updated to match
+- `Import-IntuneMobileApp` now uses `-Notes` parameter (instead of `-Description`) for mobile app notes field
+- Security Baselines count corrected from 91 to 94
+
+### Fixed
+
+- **Delete mode**: Graph API duplicate key error when listing groups (`displayName` dictionary collision)
+- **Delete mode**: Null-valued expression errors when `$response.value` is null or empty
+- **Delete mode**: Scriptblock scope bug where `$results += $item` created a new local variable instead of accumulating
+- **Delete mode**: `Get-TemplateDisplayNames` returned empty `HashSet` that PowerShell enumerated to `$null`; fixed with comma operator
+- **Delete mode**: Baseline path resolution was inside create-only conditional block; moved outside
+- **Delete mode**: Notification template prefix-stripping for name matching
+- **Batch operations**: Empty batch responses now correctly marked as Failed instead of assumed success
+- **Batch operations**: Added bounds check and TryParse for batch response ID mapping to prevent null dereference
+- **Batch operations**: `Get-GraphPagedResults` uses `List[object]` instead of O(n²) array reallocation for paging
+- **Group delete safety**: Template-scoped deletes via `-KnownNames` parameter - only groups matching current templates are deleted
+- **Group batch import**: Null-safe prefix resolution defaults to `[IHD] `, including the trailing space, when `$script:ImportPrefix` is null (dot-source safety)
+- **Enrollment profiles**: Dashes stripped only from original description text, not from hydration tag; uses space separator via `New-HydrationDescription -Separator ' '`
+- **JSON template parsing**: Malformed group template files no longer crash the entire hydration run (per-file try/catch)
+- **Group prefix mismatch**: Existence check now queries both prefixed and unprefixed names, preventing duplicate creation on re-runs
+- **Cross-platform paths**: `Import-IntuneBaseline` uses chained `Join-Path` calls instead of Windows-style backslash separators
+- **Hardcoded prefix regex**: All 9 delete-matching regex patterns now use `[regex]::Escape()` for dynamic prefix support
+- **Description helper consistency**: `Import-IntuneCompliancePolicy` and `Invoke-GroupBatchImport` now use `New-HydrationDescription` instead of manual concatenation
+- **Whitespace handling**: `New-HydrationDescription` uses `[string]::IsNullOrWhiteSpace()` instead of truthy check
+- **Cross-platform tests**: `Get-FilteredTemplates` path splitting now uses `[/\\]` regex instead of OS-native separator
+- **CI pipeline**: Pinned GitHub Actions to specific versions, added `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env var
+- **LICENSE file**: Restored to git tracking (was accidentally deleted from feature branch)
+
 ## [0.3.4] - 2026-01-17
 
 ### Added

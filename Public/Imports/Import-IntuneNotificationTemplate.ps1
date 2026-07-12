@@ -1,0 +1,203 @@
+function Import-IntuneNotificationTemplate {
+    <#
+    .SYNOPSIS
+        Imports notification message templates from JSON templates
+    .DESCRIPTION
+        Reads templates from Templates/Notifications and creates notificationMessageTemplates with localized messages.
+    .PARAMETER TemplatePath
+        Path to the notifications template directory (defaults to Templates/Notifications)
+    .EXAMPLE
+        Import-IntuneNotificationTemplate
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter()]
+        [string]$TemplatePath,
+
+        [Parameter()]
+        [switch]$RemoveExisting
+    )
+
+    if (-not $TemplatePath) {
+        $TemplatePath = Join-Path -Path $script:TemplatesPath -ChildPath "Notifications"
+    }
+
+    if (-not (Test-Path -Path $TemplatePath)) {
+        Write-Warning "Notification template directory not found: $TemplatePath"
+        return @()
+    }
+
+    $templateFiles = Get-HydrationTemplates -Path $TemplatePath -Recurse -ResourceType "notification template"
+
+    if (-not $templateFiles -or $templateFiles.Count -eq 0) {
+        Write-Warning "No notification templates found in: $TemplatePath"
+        return @()
+    }
+
+    $results = @()
+
+    # Prefetch existing templates for duplicate detection
+    $existingTemplates = @{}
+    try {
+        Get-GraphPagedResults -Uri "beta/deviceManagement/notificationMessageTemplates?`$select=id,displayName" -ProcessItems {
+            param($items)
+            foreach ($tmpl in $items) {
+                if ($tmpl.displayName -and -not $existingTemplates.ContainsKey($tmpl.displayName)) {
+                    $existingTemplates[$tmpl.displayName] = @{
+                        Id = $tmpl.id
+                    }
+                }
+            }
+        }
+    } catch {
+        $existingTemplates = @{}
+    }
+
+    # Remove existing notification templates if requested
+    # SAFETY: Only delete templates whose names match our template files
+    # Note: Notification templates don't support description field, so we match by name
+    if ($RemoveExisting) {
+        # Build list of template names from our JSON files for name-based matching
+        $templateNames = Get-TemplateDisplayNames -TemplateFiles $templateFiles
+
+        foreach ($templateName in $existingTemplates.Keys) {
+            $templateInfo = $existingTemplates[$templateName]
+
+            $deleteDecision = Resolve-HydrationDeleteDecision -Name $templateName -KnownTemplateNames $templateNames -NameOnly
+            if (-not $deleteDecision.IsMatch) {
+                Write-Verbose "Skipping '$templateName' - $($deleteDecision.Message)"
+                continue
+            }
+
+            if ($PSCmdlet.ShouldProcess($templateName, "Delete notification template")) {
+                try {
+                    Invoke-MgGraphRequest -Method DELETE -Uri "beta/deviceManagement/notificationMessageTemplates/$($templateInfo.Id)" -ErrorAction Stop
+                    Write-HydrationLog -Message "  Deleted: $templateName" -Level Info
+                    $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'Deleted' -Status 'Success'
+                } catch {
+                    $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+                    Write-HydrationLog -Message "  Failed: $templateName - $errMessage" -Level Warning
+                    $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'Failed' -Status "Delete failed: $errMessage"
+                }
+            } else {
+                Write-HydrationLog -Message "  WouldDelete: $templateName" -Level Info
+                $results += New-HydrationResult -Name $templateName -Type 'NotificationTemplate' -Action 'WouldDelete' -Status 'DryRun'
+            }
+        }
+
+        return $results
+    }
+
+    foreach ($templateFile in $templateFiles) {
+        try {
+            $template = Get-Content -Path $templateFile.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+            $displayName = "$($script:ImportPrefix)$($template.displayName)"
+
+            if (-not $template.displayName) {
+                Write-Warning "Template missing displayName: $($templateFile.FullName)"
+                $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Failed' -Status 'Missing displayName'
+                continue
+            }
+
+            if ($existingTemplates.ContainsKey($displayName)) {
+                # Notification templates lack a description field for hydration markers,
+                # so verify the template still exists via targeted GET (handles eventual
+                # consistency after recent deletes returning stale list data)
+                $existId = $existingTemplates[$displayName].Id
+                $verified = $false
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
+                    $verified = $true
+                } catch {
+                    $statusCode = Get-GraphStatusCode -ErrorRecord $_
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Template '$displayName' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
+                }
+                if ($verified) {
+                    Write-HydrationLog -Message "  Skipped: $displayName" -Level Info
+                    $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists'
+                    continue
+                }
+            }
+
+            # Check for legacy unprefixed template to prevent duplicates on upgrade
+            if ($existingTemplates.ContainsKey($template.displayName)) {
+                $existId = $existingTemplates[$template.displayName].Id
+                $verified = $false
+                try {
+                    $null = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/notificationMessageTemplates/$existId" -ErrorAction Stop
+                    $verified = $true
+                } catch {
+                    $statusCode = Get-GraphStatusCode -ErrorRecord $_
+                    if ($statusCode -eq 404) {
+                        Write-Verbose "Legacy template '$($template.displayName)' (ID: $existId) no longer exists - proceeding to create"
+                    } else {
+                        throw
+                    }
+                }
+                if ($verified) {
+                    Write-HydrationLog -Message "  Skipped: $displayName (legacy match: '$($template.displayName)')" -Level Info
+                    $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Skipped' -Status 'Already exists (legacy name)'
+                    continue
+                }
+            }
+
+            # Split template into main body and localized messages
+            $localizedMessages = @()
+            if ($template.localizedMessages) {
+                $localizedMessages = $template.localizedMessages
+                $template.PSObject.Properties.Remove('localizedMessages') | Out-Null
+            }
+
+            $importBody = Copy-DeepObject -InputObject $template
+
+            # Apply import prefix to body
+            if ($importBody.displayName) { $importBody.displayName = $displayName }
+
+            if ($PSCmdlet.ShouldProcess($displayName, "Create notification template")) {
+                $newTemplate = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates" -Body ($importBody | ConvertTo-Json -Depth 50) -ContentType "application/json" -ErrorAction Stop
+                Write-HydrationLog -Message "  Created: $displayName" -Level Info
+
+                # Create localized messages if present
+                $localizedMessageFailures = [System.Collections.Generic.List[hashtable]]::new()
+                foreach ($loc in $localizedMessages) {
+                    try {
+                        $locBody = $loc | ConvertTo-Json -Depth 20
+                        Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
+                    } catch {
+                        $locale = if ($loc.locale) { $loc.locale } else { 'unknown-locale' }
+                        $errorMessage = Get-GraphErrorMessage -ErrorRecord $_
+                        $localizedMessageFailures.Add(@{
+                                Locale = $locale
+                                Error  = $errorMessage
+                            })
+                        Write-HydrationLog -Message "  Failed to add localized message ($locale): $errorMessage" -Level Warning
+                    }
+                }
+
+                $status = if ($localizedMessageFailures.Count -eq 0) {
+                    'Success'
+                } else {
+                    $failedLocales = @($localizedMessageFailures | ForEach-Object { $_.Locale })
+                    "PartialSuccess - $($localizedMessageFailures.Count) localized message failure(s): $($failedLocales -join ', ')"
+                }
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status $status
+                foreach ($failure in $localizedMessageFailures) {
+                    $results += New-HydrationResult -Name "$displayName [$($failure.Locale)]" -Path $templateFile.FullName -Type 'NotificationTemplateLocalizedMessage' -Action 'Failed' -Status "Localized message create failed: $($failure.Error)"
+                }
+            } else {
+                Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'WouldCreate' -Status 'DryRun'
+            }
+        } catch {
+            $errMessage = Get-GraphErrorMessage -ErrorRecord $_
+            Write-HydrationLog -Message "  Failed: $($templateFile.Name) - $errMessage" -Level Warning
+            $results += New-HydrationResult -Name $templateFile.Name -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Failed' -Status $errMessage
+        }
+    }
+
+    return $results
+}

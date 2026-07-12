@@ -1,0 +1,512 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://intunehydrationkit.dev/schemas/winget-app-template.schema.json",
+    "title": "Intune Hydration Kit WinGet app template",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "$schema",
+        "schemaVersion",
+        "templateId",
+        "packageIdentifier",
+        "displayName",
+        "publisher",
+        "description",
+        "package",
+        "install",
+        "uninstall",
+        "detection",
+        "requirements",
+        "icon",
+        "metadata",
+        "resolvedPackage"
+    ],
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "schemaVersion": {
+            "type": "string",
+            "const": "1.0.0"
+        },
+        "templateId": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "packageIdentifier": {
+            "type": "string",
+            "minLength": 3
+        },
+        "displayName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "publisher": {
+            "type": "string",
+            "minLength": 1
+        },
+        "description": {
+            "type": "string",
+            "minLength": 1
+        },
+        "package": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "source",
+                "match"
+            ],
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "const": "WinGet"
+                },
+                "match": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "packageIdentifier",
+                        "architectures",
+                        "installerTypes",
+                        "scope"
+                    ],
+                    "properties": {
+                        "packageIdentifier": {
+                            "type": "string",
+                            "minLength": 3
+                        },
+                        "architectures": {
+                            "type": "array",
+                            "minItems": 1,
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "x64",
+                                    "x86",
+                                    "arm64"
+                                ]
+                            }
+                        },
+                        "installerTypes": {
+                            "type": "array",
+                            "minItems": 1,
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "exe",
+                                    "msi",
+                                    "msix",
+                                    "msixbundle",
+                                    "zip",
+                                    "burn",
+                                    "inno",
+                                    "nullsoft",
+                                    "portable"
+                                ]
+                            }
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": [
+                                "machine",
+                                "user"
+                            ]
+                        },
+                        "locale": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "channel": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "resolvedPackage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "packageVersion",
+                "manifestSource",
+                "selectedInstaller"
+            ],
+            "properties": {
+                "packageVersion": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "manifestSource": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "repository",
+                        "ref",
+                        "packagePath",
+                        "versionPath",
+                        "installerFile",
+                        "localeFile"
+                    ],
+                    "properties": {
+                        "repository": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "ref": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "packagePath": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "versionPath": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "installerFile": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "localeFile": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "selectedInstaller": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "Architecture",
+                        "Scope",
+                        "InstallerLocale",
+                        "InstallerType",
+                        "InstallerUrl",
+                        "InstallerSha256",
+                        "ProductCode",
+                        "PackageFamilyName",
+                        "NestedInstallerType",
+                        "AppsAndFeaturesEntry"
+                    ],
+                    "properties": {
+                        "Architecture": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "Scope": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "InstallerLocale": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "InstallerType": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "InstallerUrl": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "InstallerSha256": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "ProductCode": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "PackageFamilyName": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "NestedInstallerType": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "AppsAndFeaturesEntry": {
+                            "type": "array"
+                        }
+                    }
+                }
+            }
+        },
+        "install": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "command",
+                "experience",
+                "restartBehavior"
+            ],
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "experience": {
+                    "type": "string",
+                    "enum": [
+                        "system",
+                        "user"
+                    ]
+                },
+                "restartBehavior": {
+                    "type": "string",
+                    "enum": [
+                        "suppress",
+                        "force",
+                        "basedOnReturnCode",
+                        "allow"
+                    ]
+                }
+            }
+        },
+        "uninstall": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "command",
+                "behavior"
+            ],
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "behavior": {
+                    "type": "string",
+                    "enum": [
+                        "allow",
+                        "requireConfirmation"
+                    ]
+                }
+            }
+        },
+        "detection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "strategy"
+            ],
+            "properties": {
+                "strategy": {
+                    "type": "string",
+                    "const": "generated"
+                }
+            }
+        },
+        "requirements": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "minimumSupportedWindowsRelease",
+                "architectures"
+            ],
+            "properties": {
+                "minimumSupportedWindowsRelease": {
+                    "type": "string",
+                    "enum": [
+                        "W10_1607",
+                        "W10_1703",
+                        "W10_1709",
+                        "W10_1809",
+                        "W10_1909",
+                        "W10_2004",
+                        "W10_20H2",
+                        "W10_21H1",
+                        "W10_21H2",
+                        "W10_22H2",
+                        "W11_21H2",
+                        "W11_22H2",
+                        "W11_23H2",
+                        "W11_24H2"
+                    ]
+                },
+                "architectures": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "x64",
+                            "x86",
+                            "arm64"
+                        ]
+                    }
+                },
+                "minimumFreeDiskSpaceInMB": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 0
+                },
+                "minimumMemoryInMB": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 0
+                }
+            }
+        },
+        "icon": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "sourceType"
+            ],
+            "properties": {
+                "sourceType": {
+                    "type": "string",
+                    "enum": [
+                        "file",
+                        "none"
+                    ]
+                },
+                "fileName": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "notes": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "sourceType": {
+                                "const": "file"
+                            }
+                        }
+                    },
+                    "then": {
+                        "required": [
+                            "fileName"
+                        ],
+                        "properties": {
+                            "fileName": {
+                                "type": "string",
+                                "minLength": 1
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "metadata": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "categories",
+                "tags",
+                "notes",
+                "placeholders",
+                "markers"
+            ],
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "placeholders": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "customNotes",
+                        "owner",
+                        "scopeTagIds"
+                    ],
+                    "properties": {
+                        "customNotes": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "owner": {
+                            "type": "string"
+                        },
+                        "scopeTagIds": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "markers": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "hydration",
+                        "source"
+                    ],
+                    "properties": {
+                        "hydration": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "source": {
+                            "type": "string",
+                            "minLength": 1
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

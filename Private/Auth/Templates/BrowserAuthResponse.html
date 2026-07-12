@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Intune Hydration Kit - {{TITLE}}</title>
+<style>
+:root {
+    color-scheme: dark;
+    --ink: #f7fbff;
+    --muted: #c6d4ea;
+    --panel: rgba(2, 12, 36, 0.72);
+    --line: rgba(0, 214, 255, 0.32);
+    --accent: {{ACCENT}};
+    --cyan: #00d7ff;
+    --blue: #1176ff;
+    --bg: #020817;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 76% 21%, rgba(0, 215, 255, 0.22), transparent 28%),
+        radial-gradient(circle at 13% 82%, rgba(17, 118, 255, 0.18), transparent 34%),
+        linear-gradient(135deg, #020713 0%, #061a42 56%, #020817 100%);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(0, 215, 255, 0.42) 1px, transparent 1px);
+    background-size: 18px 18px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 58%, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, transparent 58%, #000 100%);
+    opacity: 0.42;
+}
+body::after {
+    content: "";
+    position: fixed;
+    left: -8%;
+    right: -8%;
+    bottom: -12%;
+    height: 42%;
+    background:
+        repeating-radial-gradient(ellipse at 50% 100%, transparent 0 24px, rgba(0, 127, 255, 0.22) 25px 26px);
+    opacity: 0.38;
+}
+main {
+    position: relative;
+    z-index: 1;
+    width: min(880px, calc(100vw - 32px));
+    min-height: 420px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) 260px;
+    gap: 36px;
+    align-items: center;
+    padding: 44px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow: 0 32px 90px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+.content {
+    min-width: 0;
+}
+.eyebrow {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+.brand {
+    display: grid;
+    gap: 0;
+    margin-bottom: 20px;
+}
+.brand span:first-child {
+    color: #ffffff;
+    font-size: clamp(42px, 7vw, 72px);
+    font-weight: 900;
+    line-height: 0.95;
+}
+.brand span:last-child {
+    width: max-content;
+    max-width: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: clamp(40px, 6.4vw, 68px);
+    font-weight: 900;
+    line-height: 1.03;
+}
+.rule {
+    width: 122px;
+    height: 3px;
+    margin: 0 0 22px;
+    background: linear-gradient(90deg, var(--cyan), rgba(17, 118, 255, 0));
+}
+.message {
+    width: min(560px, 100%);
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 20px;
+    line-height: 1.45;
+}
+.logo {
+    width: 224px;
+    height: 224px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 32px rgba(0, 215, 255, 0.45));
+}
+.mark {
+    display: inline-grid;
+    place-items: center;
+    width: 180px;
+    height: 180px;
+    border: 2px solid var(--cyan);
+    border-radius: 24px;
+    background: rgba(0, 215, 255, 0.08);
+    color: #ffffff;
+    font-size: 48px;
+    font-weight: 700;
+}
+.visual {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+}
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(0, 215, 255, 0.12), rgba(17, 118, 255, 0.08));
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+.byline {
+    margin: 16px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+.byline a {
+    color: #ffffff;
+    text-decoration-color: rgba(0, 215, 255, 0.72);
+    text-underline-offset: 4px;
+}
+.byline a:hover {
+    color: var(--cyan);
+}
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+h1 {
+    margin: 0 0 12px;
+    font-size: 28px;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+@media (max-width: 720px) {
+    main {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        padding: 30px;
+        min-height: auto;
+    }
+    .visual {
+        order: -1;
+    }
+    .logo {
+        width: 148px;
+        height: 148px;
+    }
+    .brand span:first-child {
+        font-size: 42px;
+    }
+    .brand span:last-child {
+        font-size: 40px;
+    }
+    .message {
+        font-size: 17px;
+    }
+}
+</style>
+</head>
+<body>
+<main>
+<section class="content" aria-label="Authentication status">
+<p class="eyebrow">Automate. Hydrate. Protect.</p>
+<div class="brand"><span>Intune</span><span>Hydration Kit</span></div>
+<div class="rule"></div>
+<h1>{{TITLE}}</h1>
+<p class="message">{{MESSAGE}}</p>
+<div class="status"><span class="dot"></span>{{STATUS_TEXT}} for Microsoft Graph</div>
+<p class="byline">By <a href="https://github.com/jorgeasaurus" target="_blank" rel="noopener noreferrer">Jorgeasaurus</a></p>
+</section>
+<section class="visual" aria-hidden="true">
+{{LOGO_HTML}}
+</section>
+</main>
+</body>
+</html>

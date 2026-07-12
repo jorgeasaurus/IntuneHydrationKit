@@ -1,5 +1,15 @@
 # Build output
 /build/
+site/
+
+# Python virtual environments
+.venv-docs/
+.venv/
+
+# Node modules and npm
+node_modules/
+package-lock.json
+npm-debug.log
 
 # Logs and reports
 Logs/*.log
@@ -14,6 +24,13 @@ settingsDelete.json
 
 # Dev Testing Results
 TestResults/
+test-results/
+.intunehydrationkit/
+
+# Playwright tests
+tests-e2e/screenshots/
+playwright.config.ts
+critique-page.js
 
 # Dev/test scripts
 Test-ModuleConfigurations.ps1
@@ -26,10 +43,18 @@ Test-ModuleConfigurationsParams.ps1
 # Claude AI files
 Claude.md
 .C*
+.agents/
 
 # Miscellaneous
 Publishing.md
 Test-Adhoc.ps1
 Templates/MobileApps/*.png
-OpenIntuneBaseline/
 scripts/Export-ConditionalAccessTemplates.ps1
+video/
+conference_talk/*
+env.ps1
+tests-e2e/landing-page.spec.ts
+playwright-report/*
+package.json
+tasks/*
+testResults.xml
