@@ -856,10 +856,11 @@ Describe 'Test-IntunePrerequisites' {
                 }
             } -ModuleName IntuneHydrationKit
 
-            $warnings = @()
-            Test-IntunePrerequisites -WarningVariable warnings -WarningAction SilentlyContinue
+            $messages = @()
+            Test-IntunePrerequisites -InformationVariable messages -InformationAction Continue | Out-Null
 
-            $warnings[0] | Should -BeLike '*No Azure AD Premium P2 license found*'
+            $messageData = $messages | ForEach-Object { $_.MessageData }
+            $messageData | Should -Contain '  • Azure AD Premium P2 not detected. Risk-based Conditional Access templates will be skipped:'
         }
     }
 
