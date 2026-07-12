@@ -438,6 +438,87 @@ Describe 'Import-IntuneEnrollmentProfile' {
             $deletedProfiles.Count | Should -Be 1
             $deletedProfiles[0].Name | Should -Be 'Hydration Profile'
         }
+
+        It 'Should process Autopilot profiles from later pages when RemoveExisting is specified' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -eq 'beta/deviceManagement/windowsAutopilotDeploymentProfiles') {
+                    return @{
+                        value             = @()
+                        '@odata.nextLink' = 'next-autopilot-page'
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -eq 'next-autopilot-page') {
+                    return @{
+                        value = @(
+                            @{ id = 'profile-page-2'; displayName = 'Hydration Profile Page 2'; description = 'Imported by Intune Hydration Kit' }
+                        )
+                    }
+                }
+                return @{ value = @() }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -RemoveExisting -WhatIf
+
+            $deletedProfiles = $result | Where-Object { $_.Action -eq 'WouldDelete' -and $_.Type -eq 'AutopilotDeploymentProfile' }
+            $deletedProfiles.Count | Should -Be 1
+            $deletedProfiles[0].Name | Should -Be 'Hydration Profile Page 2'
+        }
+    }
+
+    Context 'Paged Duplicate Detection' {
+        BeforeEach {
+            Mock Get-FilteredTemplates {
+                @([PSCustomObject]@{
+                        FullName = 'TestPath\Windows-Autopilot-Device-Preparation.json'
+                        Name     = 'Windows-Autopilot-Device-Preparation.json'
+                    })
+            } -ModuleName IntuneHydrationKit
+
+            Mock Get-Content {
+                @'
+{
+    "@odata.type": "#microsoft.graph.deviceManagementConfigurationPolicy",
+    "name": "Windows Autopilot device preparation - User Driven",
+    "description": "Device preparation policy",
+    "platforms": "windows10",
+    "technologies": "enrollment",
+    "templateReference": {
+        "templateId": "intune_autopilotDevicePreparation"
+    },
+    "settings": []
+}
+'@
+            } -ModuleName IntuneHydrationKit
+        }
+
+        It 'Should skip device preparation policy found on a later page' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+                if ($Method -eq 'GET' -and $Uri -eq "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'") {
+                    return @{
+                        value             = @()
+                        '@odata.nextLink' = 'next-device-prep-page'
+                    }
+                }
+                if ($Method -eq 'GET' -and $Uri -eq 'next-device-prep-page') {
+                    return @{
+                        value = @(
+                            @{ id = 'policy-page-2'; name = 'Windows Autopilot device preparation - User Driven' }
+                        )
+                    }
+                }
+                return @{ value = @() }
+            } -ModuleName IntuneHydrationKit
+
+            $result = Import-IntuneEnrollmentProfile -Platform Windows
+
+            $result[0].Action | Should -Be 'Skipped'
+            $result[0].Id | Should -Be 'policy-page-2'
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Method -eq 'POST'
+            } -Times 0
+        }
     }
 
     Context 'Error Handling' {

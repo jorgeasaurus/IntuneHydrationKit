@@ -502,6 +502,41 @@ Describe 'Test-IntunePrerequisites' {
             # Verify the second warning about affected policies was also generated
             $warnings[1] | Should -BeLike '*Affected policies*'
         }
+
+        It 'Should not treat <ServicePlanName> as a Premium P2 license' -ForEach @(
+            @{ ServicePlanName = 'ADALLOM_S_STANDALONE' }
+            @{ ServicePlanName = 'ATA' }
+        ) {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri)
+
+                if ($Uri -like '*organization*') {
+                    return @{ value = @(@{ displayName = 'Test' }) }
+                } elseif ($Uri -like '*subscribedSkus*') {
+                    return @{
+                        value = @(@{
+                                capabilityStatus = 'Enabled'
+                                skuPartNumber    = $ServicePlanName
+                                servicePlans     = @(
+                                    @{
+                                        servicePlanName    = 'INTUNE_A'
+                                        provisioningStatus = 'Success'
+                                    },
+                                    @{
+                                        servicePlanName    = $ServicePlanName
+                                        provisioningStatus = 'Success'
+                                    }
+                                )
+                            })
+                    }
+                }
+            } -ModuleName IntuneHydrationKit
+
+            $warnings = @()
+            Test-IntunePrerequisites -WarningVariable warnings -WarningAction SilentlyContinue
+
+            $warnings[0] | Should -BeLike '*No Azure AD Premium P2 license found*'
+        }
     }
 
     Context 'API Error Handling' {

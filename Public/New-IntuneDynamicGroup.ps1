@@ -39,27 +39,57 @@ function New-IntuneDynamicGroup {
         $safeDisplayName = $DisplayName -replace "'", "''"
         $listUri = "beta/groups?`$filter=displayName eq '$safeDisplayName'"
         $existingGroup = $null
+        $incompatibleGroup = $null
         do {
             $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
+            foreach ($group in @($response.value)) {
+                $isDynamicGroup = @($group.groupTypes) -contains 'DynamicMembership'
+                if ($isDynamicGroup) {
+                    $existingGroup = $group
+                    break
+                }
+                if (-not $incompatibleGroup) {
+                    $incompatibleGroup = $group
+                }
+            }
+            if ($existingGroup) {
                 break
             }
             $listUri = $response.'@odata.nextLink'
         } while ($listUri)
 
         if ($existingGroup) {
+            if ($existingGroup.membershipRule -ne $MembershipRule) {
+                $ruleWarning = "Dynamic group '$DisplayName' already exists, but its membership rule differs from the requested rule."
+                Write-HydrationLog -Message "  Warning: $ruleWarning" -Level Warning
+                Write-Warning $ruleWarning
+            }
             return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'DynamicGroup' -Action 'Skipped' -Status 'Group already exists'
+        }
+
+        if ($incompatibleGroup) {
+            $status = 'A non-dynamic group with this displayName already exists'
+            Write-HydrationLog -Message "  Failed: $DisplayName - $status" -Level Warning
+            Write-Warning $status
+            return New-HydrationResult -Name $DisplayName -Id $incompatibleGroup.id -Type 'DynamicGroup' -Action 'Failed' -Status $status
         }
 
         # Create new dynamic group
         if ($PSCmdlet.ShouldProcess($DisplayName, "Create dynamic group")) {
             $fullDescription = if ($Description) { "$Description - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
+            $mailNickname = ($DisplayName -replace '[^a-zA-Z0-9]', '')
+            if ($mailNickname.Length -gt 64) {
+                $mailNickname = $mailNickname.Substring(0, 64)
+            }
+            if ([string]::IsNullOrWhiteSpace($mailNickname)) {
+                $mailNickname = "group" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+            }
+
             $groupBody = @{
                 displayName                   = $DisplayName
                 description                   = $fullDescription
                 mailEnabled                   = $false
-                mailNickname                  = ($DisplayName -replace '[^a-zA-Z0-9]', '')
+                mailNickname                  = $mailNickname
                 securityEnabled               = $true
                 groupTypes                    = @('DynamicMembership')
                 membershipRule                = $MembershipRule

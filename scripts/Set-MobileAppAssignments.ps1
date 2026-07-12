@@ -103,6 +103,78 @@ function Get-AppAssignments {
     return $response.value
 }
 
+function ConvertTo-WritableMobileAppAssignment {
+    <#
+    .SYNOPSIS
+        Converts a Graph mobile app assignment into an assign action payload item.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Assignment
+    )
+
+    $writableAssignment = @{
+        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+        intent        = $Assignment.intent
+        target        = Remove-ODataContextProperty -InputObject $Assignment.target
+        settings      = Remove-ODataContextProperty -InputObject $Assignment.settings
+    }
+
+    return $writableAssignment
+}
+
+function Remove-ODataContextProperty {
+    <#
+    .SYNOPSIS
+        Removes Graph context metadata from nested request payload objects.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [AllowNull()]
+        [object]$InputObject
+    )
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $cleanObject = @{}
+        foreach ($key in $InputObject.Keys) {
+            if ($key -like '*@odata.context') {
+                continue
+            }
+            $cleanObject[$key] = Remove-ODataContextProperty -InputObject $InputObject[$key]
+        }
+        return $cleanObject
+    }
+
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+        $cleanArray = @()
+        foreach ($item in $InputObject) {
+            $cleanArray += Remove-ODataContextProperty -InputObject $item
+        }
+        return $cleanArray
+    }
+
+    $properties = $InputObject.PSObject.Properties
+    if ($properties.Count -eq 0 -or $InputObject.GetType().IsPrimitive) {
+        return $InputObject
+    }
+
+    $cleanPsObject = @{}
+    foreach ($property in $properties) {
+        if ($property.Name -like '*@odata.context') {
+            continue
+        }
+        $cleanPsObject[$property.Name] = Remove-ODataContextProperty -InputObject $property.Value
+    }
+
+    return $cleanPsObject
+}
+
 function Set-AppAvailableToAllUsers {
     <#
     .SYNOPSIS
@@ -133,17 +205,25 @@ function Set-AppAvailableToAllUsers {
     }
 
     if ($PSCmdlet.ShouldProcess($AppName, "Assign as Available to All Users")) {
+        $mobileAppAssignments = @()
+        foreach ($assignment in @($existingAssignments)) {
+            if ($null -eq $assignment) {
+                continue
+            }
+            $mobileAppAssignments += ConvertTo-WritableMobileAppAssignment -Assignment $assignment
+        }
+
+        $mobileAppAssignments += @{
+            "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+            intent        = "available"
+            target        = @{
+                "@odata.type" = "#microsoft.graph.allLicensedUsersAssignmentTarget"
+            }
+            settings      = $null
+        }
+
         $assignmentBody = @{
-            mobileAppAssignments = @(
-                @{
-                    "@odata.type" = "#microsoft.graph.mobileAppAssignment"
-                    intent        = "available"
-                    target        = @{
-                        "@odata.type" = "#microsoft.graph.allLicensedUsersAssignmentTarget"
-                    }
-                    settings      = $null
-                }
-            )
+            mobileAppAssignments = $mobileAppAssignments
         }
 
         try {

@@ -19,7 +19,7 @@ Describe 'Get-FilteredTemplates' {
             [PSCustomObject]@{
                 Name          = $Name
                 DirectoryName = $DirectoryName
-                FullName      = Join-Path $DirectoryName $Name
+                FullName      = "$DirectoryName/$Name"
             }
         }
     }
@@ -63,6 +63,19 @@ Describe 'Get-FilteredTemplates' {
             $result = Get-FilteredTemplates -Path 'C:\Templates' -Platform @('Windows', 'All')
 
             $result | Should -HaveCount 2
+        }
+
+        It 'Should return no templates when Platform is explicitly empty' {
+            $mockTemplates = @(
+                New-MockFileInfo -Name 'Windows-Policy.json' -DirectoryName 'C:\Templates'
+                New-MockFileInfo -Name 'Android-Policy.json' -DirectoryName 'C:\Templates'
+            )
+
+            Mock Get-HydrationTemplates { return $mockTemplates }
+
+            $result = Get-FilteredTemplates -Path 'C:\Templates' -Platform @()
+
+            $result | Should -BeNullOrEmpty
         }
     }
 
@@ -280,6 +293,36 @@ Describe 'Get-FilteredTemplates' {
 
             $result | Should -HaveCount 1
             $result.Name | Should -Be 'AppProtection.json'
+        }
+
+        It 'Should match nested Windows path segments for mobile app templates' {
+            $mockTemplates = @(
+                New-MockFileInfo -Name 'CompanyPortal.json' -DirectoryName 'Templates/MobileApps/Windows/Store'
+                New-MockFileInfo -Name 'M365.json' -DirectoryName 'Templates/MobileApps/Windows/M365'
+                New-MockFileInfo -Name 'MacApp.json' -DirectoryName 'Templates/MobileApps/macOS/Store'
+            )
+
+            Mock Get-HydrationTemplates { return $mockTemplates }
+
+            $result = Get-FilteredTemplates -Path 'Templates/MobileApps' -Platform 'Windows' -FilterMode 'Directory' -Recurse
+
+            $result | Should -HaveCount 2
+            $result.Name | Should -Contain 'CompanyPortal.json'
+            $result.Name | Should -Contain 'M365.json'
+        }
+
+        It 'Should match nested directories when paths use mixed separators' {
+            $mockTemplates = @(
+                New-MockFileInfo -Name 'CompanyPortal.json' -DirectoryName 'Templates\MobileApps/Windows\Store'
+                New-MockFileInfo -Name 'MacApp.json' -DirectoryName 'Templates\MobileApps/macOS\Store'
+            )
+
+            Mock Get-HydrationTemplates { return $mockTemplates }
+
+            $result = Get-FilteredTemplates -Path 'Templates/MobileApps' -Platform 'Windows' -FilterMode 'Directory' -Recurse
+
+            $result | Should -HaveCount 1
+            $result.Name | Should -Be 'CompanyPortal.json'
         }
     }
 

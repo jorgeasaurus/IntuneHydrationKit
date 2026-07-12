@@ -35,6 +35,46 @@ function Import-IntuneConditionalAccessPolicy {
         throw "Conditional Access template directory not found: $TemplatePath"
     }
 
+    function Remove-ODataAnnotationProperty {
+        param(
+            [Parameter(ValueFromPipeline)]
+            [AllowNull()]
+            [object]$InputObject
+        )
+
+        process {
+            if ($null -eq $InputObject -or $InputObject -is [string]) {
+                return
+            }
+
+            if ($InputObject -is [System.Collections.IDictionary]) {
+                foreach ($key in @($InputObject.Keys)) {
+                    if ($key -ne '@odata.type' -and $key -like '*@odata.*') {
+                        $InputObject.Remove($key)
+                    } else {
+                        Remove-ODataAnnotationProperty -InputObject $InputObject[$key]
+                    }
+                }
+                return
+            }
+
+            if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [pscustomobject]) {
+                foreach ($item in $InputObject) {
+                    Remove-ODataAnnotationProperty -InputObject $item
+                }
+                return
+            }
+
+            foreach ($property in @($InputObject.PSObject.Properties)) {
+                if ($property.Name -ne '@odata.type' -and $property.Name -like '*@odata.*') {
+                    $InputObject.PSObject.Properties.Remove($property.Name)
+                } else {
+                    Remove-ODataAnnotationProperty -InputObject $property.Value
+                }
+            }
+        }
+    }
+
     # Get all CA policy templates (non-recursive for CA policies)
     $templateFiles = Get-HydrationTemplates -Path $TemplatePath -ResourceType "Conditional Access template"
 
@@ -158,6 +198,10 @@ function Import-IntuneConditionalAccessPolicy {
             }
 
             if ($PSCmdlet.ShouldProcess($displayName, "Create Conditional Access policy (disabled)")) {
+                Remove-ODataAnnotationProperty -InputObject $policy.conditions
+                Remove-ODataAnnotationProperty -InputObject $policy.grantControls
+                Remove-ODataAnnotationProperty -InputObject $policy.sessionControls
+
                 # Build the policy body - force state to disabled
                 $policyBody = @{
                     displayName   = $displayName
@@ -171,10 +215,7 @@ function Import-IntuneConditionalAccessPolicy {
                     $policyBody.sessionControls = $policy.sessionControls
                 }
 
-                # Remove any odata context properties that shouldn't be in create request
                 $jsonBody = $policyBody | ConvertTo-Json -Depth 20
-                $jsonBody = $jsonBody -replace '"@odata\.[^"]*":\s*"[^"]*",?\s*', ''
-                $jsonBody = $jsonBody -replace '"@odata\.[^"]*":\s*null,?\s*', ''
 
                 # Create the policy
                 $newPolicy = Invoke-MgGraphRequest -Method POST -Uri "beta/identity/conditionalAccess/policies" -Body $jsonBody -ContentType "application/json" -ErrorAction Stop

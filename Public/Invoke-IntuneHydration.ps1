@@ -258,6 +258,16 @@ function Invoke-IntuneHydration {
             } elseif (-not $settings.platforms) {
                 $settings['platforms'] = @('All')
             }
+
+            if (-not $settings.openIntuneBaseline) {
+                $settings['openIntuneBaseline'] = @{}
+            }
+            if (-not $settings.openIntuneBaseline.repoUrl) {
+                $settings.openIntuneBaseline.repoUrl = "https://github.com/jorgeasaurus/OpenIntuneBaseline"
+            }
+            if (-not $settings.openIntuneBaseline.branch) {
+                $settings.openIntuneBaseline.branch = 'main'
+            }
         } else {
             # Parameter-based mode - build settings from parameters
             Write-Host "Using parameter-based configuration" -InformationAction Continue
@@ -314,6 +324,9 @@ function Invoke-IntuneHydration {
             }
         }
 
+        $effectiveWhatIf = [bool]$WhatIfPreference -or ($settings.options.dryRun -eq $true)
+        $enableVerboseLogging = ($VerbosePreference -eq 'Continue') -or ($settings.options.verbose -eq $true)
+
         # Display current settings
         Write-Host "Target Tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -InformationAction Continue
         if ($settings.tenant.tenantName) {
@@ -332,8 +345,22 @@ function Invoke-IntuneHydration {
             param([string[]]$ValidSet)
             if ($settings.platforms -contains 'All') { return @('All') }
             $valid = $settings.platforms | Where-Object { $_ -in $ValidSet }
-            if ($valid.Count -eq 0) { return @('All') }
-            return $valid
+            return ,@($valid)
+        }
+
+        function Test-PlatformFilterSupported {
+            param(
+                [string]$Category,
+                [string[]]$Platform
+            )
+
+            if ($Platform -and @($Platform).Count -gt 0) {
+                return $true
+            }
+
+            $selectedPlatforms = if ($settings.platforms) { $settings.platforms -join ', ' } else { '<none>' }
+            Write-HydrationLog -Message "Skipping $Category`: none of the selected platforms ($selectedPlatforms) are supported" -Level Warning
+            return $false
         }
 
         $platformFilters = @{
@@ -361,31 +388,21 @@ function Invoke-IntuneHydration {
             throw "At least one of 'create' or 'delete' options must be true. Current settings: create=$createEnabled, delete=$deleteEnabled"
         }
 
-        if ($deleteEnabled -and -not $forceDelete -and -not $WhatIfPreference) {
+        if ($deleteEnabled -and -not $forceDelete -and -not $effectiveWhatIf) {
             if (-not $PSCmdlet.ShouldContinue("Proceed with delete operations?", "Delete mode will remove Intune configurations created by the hydration kit.")) {
                 Write-Warning "Delete operation cancelled by user confirmation."
                 return
             }
         }
 
-        # dryRun from settings enables WhatIf if not already set via command line
-        if ($settings.options.dryRun -eq $true -and -not $WhatIfPreference) {
-            $script:WhatIfPreference = $true
-        }
-
-        # verbose from settings enables verbose output
-        if ($settings.options.verbose -eq $true) {
-            $script:VerbosePreference = 'Continue'
-        }
-
         # Initialize logging (after applying verbose setting)
         # Uses OS temp directory by default (e.g., $env:TEMP/IntuneHydrationKit/Logs on Windows, /tmp/IntuneHydrationKit/Logs on macOS/Linux)
-        Initialize-HydrationLogging -EnableVerbose:($VerbosePreference -eq 'Continue')
+        Initialize-HydrationLogging -EnableVerbose:$enableVerboseLogging
 
         Write-HydrationLog -Message "=== Intune Hydration Kit Started ===" -Level Info
         Write-HydrationLog -Message "Loaded settings for tenant: $(Get-ObfuscatedTenantId -TenantId $settings.tenant.tenantId)" -Level Info
 
-        if ($WhatIfPreference) {
+        if ($effectiveWhatIf) {
             Write-HydrationLog -Message "Running in DRY-RUN mode - no changes will be made" -Level Warning
         }
 
@@ -433,10 +450,11 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
             Write-HydrationLog -Message "Step 3: $stepAction Dynamic Groups" -Level Info
 
+            if (-not (Test-PlatformFilterSupported -Category 'Dynamic Groups' -Platform $platformFilters.Groups)) {
+                # Skip unsupported platform selection
+            } elseif ($RemoveExisting) {
             # Delete existing dynamic groups if RemoveExisting is set
             # SAFETY: Only delete groups that have "Imported by Intune Hydration Kit" in description
-            if ($RemoveExisting) {
-
                 try {
                     # Get all dynamic groups with descriptions
                     $listUri = "beta/groups?`$filter=groupTypes/any(c:c eq 'DynamicMembership')&`$select=id,displayName,description"
@@ -449,7 +467,7 @@ function Invoke-IntuneHydration {
                                 continue
                             }
 
-                            if ($PSCmdlet.ShouldProcess($group.displayName, "Delete dynamic group")) {
+                            if (-not $effectiveWhatIf -and $PSCmdlet.ShouldProcess($group.displayName, "Delete dynamic group")) {
                                 try {
                                     Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
                                     Write-HydrationLog -Message "  Deleted: $($group.displayName)" -Level Info
@@ -496,7 +514,7 @@ function Invoke-IntuneHydration {
                     }
 
                     foreach ($groupDef in $filteredGroupDefs) {
-                        if ($PSCmdlet.ShouldProcess($groupDef.displayName, "Create dynamic group")) {
+                        if (-not $effectiveWhatIf -and $PSCmdlet.ShouldProcess($groupDef.displayName, "Create dynamic group")) {
                             $groupResult = New-IntuneDynamicGroup -DisplayName $groupDef.displayName -Description $groupDef.description -MembershipRule $groupDef.membershipRule
 
                             $allResults += New-HydrationResult -Type 'DynamicGroup' -Name $groupDef.displayName -Action $groupResult.Action -Id $groupResult.Id -Details $groupResult.Reason
@@ -516,9 +534,11 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
             Write-HydrationLog -Message "Step 3b: $stepAction Static Groups" -Level Info
 
+            if (-not (Test-PlatformFilterSupported -Category 'Static Groups' -Platform $platformFilters.Groups)) {
+                # Skip unsupported platform selection
+            } elseif ($RemoveExisting) {
             # Delete existing static groups if RemoveExisting is set
             # SAFETY: Only delete groups that have "Imported by Intune Hydration Kit" in description
-            if ($RemoveExisting) {
                 try {
                     # Get all security groups (non-dynamic) with hydration kit marker in description
                     # Note: Using ConsistencyLevel header and $count for advanced query with NOT operator
@@ -533,7 +553,7 @@ function Invoke-IntuneHydration {
                                 continue
                             }
 
-                            if ($PSCmdlet.ShouldProcess($group.displayName, "Delete static group")) {
+                            if (-not $effectiveWhatIf -and $PSCmdlet.ShouldProcess($group.displayName, "Delete static group")) {
                                 try {
                                     Invoke-MgGraphRequest -Method DELETE -Uri "beta/groups/$($group.id)" -ErrorAction Stop
                                     Write-HydrationLog -Message "  Deleted: $($group.displayName)" -Level Info
@@ -580,7 +600,7 @@ function Invoke-IntuneHydration {
                     }
 
                     foreach ($groupDef in $filteredGroupDefs) {
-                        if ($PSCmdlet.ShouldProcess($groupDef.displayName, "Create static group")) {
+                        if (-not $effectiveWhatIf -and $PSCmdlet.ShouldProcess($groupDef.displayName, "Create static group")) {
                             $groupParams = @{
                                 DisplayName = $groupDef.displayName
                                 Description = $groupDef.description
@@ -607,8 +627,10 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Creating" }
             Write-HydrationLog -Message "Step 4: $stepAction Device Filters" -Level Info
 
-            $filterResults = Import-IntuneDeviceFilter -Platform $platformFilters.DeviceFilters -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
-            $allResults += $filterResults
+            if (Test-PlatformFilterSupported -Category 'Device Filters' -Platform $platformFilters.DeviceFilters) {
+                $filterResults = Import-IntuneDeviceFilter -Platform $platformFilters.DeviceFilters -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
+                $allResults += $filterResults
+            }
         }
 
         # Step 5: OpenIntuneBaseline
@@ -621,13 +643,21 @@ function Invoke-IntuneHydration {
             if ($settings.openIntuneBaseline.downloadPath) {
                 $baselineParams['BaselinePath'] = $settings.openIntuneBaseline.downloadPath
             }
+            if ($settings.openIntuneBaseline.repoUrl) {
+                $baselineParams['RepoUrl'] = $settings.openIntuneBaseline.repoUrl
+            }
+            if ($settings.openIntuneBaseline.branch) {
+                $baselineParams['Branch'] = $settings.openIntuneBaseline.branch
+            }
 
             # Import function handles ShouldProcess internally for each policy
             $baselineParams['RemoveExisting'] = $RemoveExisting
-            $baselineParams['WhatIf'] = $WhatIfPreference
-            $baselineParams['Platform'] = $platformFilters.Baseline
-            $baselineResults = Import-IntuneBaseline @baselineParams
-            $allResults += $baselineResults
+            $baselineParams['WhatIf'] = $effectiveWhatIf
+            if (Test-PlatformFilterSupported -Category 'OpenIntuneBaseline policies' -Platform $platformFilters.Baseline) {
+                $baselineParams['Platform'] = $platformFilters.Baseline
+                $baselineResults = Import-IntuneBaseline @baselineParams
+                $allResults += $baselineResults
+            }
         }
 
         # Step 6: Compliance Templates
@@ -635,8 +665,10 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 6: $stepAction Compliance templates" -Level Info
 
-            $complianceResults = Import-IntuneCompliancePolicy -Platform $platformFilters.Compliance -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
-            $allResults += $complianceResults
+            if (Test-PlatformFilterSupported -Category 'Compliance templates' -Platform $platformFilters.Compliance) {
+                $complianceResults = Import-IntuneCompliancePolicy -Platform $platformFilters.Compliance -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
+                $allResults += $complianceResults
+            }
         }
 
         # Step 7: Notification Templates
@@ -644,7 +676,7 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 7: $stepAction Notification Templates" -Level Info
 
-            $notificationResults = Import-IntuneNotificationTemplate -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $notificationResults = Import-IntuneNotificationTemplate -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
             $allResults += $notificationResults
         }
 
@@ -653,8 +685,10 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 8: $stepAction App Protection policies" -Level Info
 
-            $mamResults = Import-IntuneAppProtectionPolicy -Platform $platformFilters.AppProtection -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
-            $allResults += $mamResults
+            if (Test-PlatformFilterSupported -Category 'App Protection policies' -Platform $platformFilters.AppProtection) {
+                $mamResults = Import-IntuneAppProtectionPolicy -Platform $platformFilters.AppProtection -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
+                $allResults += $mamResults
+            }
         }
 
         # Step 9: Enrollment Profiles
@@ -662,8 +696,10 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 9: $stepAction Enrollment Profiles" -Level Info
 
-            $enrollmentResults = Import-IntuneEnrollmentProfile -Platform $platformFilters.EnrollmentProfiles -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
-            $allResults += $enrollmentResults
+            if (Test-PlatformFilterSupported -Category 'Enrollment Profiles' -Platform $platformFilters.EnrollmentProfiles) {
+                $enrollmentResults = Import-IntuneEnrollmentProfile -Platform $platformFilters.EnrollmentProfiles -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
+                $allResults += $enrollmentResults
+            }
         }
 
         # Step 10: Conditional Access Starter Pack
@@ -671,7 +707,7 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 10: $stepAction Conditional Access Starter Pack" -Level Info
 
-            $caResults = Import-IntuneConditionalAccessPolicy -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
+            $caResults = Import-IntuneConditionalAccessPolicy -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
             $allResults += $caResults
         }
 
@@ -680,8 +716,10 @@ function Invoke-IntuneHydration {
             $stepAction = if ($RemoveExisting) { "Deleting" } else { "Importing" }
             Write-HydrationLog -Message "Step 11: $stepAction Mobile Apps" -Level Info
 
-            $mobileAppResults = Import-IntuneMobileApp -Platform $platformFilters.MobileApps -RemoveExisting:$RemoveExisting -WhatIf:$WhatIfPreference
-            $allResults += $mobileAppResults
+            if (Test-PlatformFilterSupported -Category 'Mobile Apps' -Platform $platformFilters.MobileApps) {
+                $mobileAppResults = Import-IntuneMobileApp -Platform $platformFilters.MobileApps -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIf
+                $allResults += $mobileAppResults
+            }
         }
 
         # Step 12: Generate Summary Report
@@ -712,7 +750,7 @@ function Invoke-IntuneHydration {
 **Generated:** $timestamp
 **Tenant:** $($settings.tenant.tenantId)
 **Environment:** $($settings.authentication.environment)
-**Mode:** $(if ($WhatIfPreference) { 'Dry-Run' } else { 'Live' })
+**Mode:** $(if ($effectiveWhatIf) { 'Dry-Run' } else { 'Live' })
 
 ## Summary
 
@@ -808,7 +846,7 @@ function Invoke-IntuneHydration {
                 Timestamp   = $timestamp
                 Tenant      = $settings.tenant.tenantId
                 Environment = $settings.authentication.environment
-                Mode        = if ($WhatIfPreference) { 'DryRun' } else { 'Live' }
+                Mode        = if ($effectiveWhatIf) { 'DryRun' } else { 'Live' }
                 Summary     = $summary
                 Results     = $allResults
             } | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonReportPath -Encoding UTF8 -WhatIf:$false
@@ -820,7 +858,7 @@ function Invoke-IntuneHydration {
         # Friendly console summary
         Write-Host "" -InformationAction Continue
         Write-Host "---------------- Summary ----------------" -InformationAction Continue
-        if ($WhatIfPreference) {
+        if ($effectiveWhatIf) {
             Write-Host ("Would Create: {0} | Would Update: {1} | Would Delete: {2} | Skipped: {3} | Failed: {4}" -f $summary.WouldCreate, $summary.WouldUpdate, $summary.WouldDelete, $summary.Skipped, $summary.Failed) -InformationAction Continue
         } else {
             Write-Host ("Created: {0} | Updated: {1} | Deleted: {2} | Skipped: {3} | Failed: {4}" -f $summary.Created, $summary.Updated, $summary.Deleted, $summary.Skipped, $summary.Failed) -InformationAction Continue
@@ -834,7 +872,7 @@ function Invoke-IntuneHydration {
         # Log completion status
         if ($summary.Failed -gt 0) {
             Write-HydrationLog -Message "Completed with $($summary.Failed) failures" -Level Warning
-        } elseif ($WhatIfPreference) {
+        } elseif ($effectiveWhatIf) {
             Write-HydrationLog -Message "Dry-run completed: $($summary.WouldCreate) would create, $($summary.WouldUpdate) would update, $($summary.WouldDelete) would delete, $($summary.Skipped) skipped" -Level Info
         } else {
             Write-HydrationLog -Message "Completed successfully: $($summary.Created) created, $($summary.Updated) updated, $($summary.Deleted) deleted, $($summary.Skipped) skipped" -Level Info

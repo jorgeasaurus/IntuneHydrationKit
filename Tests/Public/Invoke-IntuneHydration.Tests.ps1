@@ -12,15 +12,22 @@ BeforeAll {
         throw "Failed to import IntuneHydrationKit module"
     }
 
-    # Create a temp directory for test settings files
-    $script:TestTempPath = Join-Path ([System.IO.Path]::GetTempPath()) 'IntuneHydrationKitTests'
+    # Create a repository-local directory for test settings and generated reports
+    $script:OriginalTempDirectory = $env:TMPDIR
+    $script:TestTempPath = Join-Path $modulePath '.test-artifacts/InvokeIntuneHydration'
+    $env:TMPDIR = Join-Path $script:TestTempPath 'Temp'
     if (-not (Test-Path $script:TestTempPath)) {
         New-Item -Path $script:TestTempPath -ItemType Directory -Force | Out-Null
+    }
+    if (-not (Test-Path $env:TMPDIR)) {
+        New-Item -Path $env:TMPDIR -ItemType Directory -Force | Out-Null
     }
 }
 
 AfterAll {
-    # Clean up temp directory
+    $env:TMPDIR = $script:OriginalTempDirectory
+
+    # Clean up test artifact directory
     if (Test-Path $script:TestTempPath) {
         Remove-Item -Path $script:TestTempPath -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -205,6 +212,29 @@ Describe 'Invoke-IntuneHydration' {
 
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([switch])
+        }
+
+        It 'Should have MobileApps switch parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $param = $command.Parameters['MobileApps']
+
+            $param | Should -Not -BeNullOrEmpty
+            $param.ParameterType | Should -Be ([switch])
+        }
+
+        It 'Should validate Platform parameter values' {
+            $command = Get-Command Invoke-IntuneHydration
+            $param = $command.Parameters['Platform']
+
+            $param | Should -Not -BeNullOrEmpty
+            $param.ParameterType | Should -Be ([string[]])
+            $validateSet = $param.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Windows'
+            $validateSet.ValidValues | Should -Contain 'macOS'
+            $validateSet.ValidValues | Should -Contain 'iOS'
+            $validateSet.ValidValues | Should -Contain 'Android'
+            $validateSet.ValidValues | Should -Contain 'Linux'
+            $validateSet.ValidValues | Should -Contain 'All'
         }
     }
 
@@ -454,6 +484,23 @@ Describe 'Invoke-IntuneHydration' {
             Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -AppProtection -WhatIf
 
             Should -Invoke Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit -Times 1
+        }
+
+        It 'Should skip AppProtection when selected platform is unsupported' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -AppProtection -Platform Windows -WhatIf
+
+            Should -Invoke Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit -Times 0
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -like 'Skipping App Protection policies:*Windows*'
+            }
+        }
+
+        It 'Should pass BaselineRepoUrl and BaselineBranch to Import-IntuneBaseline' {
+            Invoke-IntuneHydration -TenantId '12345678-1234-1234-1234-123456789abc' -Interactive -Create -OpenIntuneBaseline -BaselineRepoUrl 'https://github.com/example/baseline' -BaselineBranch 'develop' -WhatIf
+
+            Should -Invoke Import-IntuneBaseline -ModuleName IntuneHydrationKit -Times 1 -ParameterFilter {
+                $RepoUrl -eq 'https://github.com/example/baseline' -and $Branch -eq 'develop'
+            }
         }
 
         It 'Should call Import-IntuneNotificationTemplate when NotificationTemplates is enabled' {

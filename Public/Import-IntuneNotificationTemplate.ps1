@@ -138,16 +138,23 @@ function Import-IntuneNotificationTemplate {
                 Write-HydrationLog -Message "  Created: $displayName" -Level Info
 
                 # Create localized messages if present
+                $localizedMessageFailures = 0
                 foreach ($loc in $localizedMessages) {
                     try {
                         $locBody = $loc | ConvertTo-Json -Depth 20
                         Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/notificationMessageTemplates/$($newTemplate.id)/localizedNotificationMessages" -Body $locBody -ContentType "application/json" -ErrorAction Stop
                     } catch {
+                        $localizedMessageFailures++
                         Write-HydrationLog -Message "  Failed to add localized message ($($loc.locale)): $($_.Exception.Message)" -Level Warning
                     }
                 }
 
-                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status 'Success'
+                $status = if ($localizedMessageFailures -gt 0) {
+                    "Partial: $localizedMessageFailures of $($localizedMessages.Count) localized messages failed"
+                } else {
+                    'Success'
+                }
+                $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'Created' -Status $status
             } else {
                 Write-HydrationLog -Message "  WouldCreate: $displayName" -Level Info
                 $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'NotificationTemplate' -Action 'WouldCreate' -Status 'DryRun'

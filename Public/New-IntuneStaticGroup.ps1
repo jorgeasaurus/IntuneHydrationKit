@@ -63,10 +63,20 @@ function New-IntuneStaticGroup {
         $safeDisplayName = $DisplayName -replace "'", "''"
         $listUri = "v1.0/groups?`$filter=displayName eq '$safeDisplayName'"
         $existingGroup = $null
+        $incompatibleGroup = $null
         do {
             $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-            if ($response.value.Count -gt 0) {
-                $existingGroup = $response.value[0]
+            foreach ($group in @($response.value)) {
+                $isStaticSecurityGroup = $group.securityEnabled -eq $true -and @($group.groupTypes) -notcontains 'DynamicMembership'
+                if ($isStaticSecurityGroup) {
+                    $existingGroup = $group
+                    break
+                }
+                if (-not $incompatibleGroup) {
+                    $incompatibleGroup = $group
+                }
+            }
+            if ($existingGroup) {
                 break
             }
             $listUri = $response.'@odata.nextLink'
@@ -96,6 +106,13 @@ function New-IntuneStaticGroup {
                 }
             }
             return New-HydrationResult -Name $existingGroup.displayName -Id $existingGroup.id -Type 'StaticGroup' -Action 'Skipped' -Status 'Group already exists'
+        }
+
+        if ($incompatibleGroup) {
+            $status = 'A non-static security group with this displayName already exists'
+            Write-HydrationLog -Message "  Failed: $DisplayName - $status" -Level Warning
+            Write-Warning $status
+            return New-HydrationResult -Name $DisplayName -Id $incompatibleGroup.id -Type 'StaticGroup' -Action 'Failed' -Status $status
         }
 
         # Create new static group

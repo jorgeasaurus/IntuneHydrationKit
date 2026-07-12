@@ -7,6 +7,10 @@ function Import-IntuneBaseline {
         Uses IntuneManagement's silent batch mode for automated imports.
     .PARAMETER BaselinePath
         Path to the OpenIntuneBaseline directory (will download if not specified)
+    .PARAMETER RepoUrl
+        GitHub repository URL to download when BaselinePath is not specified.
+    .PARAMETER Branch
+        Git branch to download when BaselinePath is not specified.
     .PARAMETER IntuneManagementPath
         Path to IntuneManagement module (will download if not specified)
     .PARAMETER TenantId
@@ -34,6 +38,12 @@ function Import-IntuneBaseline {
         [string]$BaselinePath,
 
         [Parameter()]
+        [string]$RepoUrl = 'https://github.com/jorgeasaurus/OpenIntuneBaseline',
+
+        [Parameter()]
+        [string]$Branch = 'main',
+
+        [Parameter()]
         [string]$TenantId,
 
         [Parameter()]
@@ -59,7 +69,7 @@ function Import-IntuneBaseline {
 
     # Download OpenIntuneBaseline if not provided
     if (-not $BaselinePath -or -not (Test-Path -Path $BaselinePath)) {
-        $BaselinePath = Get-OpenIntuneBaseline
+        $BaselinePath = Get-OpenIntuneBaseline -RepoUrl $RepoUrl -Branch $Branch
     }
 
     # OpenIntuneBaseline uses OS-based folder structure:
@@ -70,7 +80,7 @@ function Import-IntuneBaseline {
     # Map folder names to Graph API endpoints (normalized names only, no duplicates)
     $endpointMap = @{
         'NativeImport'                     = 'deviceManagement/configurationPolicies'
-        'AppProtection'                    = 'deviceAppManagement/managedAppPolicies'
+        'AppProtection'                    = 'APP_PROTECTION'
         'Administrative Templates'         = 'deviceManagement/groupPolicyConfigurations'
         'Compliance'                       = 'deviceManagement/deviceCompliancePolicies'
         'Compliance Policies'              = 'deviceManagement/deviceCompliancePolicies'
@@ -83,7 +93,13 @@ function Import-IntuneBaseline {
         'Proactive Remediations'           = 'deviceManagement/deviceHealthScripts'
         'Windows Autopilot'                = 'deviceManagement/windowsAutopilotDeploymentProfiles'
         'App Configuration'                = 'deviceAppManagement/mobileAppConfigurations'
-        'App Protection Policies'          = 'deviceAppManagement/managedAppPolicies'
+        'App Protection Policies'          = 'APP_PROTECTION'
+    }
+
+    $appProtectionTypeToEndpoint = @{
+        '#microsoft.graph.androidManagedAppProtection' = 'deviceAppManagement/androidManagedAppProtections'
+        '#microsoft.graph.iosManagedAppProtection'     = 'deviceAppManagement/iosManagedAppProtections'
+        '#microsoft.graph.windowsManagedAppProtection' = 'deviceAppManagement/windowsManagedAppProtections'
     }
 
     # Map @odata.type to Graph API endpoints for IntuneManagement exports
@@ -313,10 +329,7 @@ function Import-IntuneBaseline {
                         }
 
                         # Get display name
-                        $displayName = $policyContent.displayName
-                        if (-not $displayName) {
-                            $displayName = $policyName
-                        }
+                        $displayName = if ($policyContent.displayName) { $policyContent.displayName } elseif ($policyContent.name) { $policyContent.name } else { $policyName }
 
                         # Check if policy exists using pre-fetched cache
                         $existingPolicy = $endpointPolicyCache[$typeEndpoint].ContainsKey($displayName)
@@ -460,22 +473,31 @@ function Import-IntuneBaseline {
             $folderCurrent = 0
 
             # Pre-fetch existing policies for this endpoint to avoid repeated API calls (page through all results)
-            $existingPolicies = @{}
-            try {
-                $listUri = "beta/$endpoint"
-                do {
-                    $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
-                    foreach ($policy in $existingResponse.value) {
-                        $policyDisplayName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
-                        if ($policyDisplayName -and -not $existingPolicies.ContainsKey($policyDisplayName)) {
-                            $existingPolicies[$policyDisplayName] = $policy.id
+            $existingPoliciesByEndpoint = @{}
+            $endpointsToCache = if ($endpoint -eq 'APP_PROTECTION') {
+                $appProtectionTypeToEndpoint.Values | Sort-Object -Unique
+            } else {
+                @($endpoint)
+            }
+
+            foreach ($cacheEndpoint in $endpointsToCache) {
+                $existingPoliciesByEndpoint[$cacheEndpoint] = @{}
+                try {
+                    $listUri = "beta/$cacheEndpoint"
+                    do {
+                        $existingResponse = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
+                        foreach ($policy in $existingResponse.value) {
+                            $policyDisplayName = if ($policy.displayName) { $policy.displayName } elseif ($policy.name) { $policy.name } else { $null }
+                            if ($policyDisplayName -and -not $existingPoliciesByEndpoint[$cacheEndpoint].ContainsKey($policyDisplayName)) {
+                                $existingPoliciesByEndpoint[$cacheEndpoint][$policyDisplayName] = $policy.id
+                            }
                         }
-                    }
-                    $listUri = $existingResponse.'@odata.nextLink'
-                } while ($listUri)
-            } catch {
-                # Endpoint might not support listing, continue without cache
-                Write-Verbose "Could not cache policies from $endpoint - will check individually"
+                        $listUri = $existingResponse.'@odata.nextLink'
+                    } while ($listUri)
+                } catch {
+                    # Endpoint might not support listing, continue without cache
+                    Write-Verbose "Could not cache policies from $cacheEndpoint - will check individually"
+                }
             }
 
             foreach ($jsonFile in $jsonFiles) {
@@ -492,6 +514,17 @@ function Import-IntuneBaseline {
                         $jsonContent = $jsonContent -replace '%OrganizationId%', $TenantId
                     }
                     $policyContent = $jsonContent | ConvertFrom-Json
+                    $postEndpoint = $endpoint
+                    if ($endpoint -eq 'APP_PROTECTION') {
+                        $odataType = $policyContent.'@odata.type'
+                        $postEndpoint = $appProtectionTypeToEndpoint[$odataType]
+                        if (-not $postEndpoint) {
+                            $status = if ($odataType) { "Unsupported app protection @odata.type: $odataType" } else { 'Missing app protection @odata.type' }
+                            Write-Warning "  Skipping $policyName - $status"
+                            $results += New-HydrationResult -Name $policyName -Path $jsonFile.FullName -Type "$osName/$folderName" -Action 'Skipped' -Status $status
+                            continue
+                        }
+                    }
 
                     # Get display name from policy
                     $displayName = $policyContent.displayName
@@ -503,6 +536,10 @@ function Import-IntuneBaseline {
                     }
 
                     # Check if policy exists using cached list
+                    $existingPolicies = $existingPoliciesByEndpoint[$postEndpoint]
+                    if (-not $existingPolicies) {
+                        $existingPolicies = @{}
+                    }
                     $existingPolicy = $existingPolicies.ContainsKey($displayName)
 
                     if ($existingPolicy -and $ImportMode -eq 'SkipIfExists') {
@@ -527,7 +564,7 @@ function Import-IntuneBaseline {
                     $importBody.description = if ($existingDesc) { "$existingDesc - Imported by Intune Hydration Kit" } else { "Imported by Intune Hydration Kit" }
 
                     # Create the policy
-                    $null = Invoke-MgGraphRequest -Method POST -Uri "beta/$endpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
+                    $null = Invoke-MgGraphRequest -Method POST -Uri "beta/$postEndpoint" -Body ($importBody | ConvertTo-Json -Depth 100) -ContentType 'application/json' -ErrorAction Stop
 
                     Write-HydrationLog -Message "  Created: $displayName" -Level Info
 

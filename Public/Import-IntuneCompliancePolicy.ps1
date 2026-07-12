@@ -193,8 +193,13 @@ function Import-IntuneCompliancePolicy {
                             runAsAccount           = if ($scriptDefinition.runAsAccount) { $scriptDefinition.runAsAccount } else { "system" }
                         }
 
-                        $newScript = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceComplianceScripts" -Body ($scriptBody | ConvertTo-Json -Depth 10) -ContentType "application/json" -ErrorAction Stop
-                        $scriptId = $newScript.id
+                        if ($PSCmdlet.ShouldProcess($scriptDisplayName, "Create compliance script")) {
+                            $newScript = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceManagement/deviceComplianceScripts" -Body ($scriptBody | ConvertTo-Json -Depth 10) -ContentType "application/json" -ErrorAction Stop
+                            $scriptId = $newScript.id
+                        } else {
+                            Write-HydrationLog -Message "  WouldCreate: $scriptDisplayName" -Level Info
+                            $scriptId = 'whatif-script-id'
+                        }
                     } else {
                         Write-Warning "Skipping compliance policy '$displayName' - no script definition found with detectionScriptContentBase64"
                         $results += New-HydrationResult -Name $displayName -Path $templateFile.FullName -Type 'CompliancePolicy' -Action 'Failed' -Status 'Missing detectionScriptContentBase64 in deviceCompliancePolicyScriptDefinition'

@@ -43,8 +43,13 @@ function Get-FilteredTemplates {
     # Get all templates first
     $allTemplates = Get-HydrationTemplates -Path $Path -Recurse:$Recurse -ResourceType $ResourceType
 
+    if ($null -eq $Platform -or @($Platform).Count -eq 0) {
+        Write-Verbose "No platforms were specified. Returning no $ResourceType templates."
+        return @()
+    }
+
     # Return everything if no filtering needed
-    if (-not $Platform -or $Platform -contains 'All' -or -not $allTemplates -or $allTemplates.Count -eq 0) {
+    if ($Platform -contains 'All' -or -not $allTemplates -or $allTemplates.Count -eq 0) {
         return $allTemplates
     }
 
@@ -67,13 +72,13 @@ function Get-FilteredTemplates {
                     $matched = $template.Name -like "*[-_]$plat.json"
                 }
                 'Directory' {
-                    $parentDir = Split-Path -Path $template.DirectoryName -Leaf
-                    $matched = $parentDir -eq $plat -or
-                    ($plat -eq 'macOS' -and $parentDir -eq 'Mac')
+                    $pathParts = $template.DirectoryName -split '[\\/]'
+                    $matched = ($pathParts -eq $plat).Count -gt 0 -or
+                    ($plat -eq 'macOS' -and ($pathParts -eq 'Mac').Count -gt 0)
                 }
                 'Folder' {
                     # OpenIntuneBaseline uses uppercase folder names: WINDOWS, WINDOWS365, MACOS, BYOD
-                    $pathParts = $template.DirectoryName -split [regex]::Escape([System.IO.Path]::DirectorySeparatorChar)
+                    $pathParts = $template.DirectoryName -split '[\\/]'
                     $matched = switch ($plat) {
                         'Windows' { ($pathParts -match '^WINDOWS(365)?$').Count -gt 0 }
                         'macOS' { ($pathParts -match '^MACOS$').Count -gt 0 }

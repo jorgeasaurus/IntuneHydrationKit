@@ -50,8 +50,12 @@
     Process device filters
 .PARAMETER ConditionalAccess
     Process Conditional Access starter pack policies
+.PARAMETER MobileApps
+    Process mobile app templates
 .PARAMETER All
     Enable all targets
+.PARAMETER Platform
+    Filter imports by platform. Valid values: Windows, macOS, iOS, Android, Linux, All.
 .PARAMETER BaselineRepoUrl
     GitHub repository URL for OpenIntuneBaseline
 .PARAMETER BaselineBranch
@@ -154,7 +158,17 @@ param(
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$MobileApps,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$All,
+
+    [Parameter(ParameterSetName = 'SettingsFile')]
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [ValidateSet('Windows', 'macOS', 'iOS', 'Android', 'Linux', 'All')]
+    [string[]]$Platform = @('All'),
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]

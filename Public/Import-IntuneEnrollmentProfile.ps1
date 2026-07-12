@@ -44,14 +44,30 @@ function Import-IntuneEnrollmentProfile {
     }
 
     $results = @()
+    $getPagedGraphValues = {
+        param(
+            [Parameter(Mandatory)]
+            [string]$Uri
+        )
+
+        $items = @()
+        $listUri = $Uri
+        do {
+            $response = Invoke-MgGraphRequest -Method GET -Uri $listUri -ErrorAction Stop
+            $items += @($response.value)
+            $listUri = $response.'@odata.nextLink'
+        } while ($listUri)
+
+        return $items
+    }
 
     # Remove existing enrollment profiles if requested
     # SAFETY: Only delete profiles that have "Imported by Intune Hydration Kit" in description
     if ($RemoveExisting) {
         # Delete matching Autopilot profiles
         try {
-            $existingAutopilot = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles" -ErrorAction Stop
-            foreach ($enrollmentProfile in $existingAutopilot.value) {
+            $existingAutopilot = & $getPagedGraphValues -Uri "beta/deviceManagement/windowsAutopilotDeploymentProfiles"
+            foreach ($enrollmentProfile in $existingAutopilot) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
                 if (-not (Test-HydrationKitObject -Description $enrollmentProfile.description -ObjectName $enrollmentProfile.displayName)) {
                     Write-Verbose "Skipping '$($enrollmentProfile.displayName)' - not created by Intune Hydration Kit"
@@ -79,8 +95,8 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching ESP profiles
         try {
-            $existingESP = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/deviceEnrollmentConfigurations" -ErrorAction Stop
-            $espProfiles = $existingESP.value | Where-Object {
+            $existingESP = & $getPagedGraphValues -Uri "beta/deviceManagement/deviceEnrollmentConfigurations"
+            $espProfiles = $existingESP | Where-Object {
                 $_.'@odata.type' -eq '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
             }
 
@@ -112,8 +128,8 @@ function Import-IntuneEnrollmentProfile {
 
         # Delete matching Autopilot Device Preparation policies (configurationPolicies with technologies = "enrollment")
         try {
-            $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
-            foreach ($policy in $existingPolicies.value) {
+            $existingPolicies = & $getPagedGraphValues -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'"
+            foreach ($policy in $existingPolicies) {
                 # Safety check: Only delete if created by this kit (has hydration marker in description)
                 if (-not (Test-HydrationKitObject -Description $policy.description -ObjectName $policy.name)) {
                     Write-Verbose "Skipping '$($policy.name)' - not created by Intune Hydration Kit"
@@ -336,9 +352,9 @@ function Import-IntuneEnrollmentProfile {
 
                 try {
                     # Check if policy exists - filter by technologies (name filter not supported)
-                    $existingPolicies = Invoke-MgGraphRequest -Method GET -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'" -ErrorAction Stop
+                    $existingPolicies = & $getPagedGraphValues -Uri "beta/deviceManagement/configurationPolicies?`$filter=technologies eq 'enrollment'"
 
-                    $existingPolicy = $existingPolicies.value | Where-Object { $_.name -eq $profileName }
+                    $existingPolicy = $existingPolicies | Where-Object { $_.name -eq $profileName }
 
                     if ($existingPolicy) {
                         Write-HydrationLog -Message "  Skipped: $profileName" -Level Info
