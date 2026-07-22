@@ -1,0 +1,16 @@
+{
+    "filters": [
+        {
+            "displayName": "iOS - iOS 26 Devices",
+            "description": "Filter for iOS/iPadOS 26 devices",
+            "platform": "iOS",
+            "rule": "(device.osVersion -startsWith \"26.\")"
+        },
+        {
+            "displayName": "iOS - iOS 18 Devices",
+            "description": "Filter for iOS/iPadOS 18 devices",
+            "platform": "iOS",
+            "rule": "(device.osVersion -startsWith \"18.\")"
+        }
+    ]
+}

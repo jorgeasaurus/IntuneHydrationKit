@@ -1,0 +1,22 @@
+{
+    "filters": [
+        {
+            "displayName": "Windows - Windows 11 24H2 Devices",
+            "description": "Filter for Windows 11 24H2 devices (build 26100)",
+            "platform": "windows10AndLater",
+            "rule": "(device.osVersion -startsWith \"10.0.26100\")"
+        },
+        {
+            "displayName": "Windows - Windows 11 25H2 Devices",
+            "description": "Filter for Windows 11 25H2 devices (build 26200)",
+            "platform": "windows10AndLater",
+            "rule": "(device.osVersion -startsWith \"10.0.26200\")"
+        },
+        {
+            "displayName": "Windows - Windows 11 26H1 Devices",
+            "description": "Filter for Windows 11 26H1 devices (build 28000)",
+            "platform": "windows10AndLater",
+            "rule": "(device.osVersion -startsWith \"10.0.28000\")"
+        }
+    ]
+}

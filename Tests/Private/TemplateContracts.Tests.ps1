@@ -87,6 +87,58 @@ Describe 'Bundled template contracts' {
         }
     }
 
+    It 'Should include the web-app OS-version dynamic group templates' {
+        $groups = foreach ($templateFile in $script:DynamicGroupTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            @($template.groups)
+        }
+        $expectedGroups = @{
+            'Intune - Windows 11 24H2 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26100") and (device.managementType -eq "MDM")' }
+            'Intune - Windows 11 25H2 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26200") and (device.managementType -eq "MDM")' }
+            'Intune - Windows 11 26H1 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.28000") and (device.managementType -eq "MDM")' }
+            'Intune - macOS 27 Golden Gate Devices' = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "27.")' }
+            'Intune - macOS 26 Tahoe Devices'    = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "26.")' }
+            'Intune - macOS 15 Sequoia Devices'  = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "15.")' }
+            'Intune - macOS 14 Sonoma Devices'   = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "14.")' }
+            'Intune - iOS iPadOS 26 Devices'     = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "26.")' }
+            'Intune - iOS iPadOS 18 Devices'     = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "18.")' }
+        }
+
+        $groups | Should -HaveCount 59
+        foreach ($name in $expectedGroups.Keys) {
+            $group = $groups | Where-Object { $_.displayName -eq $name }
+            $group | Should -HaveCount 1
+            $group.platform | Should -Be $expectedGroups[$name].Platform
+            $group.membershipRule | Should -Be $expectedGroups[$name].Rule
+        }
+    }
+
+    It 'Should include the web-app OS-version device filter templates' {
+        $filters = foreach ($templateFile in $script:DeviceFilterTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            @($template.filters)
+        }
+        $expectedFilters = @{
+            'Windows - Windows 11 24H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.26100")' }
+            'Windows - Windows 11 25H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.26200")' }
+            'Windows - Windows 11 26H1 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.28000")' }
+            'iOS - iOS 26 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.osVersion -startsWith "26.")' }
+            'iOS - iOS 18 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.osVersion -startsWith "18.")' }
+            'macOS - macOS 27 Golden Gate Devices' = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "27.")' }
+            'macOS - macOS 26 Tahoe Devices'       = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "26.")' }
+            'macOS - macOS 15 Sequoia Devices'     = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "15.")' }
+            'macOS - macOS 14 Sonoma Devices'      = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "14.")' }
+        }
+
+        $filters | Should -HaveCount 38
+        foreach ($name in $expectedFilters.Keys) {
+            $filter = $filters | Where-Object { $_.displayName -eq $name }
+            $filter | Should -HaveCount 1
+            $filter.platform | Should -Be $expectedFilters[$name].Platform
+            $filter.rule | Should -Be $expectedFilters[$name].Rule
+        }
+    }
+
     It 'Should keep architecture device filters on documented cpu architecture rules' {
         $architectureTemplateFiles = @(
             Join-Path $script:DeviceFilterTemplatePath 'Windows-Architecture-Filters.json'
