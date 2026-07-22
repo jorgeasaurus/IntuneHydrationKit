@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.1.2'
+    ModuleVersion     = '1.2.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,10 +85,10 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.1.2
+## v1.2.0
 
-- **Conditional Access:** Fixed policy imports failing when templates contain prefixed OData annotations (e.g. `authenticationStrength@odata.context`); annotations are now stripped recursively while `@odata.type` is preserved.
-- **License detection:** Removed Defender for Cloud Apps (`ADALLOM_S_STANDALONE`) and Defender for Identity (`ATA`) service plans from Entra ID Premium P2 detection, so risk-based Conditional Access templates are correctly skipped on tenants without P2.
+- **Dynamic Groups:** Added Windows 11 24H2/25H2/26H1, macOS 14-27, and iOS/iPadOS 18/26 OS-version groups.
+- **Device Filters:** Added matching Windows, macOS, and iOS OS-version assignment filters.
 
 '@
         }

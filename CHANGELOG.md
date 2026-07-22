@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-22
+
+### Added
+
+- **Dynamic Groups**: Added OS-version groups for Windows 11 24H2/25H2/26H1, macOS 14-27, and iOS/iPadOS 18/26.
+- **Device Filters**: Added matching Windows, macOS, and iOS OS-version assignment filters.
+
 ## [1.1.2] - 2026-07-12
 
 ### Fixed
