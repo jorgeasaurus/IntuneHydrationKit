@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.2.0'
+    ModuleVersion     = '1.3.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,10 +85,10 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.2.0
+## v1.3.0
 
-- **Dynamic Groups:** Added Windows 11 24H2/25H2/26H1, macOS 14-27, and iOS/iPadOS 18/26 OS-version groups.
-- **Device Filters:** Added matching Windows, macOS, and iOS OS-version assignment filters.
+- **Dynamic Groups:** Added Microsoft Entra joined, hybrid joined, and registered Windows device groups.
+- **Device Filters:** Added Windows assignment filters for Microsoft Entra joined, hybrid joined, registered, and unknown join types.
 
 '@
         }
