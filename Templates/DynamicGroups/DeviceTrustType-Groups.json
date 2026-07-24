@@ -1,0 +1,22 @@
+{
+    "groups": [
+        {
+            "displayName": "Intune - Entra Joined Devices",
+            "description": "All Microsoft Entra joined devices",
+            "membershipRule": "(device.deviceTrustType -eq \"AzureAD\")",
+            "platform": "Windows"
+        },
+        {
+            "displayName": "Intune - Hybrid Entra Joined Devices",
+            "description": "All Microsoft Entra hybrid joined devices",
+            "membershipRule": "(device.deviceTrustType -eq \"ServerAD\")",
+            "platform": "Windows"
+        },
+        {
+            "displayName": "Intune - Entra Registered Devices",
+            "description": "All Microsoft Entra registered devices",
+            "membershipRule": "(device.deviceTrustType -eq \"Workplace\")",
+            "platform": "Windows"
+        }
+    ]
+}

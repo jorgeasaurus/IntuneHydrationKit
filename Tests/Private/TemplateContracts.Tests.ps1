@@ -104,7 +104,7 @@ Describe 'Bundled template contracts' {
             'Intune - iOS iPadOS 18 Devices'     = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "18.")' }
         }
 
-        $groups | Should -HaveCount 59
+        $groups | Should -HaveCount 62
         foreach ($name in $expectedGroups.Keys) {
             $group = $groups | Where-Object { $_.displayName -eq $name }
             $group | Should -HaveCount 1
@@ -130,7 +130,7 @@ Describe 'Bundled template contracts' {
             'macOS - macOS 14 Sonoma Devices'      = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "14.")' }
         }
 
-        $filters | Should -HaveCount 38
+        $filters | Should -HaveCount 42
         foreach ($name in $expectedFilters.Keys) {
             $filter = $filters | Where-Object { $_.displayName -eq $name }
             $filter | Should -HaveCount 1
@@ -163,6 +163,42 @@ Describe 'Bundled template contracts' {
 
             $filter.platform | Should -Be $expected.Platform
             $filter.rule | Should -Be $expected.Rule
+        }
+    }
+
+    It 'Should include device trust type templates with service-specific values' {
+        $groups = foreach ($templateFile in $script:DynamicGroupTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            @($template.groups)
+        }
+        $filters = foreach ($templateFile in $script:DeviceFilterTemplates) {
+            $template = Get-Content -Path $templateFile.FullName -Raw | ConvertFrom-Json -Depth 20
+            @($template.filters)
+        }
+        $expectedGroups = @{
+            'Intune - Entra Joined Devices'        = @{ Platform = 'Windows'; Rule = '(device.deviceTrustType -eq "AzureAD")' }
+            'Intune - Hybrid Entra Joined Devices' = @{ Platform = 'Windows'; Rule = '(device.deviceTrustType -eq "ServerAD")' }
+            'Intune - Entra Registered Devices'    = @{ Platform = 'Windows'; Rule = '(device.deviceTrustType -eq "Workplace")' }
+        }
+        $expectedFilters = @{
+            'Windows - Entra Joined'           = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD joined")' }
+            'Windows - Hybrid Entra Joined'    = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Hybrid Azure AD joined")' }
+            'Windows - Entra Registered'       = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD registered")' }
+            'Windows - Unknown Entra Join Type' = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Unknown")' }
+        }
+
+        foreach ($name in $expectedGroups.Keys) {
+            $group = $groups | Where-Object { $_.displayName -eq $name }
+            $group | Should -HaveCount 1
+            $group.platform | Should -Be $expectedGroups[$name].Platform
+            $group.membershipRule | Should -Be $expectedGroups[$name].Rule
+        }
+
+        foreach ($name in $expectedFilters.Keys) {
+            $filter = $filters | Where-Object { $_.displayName -eq $name }
+            $filter | Should -HaveCount 1
+            $filter.platform | Should -Be $expectedFilters[$name].Platform
+            $filter.rule | Should -Be $expectedFilters[$name].Rule
         }
     }
 
