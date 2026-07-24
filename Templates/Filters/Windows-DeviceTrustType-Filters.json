@@ -1,0 +1,28 @@
+{
+    "filters": [
+        {
+            "displayName": "Windows - Entra Joined",
+            "description": "Filter for Microsoft Entra joined Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.deviceTrustType -eq \"Azure AD joined\")"
+        },
+        {
+            "displayName": "Windows - Hybrid Entra Joined",
+            "description": "Filter for Microsoft Entra hybrid joined Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.deviceTrustType -eq \"Hybrid Azure AD joined\")"
+        },
+        {
+            "displayName": "Windows - Entra Registered",
+            "description": "Filter for Microsoft Entra registered Windows devices",
+            "platform": "windows10AndLater",
+            "rule": "(device.deviceTrustType -eq \"Azure AD registered\")"
+        },
+        {
+            "displayName": "Windows - Unknown Entra Join Type",
+            "description": "Filter for Windows devices with an unknown Microsoft Entra join type",
+            "platform": "windows10AndLater",
+            "rule": "(device.deviceTrustType -eq \"Unknown\")"
+        }
+    ]
+}
