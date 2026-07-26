@@ -35,7 +35,7 @@ function Write-WinGetDetectionLog {
         [string]`$Level = 'INFO'
     )
 
-    Write-Output "[`$Level] `$Message"
+    Write-Verbose "[`$Level] `$Message"
 }
 
 $bootstrapFragment
