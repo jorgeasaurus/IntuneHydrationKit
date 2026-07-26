@@ -19,13 +19,13 @@ function Connect-AssignmentGraph {
 
     $context = Get-MgContext
     if (-not $context) {
-        Connect-MgGraph -Scopes $requiredScope -NoWelcome | Out-Null
+        Connect-MgGraph -Scopes $RequiredScope -NoWelcome | Out-Null
         return
     }
 
-    if ($context.Scopes -notcontains $requiredScope) {
+    if ($context.Scopes -notcontains $RequiredScope) {
         Disconnect-MgGraph | Out-Null
-        Connect-MgGraph -Scopes $requiredScope -NoWelcome | Out-Null
+        Connect-MgGraph -Scopes $RequiredScope -NoWelcome | Out-Null
     }
 }
 

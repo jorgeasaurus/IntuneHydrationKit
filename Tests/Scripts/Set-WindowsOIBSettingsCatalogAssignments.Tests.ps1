@@ -5,6 +5,34 @@ BeforeAll {
 }
 
 Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
+    Context 'Connect-AssignmentGraph' {
+        It 'Should connect using the requested configuration policy scope' {
+            Mock Get-MgContext { $null }
+            Mock Connect-MgGraph {}
+
+            Connect-AssignmentGraph -RequiredScope 'DeviceManagementConfiguration.ReadWrite.All'
+
+            Should -Invoke Connect-MgGraph -Exactly 1 -ParameterFilter {
+                $Scopes -eq 'DeviceManagementConfiguration.ReadWrite.All' -and $NoWelcome
+            }
+        }
+
+        It 'Should reconnect when the requested scope is missing' {
+            Mock Get-MgContext {
+                [PSCustomObject]@{ Scopes = @('DeviceManagementApps.ReadWrite.All') }
+            }
+            Mock Disconnect-MgGraph {}
+            Mock Connect-MgGraph {}
+
+            Connect-AssignmentGraph -RequiredScope 'DeviceManagementConfiguration.ReadWrite.All'
+
+            Should -Invoke Disconnect-MgGraph -Exactly 1
+            Should -Invoke Connect-MgGraph -Exactly 1 -ParameterFilter {
+                $Scopes -eq 'DeviceManagementConfiguration.ReadWrite.All' -and $NoWelcome
+            }
+        }
+    }
+
     Context 'Get-WindowsOIBSettingsCatalogPolicy' {
         BeforeEach {
             Mock Invoke-MgGraphRequest {
