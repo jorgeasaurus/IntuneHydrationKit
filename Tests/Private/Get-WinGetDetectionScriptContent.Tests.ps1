@@ -17,7 +17,6 @@ Describe 'Get-WinGetDetectionScriptContent' {
         $scriptContent | Should -Match 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\*'
         $scriptContent | Should -Match 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\\*'
         $scriptContent | Should -Match 'Test-InstalledApplicationRegistry'
-        $scriptContent | Should -Match ([regex]::Escape('Write-Output "[$Level] $Message"'))
         $scriptContent | Should -Match ([regex]::Escape('Write-Output "$PackageIdentifier is installed"'))
         $scriptContent | Should -Match ([regex]::Escape('Write-Output "$PackageIdentifier is not installed"'))
         $scriptContent | Should -Not -Match 'Write-Host'
@@ -25,5 +24,17 @@ Describe 'Get-WinGetDetectionScriptContent' {
         $parseErrors = $null
         $null = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$parseErrors)
         $parseErrors | Should -BeNullOrEmpty
+    }
+
+    It 'Should keep bootstrap log messages out of the success stream' {
+        $scriptContent = Get-WinGetDetectionScriptContent -PackageIdentifier 'Contoso.App'
+        $loggerDefinition = [regex]::Match($scriptContent, '(?ms)^function Write-WinGetDetectionLog \{.*?^\}')
+
+        $loggerDefinition.Success | Should -BeTrue
+        . ([scriptblock]::Create($loggerDefinition.Value))
+
+        $successOutput = @(Write-WinGetDetectionLog -Message 'Bootstrapping WinGet for detection.')
+
+        $successOutput | Should -BeNullOrEmpty
     }
 }

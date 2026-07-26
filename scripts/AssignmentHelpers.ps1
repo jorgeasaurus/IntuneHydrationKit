@@ -11,9 +11,12 @@
 
 function Connect-AssignmentGraph {
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$RequiredScope = 'DeviceManagementApps.ReadWrite.All'
+    )
 
-    $requiredScope = 'DeviceManagementApps.ReadWrite.All'
     $context = Get-MgContext
     if (-not $context) {
         Connect-MgGraph -Scopes $requiredScope -NoWelcome | Out-Null

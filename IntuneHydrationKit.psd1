@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.3.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,10 +85,10 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.3.0
+## v1.3.1
 
-- **Dynamic Groups:** Added Microsoft Entra joined, hybrid joined, and registered Windows device groups.
-- **Device Filters:** Added Windows assignment filters for Microsoft Entra joined, hybrid joined, registered, and unknown join types.
+- **WinGet detection:** Prevented bootstrap log messages from corrupting the WinGet executable path.
+- **OIB Settings Catalog:** Added a guarded assignment script that targets managed policies, preserves direct assignments, and fails closed on filtered or policy-set-owned targets.
 
 '@
         }
