@@ -176,6 +176,20 @@ function Test-UnfilteredConfigurationPolicyAssignmentTarget {
     return ([string]::IsNullOrWhiteSpace($filterType) -or $filterType -eq 'none') -and [string]::IsNullOrWhiteSpace($filterId)
 }
 
+function Get-OIBAssignmentSkipStatus {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [bool]$WasWhatIf = $WhatIfPreference
+    )
+
+    if ($WasWhatIf) {
+        return 'WhatIf'
+    }
+
+    return 'Cancelled'
+}
+
 function Set-OIBSettingsCatalogAssignment {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -217,11 +231,10 @@ function Set-OIBSettingsCatalogAssignment {
     }
 
     if (-not $PSCmdlet.ShouldProcess($PolicyName, "Assign to $targetName")) {
-        $status = if ($WhatIfPreference) { 'WhatIf' } else { 'Cancelled' }
         return [PSCustomObject]@{
             Name   = $PolicyName
             Target = $targetName
-            Status = $status
+            Status = Get-OIBAssignmentSkipStatus
             Reason = $null
         }
     }

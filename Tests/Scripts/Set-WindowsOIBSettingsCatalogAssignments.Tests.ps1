@@ -72,6 +72,11 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
     }
 
     Context 'Set-OIBSettingsCatalogAssignment' {
+        It 'Should distinguish WhatIf from an interactive cancellation' {
+            Get-OIBAssignmentSkipStatus -WasWhatIf $true | Should -Be 'WhatIf'
+            Get-OIBAssignmentSkipStatus -WasWhatIf $false | Should -Be 'Cancelled'
+        }
+
         It 'Should skip an existing unfiltered intended target' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri, $Body, $ContentType)
