@@ -217,10 +217,11 @@ function Set-OIBSettingsCatalogAssignment {
     }
 
     if (-not $PSCmdlet.ShouldProcess($PolicyName, "Assign to $targetName")) {
+        $status = if ($WhatIfPreference) { 'WhatIf' } else { 'Cancelled' }
         return [PSCustomObject]@{
             Name   = $PolicyName
             Target = $targetName
-            Status = 'WhatIf'
+            Status = $status
             Reason = $null
         }
     }
