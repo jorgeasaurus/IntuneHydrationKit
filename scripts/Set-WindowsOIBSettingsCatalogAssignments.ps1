@@ -196,6 +196,11 @@ function Set-OIBSettingsCatalogAssignment {
     }
 
     $existingAssignments = Get-ConfigurationPolicyAssignment -PolicyId $PolicyId
+    $indirectAssignments = @($existingAssignments | Where-Object { -not (Test-DirectConfigurationPolicyAssignment -Assignment $_) })
+    if ($indirectAssignments.Count -gt 0) {
+        throw "Policy '$PolicyName' has an assignment owned by a policy set. Refusing to replay it as a direct assignment."
+    }
+
     $matchingTargets = @($existingAssignments | Where-Object { $_.target.'@odata.type' -eq $targetType })
     $unfilteredTarget = @($matchingTargets | Where-Object { Test-UnfilteredConfigurationPolicyAssignmentTarget -Assignment $_ -TargetType $targetType })
     if ($unfilteredTarget.Count -gt 0) {
@@ -209,11 +214,6 @@ function Set-OIBSettingsCatalogAssignment {
 
     if ($matchingTargets.Count -gt 0) {
         throw "Policy '$PolicyName' has a filtered $targetName assignment. Refusing to add an unfiltered target."
-    }
-
-    $indirectAssignments = @($existingAssignments | Where-Object { -not (Test-DirectConfigurationPolicyAssignment -Assignment $_) })
-    if ($indirectAssignments.Count -gt 0) {
-        throw "Policy '$PolicyName' has an assignment owned by a policy set. Refusing to replay it as a direct assignment."
     }
 
     if (-not $PSCmdlet.ShouldProcess($PolicyName, "Assign to $targetName")) {

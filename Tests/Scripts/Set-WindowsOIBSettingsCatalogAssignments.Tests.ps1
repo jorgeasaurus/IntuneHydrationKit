@@ -135,6 +135,28 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
             Should -Invoke Invoke-MgGraphRequest -Exactly 0
         }
 
+        It 'Should fail when an existing intended target is owned by a policy set' {
+            Mock Invoke-MgGraphRequest {
+                param($Method, $Uri, $Body, $ContentType)
+                $null = $Method, $Uri, $Body, $ContentType
+            }
+            Mock Get-ConfigurationPolicyAssignment {
+                @([PSCustomObject]@{
+                        source = 'policySets'
+                        sourceId = 'policy-set-id'
+                        target = [PSCustomObject]@{
+                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
+                            deviceAndAppManagementAssignmentFilterType = 'none'
+                        }
+                    })
+            }
+
+            {
+                Set-OIBSettingsCatalogAssignment -PolicyId 'policy-id' -PolicyName '[IHD] Win - OIB - SC - Test - U - Policy' -Confirm:$false
+            } | Should -Throw '*owned by a policy set*'
+            Should -Invoke Invoke-MgGraphRequest -Exactly 0
+        }
+
         It 'Should not write assignments in WhatIf mode' {
             Mock Invoke-MgGraphRequest {
                 param($Method, $Uri, $Body, $ContentType)
