@@ -339,7 +339,7 @@ Describe 'Bundled template contracts' {
     }
 
     It 'Should keep bundled WinGet app templates internally consistent' {
-        $script:WinGetAppTemplates.Count | Should -Be 28
+        $script:WinGetAppTemplates.Count | Should -Be 29
 
         $templateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($templateFile in $script:WinGetAppTemplates) {
