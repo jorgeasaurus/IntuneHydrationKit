@@ -1,0 +1,11 @@
+{
+  "templateId": "windows-disk-pressure-cleanup",
+  "sortOrder": 10,
+  "displayName": "Windows - Disk Pressure Cleanup",
+  "publisher": "Intune Hydration Kit",
+  "description": "Reclaims aged temporary files when system-drive free space is low or eligible temporary data exceeds the configured threshold. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-DiskPressureCleanup.ps1",
+  "remediationScript": "Remediate-DiskPressureCleanup.ps1"
+}

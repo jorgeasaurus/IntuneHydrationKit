@@ -1,0 +1,11 @@
+{
+  "templateId": "windows-defender-signature-freshness",
+  "sortOrder": 50,
+  "displayName": "Windows - Defender Signature Freshness",
+  "publisher": "Intune Hydration Kit",
+  "description": "Updates Microsoft Defender signatures only when Defender antivirus is active and signatures are older than seven days. Devices using passive or third-party antivirus are skipped. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-DefenderSignatureFreshness.ps1",
+  "remediationScript": "Remediate-DefenderSignatureFreshness.ps1"
+}

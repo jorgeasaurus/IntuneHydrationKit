@@ -88,6 +88,7 @@ $publicFunctions = @(
         'Import-IntuneEnrollmentProfile',
         'Import-IntuneMobileApp',
         'Import-IntuneNotificationTemplate',
+        'Import-IntuneRemediation',
         'Import-IntuneWinGetApp',
         'Initialize-HydrationLogging',
         'Invoke-IntuneHydration',

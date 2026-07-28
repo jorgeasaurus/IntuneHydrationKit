@@ -34,6 +34,7 @@ function Get-HydrationGraphWorkloadAccessProbe {
             })
     }
 
+    $requiresWinGetRemediationProbe = $false
     if ($Imports.ContainsKey('mobileApps') -and $Imports.mobileApps) {
         $probes.Add(@{
                 Workload      = 'Mobile Apps'
@@ -48,15 +49,25 @@ function Get-HydrationGraphWorkloadAccessProbe {
             $remediationEnabled = [bool]$MobileAppConfiguration.remediationEnabled
         }
 
-        if ($remediationEnabled -and (Test-HydrationMobileAppsIncludeWinGet -Configuration $MobileAppConfiguration -Platforms $MobileAppPlatforms)) {
-            $probes.Add(@{
-                    Workload      = 'WinGet Proactive Remediations'
-                    Endpoint      = 'beta/deviceManagement/deviceHealthScripts'
-                    Uri           = 'beta/deviceManagement/deviceHealthScripts?$top=1&$select=id'
-                    RequiredScope = 'DeviceManagementScripts.ReadWrite.All'
-                    RoleHint      = 'Use a Global Administrator account with active Intune device script access; PIM-elevated roles can still be rejected by the downstream Intune service.'
-                })
+        $requiresWinGetRemediationProbe = $remediationEnabled -and (Test-HydrationMobileAppsIncludeWinGet -Configuration $MobileAppConfiguration -Platforms $MobileAppPlatforms)
+    }
+
+    $requiresRemediationProbe = $Imports.ContainsKey('remediations') -and $Imports.remediations
+    if ($requiresWinGetRemediationProbe -or $requiresRemediationProbe) {
+        $workloads = [System.Collections.Generic.List[string]]::new()
+        if ($requiresWinGetRemediationProbe) {
+            $workloads.Add('WinGet Proactive Remediations')
         }
+        if ($requiresRemediationProbe) {
+            $workloads.Add('Proactive Remediations')
+        }
+        $probes.Add(@{
+                Workload      = $workloads -join ' and '
+                Endpoint      = 'beta/deviceManagement/deviceHealthScripts'
+                Uri           = 'beta/deviceManagement/deviceHealthScripts?$top=1&$select=id'
+                RequiredScope = 'DeviceManagementScripts.ReadWrite.All'
+                RoleHint      = 'Use a Global Administrator account with active Intune device script access; PIM-elevated roles can still be rejected by the downstream Intune service.'
+            })
     }
 
     $appProtectionProbePlatforms = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

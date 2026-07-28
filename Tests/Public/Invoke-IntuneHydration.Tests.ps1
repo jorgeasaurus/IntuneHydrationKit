@@ -240,6 +240,14 @@ Describe 'Invoke-IntuneHydration' {
             $param | Should -Not -BeNullOrEmpty
             $param.ParameterType | Should -Be ([switch])
         }
+
+        It 'Should have Remediations switch parameter' {
+            $command = Get-Command Invoke-IntuneHydration
+            $param = $command.Parameters['Remediations']
+
+            $param | Should -Not -BeNullOrEmpty
+            $param.ParameterType | Should -Be ([switch])
+        }
     }
 
     Context 'Settings File Validation' {
@@ -318,6 +326,7 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneEnrollmentProfile -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit
             Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneRemediation { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneWinGetApp { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup -ModuleName IntuneHydrationKit
             Mock Get-ChildItem { @() } -ModuleName IntuneHydrationKit
@@ -735,6 +744,7 @@ Describe 'Invoke-IntuneHydration' {
             Mock Import-IntuneEnrollmentProfile { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneConditionalAccessPolicy { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneMobileApp { @() } -ModuleName IntuneHydrationKit
+            Mock Import-IntuneRemediation { @() } -ModuleName IntuneHydrationKit
             Mock Import-IntuneWinGetApp { @() } -ModuleName IntuneHydrationKit
             Mock Import-CISBaseline { @() } -ModuleName IntuneHydrationKit
             Mock New-IntuneDynamicGroup { @{ Action = 'Created'; Id = 'test-id' } } -ModuleName IntuneHydrationKit
@@ -849,6 +859,7 @@ Describe 'Invoke-IntuneHydration' {
             Should -Invoke Import-IntuneAppProtectionPolicy -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneEnrollmentProfile -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneConditionalAccessPolicy -ModuleName IntuneHydrationKit -Times 1
+            Should -Invoke Import-IntuneRemediation -ModuleName IntuneHydrationKit -Times 1
             Should -Invoke Import-IntuneWinGetApp -ModuleName IntuneHydrationKit -Times 1
         }
 

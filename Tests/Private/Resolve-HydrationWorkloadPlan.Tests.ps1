@@ -18,6 +18,7 @@ Describe 'Get-HydrationWorkloadCatalog' {
             'appProtection'
             'enrollmentProfiles'
             'mobileApps'
+            'remediations'
             'notificationTemplates'
             'conditionalAccess'
         )

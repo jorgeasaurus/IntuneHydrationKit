@@ -15,5 +15,6 @@ function Get-HydrationTuiImportOption {
         [pscustomobject]@{ Number = 9; Key = 'enrollmentProfiles'; Label = 'Enrollment Profiles' }
         [pscustomobject]@{ Number = 10; Key = 'conditionalAccess'; Label = 'Conditional Access' }
         [pscustomobject]@{ Number = 11; Key = 'mobileApps'; Label = 'Mobile Apps' }
+        [pscustomobject]@{ Number = 12; Key = 'remediations'; Label = 'Proactive Remediations' }
     )
 }

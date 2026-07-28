@@ -200,6 +200,25 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         Should -Invoke Invoke-HydrationGraphRequest -Exactly 0 -ModuleName IntuneHydrationKit
     }
 
+    It 'Should require exact ownership metadata before it can remove a remediation' {
+        $definition = @{
+            DisplayName       = 'Test remediation'
+            Type              = 'WinGetRemediation'
+            Path              = $null
+            SourceMarker      = 'Imported from WinGet'
+            OwnershipMetadata = @{}
+        }
+
+        {
+            & $script:TestModule {
+                param($Definition)
+                Sync-IntuneDeviceHealthScript -Definition $Definition -DesiredState Remove
+            } $definition
+        } | Should -Throw '*requires non-empty ownership metadata*'
+
+        Should -Invoke Invoke-HydrationGraphRequest -Exactly 0 -ModuleName IntuneHydrationKit
+    }
+
     It 'Should update an owned remediation when the package fingerprint changes' {
         Mock Invoke-HydrationGraphRequest {
             param($Method, $Uri, $Body)
@@ -245,6 +264,37 @@ Describe 'Sync-IntuneWinGetProactiveRemediation' {
         $script:patchedRemediationBody.description | Should -Not -BeLike '*OLDHASH*'
         $script:patchedRemediationBody.ContainsKey('isGlobalScript') | Should -Be $false
         $script:patchedRemediationBody.ContainsKey('@odata.type') | Should -Be $false
+    }
+
+    It 'Should refuse a nondeterministic update when multiple owned remediations match' {
+        Mock Invoke-HydrationGraphRequest {
+            param($Method, $Uri)
+
+            if ($Method -eq 'GET' -and $Uri -like '*System*') {
+                return @{
+                    value = @(
+                        @{ id = 'first-system'; description = "Imported by Intune Hydration Kit`nImported from WinGet`nWinGetRemediationScope: system" },
+                        @{ id = 'second-system'; description = "Imported by Intune Hydration Kit`nImported from WinGet`nWinGetRemediationScope: system" }
+                    )
+                }
+            }
+
+            if ($Method -eq 'GET') {
+                return @{ value = @() }
+            }
+
+            throw 'No mutation should be attempted for ambiguous ownership.'
+        } -ModuleName IntuneHydrationKit
+
+        $result = & $script:TestModule {
+            param([object[]]$Templates)
+            Sync-IntuneWinGetProactiveRemediation -Templates $Templates
+        } @($script:testTemplates | Where-Object { $_.package.match.scope -eq 'machine' })
+
+        $systemResult = $result | Where-Object { $_.Name -eq 'WinGet App Updates (System)' }
+        $systemResult.Action | Should -Be 'Failed'
+        $systemResult.Status | Should -Be 'Multiple owned remediations'
+        Should -Invoke Invoke-HydrationGraphRequest -Exactly 0 -ParameterFilter { $Method -in @('PATCH', 'POST', 'DELETE') } -ModuleName IntuneHydrationKit
     }
 
     It 'Should delete an owned remediation when the current template set has no packages for its scope' {

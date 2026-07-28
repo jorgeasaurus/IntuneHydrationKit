@@ -52,6 +52,7 @@ function Get-HydrationGraphScopes {
         appProtection         = @('DeviceManagementApps.ReadWrite.All')
         notificationTemplates = @('DeviceManagementServiceConfig.ReadWrite.All')
         mobileApps            = @('DeviceManagementApps.ReadWrite.All')
+        remediations          = @('DeviceManagementConfiguration.ReadWrite.All', 'DeviceManagementScripts.ReadWrite.All')
         cisBaselines          = @('DeviceManagementConfiguration.ReadWrite.All')
     }
 

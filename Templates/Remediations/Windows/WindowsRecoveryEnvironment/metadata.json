@@ -1,0 +1,11 @@
+{
+  "templateId": "windows-recovery-environment-health",
+  "sortOrder": 60,
+  "displayName": "Windows - Recovery Environment Health",
+  "publisher": "Intune Hydration Kit",
+  "description": "Enables Windows Recovery Environment only when ReAgent configuration is explicitly disabled and the standard local Winre.wim is available. It does not change recovery partitions, image paths, or BCD entries. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-WindowsRecoveryEnvironment.ps1",
+  "remediationScript": "Remediate-WindowsRecoveryEnvironment.ps1"
+}

@@ -54,6 +54,8 @@
     Process Conditional Access starter pack policies
 .PARAMETER MobileApps
     Process mobile app templates
+.PARAMETER Remediations
+    Process bundled, unassigned Proactive Windows Remediations.
 .PARAMETER CISBaselines
     Process bundled CIS baseline policies
 .PARAMETER All
@@ -165,6 +167,10 @@ param(
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]
     [switch]$MobileApps,
+
+    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'ServicePrincipal')]
+    [switch]$Remediations,
 
     [Parameter(ParameterSetName = 'Interactive')]
     [Parameter(ParameterSetName = 'ServicePrincipal')]

@@ -243,6 +243,18 @@ Describe 'Test-IntunePrerequisites' {
             }
         }
 
+        It 'Should probe device health scripts once when WinGet apps and remediations are selected' {
+            Set-PrerequisiteGraphRequestMock `
+                -MobileAppsResponse { @{ value = @() } } `
+                -DeviceHealthScriptsResponse { @{ value = @() } }
+
+            Test-IntunePrerequisites -Imports @{ mobileApps = $true; remediations = $true } | Should -Be $true
+
+            Should -Invoke Invoke-MgGraphRequest -ModuleName IntuneHydrationKit -Exactly 1 -ParameterFilter {
+                $Method -eq 'GET' -and $Uri -like '*deviceManagement/deviceHealthScripts*'
+            }
+        }
+
         It 'Should skip WinGet remediation access probe when remediation is disabled' {
             Set-PrerequisiteGraphRequestMock -MobileAppsResponse { @{ value = @() } }
 

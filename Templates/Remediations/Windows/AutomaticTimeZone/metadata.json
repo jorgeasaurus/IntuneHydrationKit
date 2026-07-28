@@ -1,0 +1,11 @@
+{
+  "templateId": "windows-automatic-time-zone",
+  "sortOrder": 30,
+  "displayName": "Windows - Automatic Time Zone",
+  "publisher": "Intune Hydration Kit",
+  "description": "Enables the Windows automatic time-zone service when it is disabled. Requires an approved Location Services configuration. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-AutomaticTimeZone.ps1",
+  "remediationScript": "Remediate-AutomaticTimeZone.ps1"
+}

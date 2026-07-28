@@ -1,0 +1,10 @@
+{
+  "templateId": "windows-device-health-reporting",
+  "sortOrder": 20,
+  "displayName": "Windows - Device Health Reporting",
+  "publisher": "Intune Hydration Kit",
+  "description": "Reports storage-health warnings and Plug and Play device errors for triage. This detection-only package makes no device changes. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-DeviceHealth.ps1"
+}

@@ -74,6 +74,9 @@ function Resolve-HydrationExecutionSettings {
         [switch]$MobileApps,
 
         [Parameter()]
+        [switch]$Remediations,
+
+        [Parameter()]
         [switch]$CISBaselines,
 
         [Parameter()]
@@ -179,6 +182,7 @@ function Resolve-HydrationExecutionSettings {
         appProtection         = $All.IsPresent -or $AppProtection.IsPresent
         notificationTemplates = $All.IsPresent -or $NotificationTemplates.IsPresent
         mobileApps            = $All.IsPresent -or $MobileApps.IsPresent
+        remediations          = $All.IsPresent -or $Remediations.IsPresent
         cisBaselines          = $All.IsPresent -or $CISBaselines.IsPresent
     }
 

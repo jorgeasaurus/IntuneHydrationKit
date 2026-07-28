@@ -68,4 +68,14 @@ Describe 'Get-HydrationGraphScopes' {
             $macScopes | Should -Not -Contain 'DeviceManagementScripts.ReadWrite.All'
         }
     }
+
+    It 'Should include remediation update and assignment-read scopes when remediations are selected' {
+        InModuleScope IntuneHydrationKit {
+            $scopes = Get-HydrationGraphScopes -Imports @{ remediations = $true } -Create
+
+            $scopes | Should -Contain 'DeviceManagementConfiguration.ReadWrite.All'
+            $scopes | Should -Contain 'DeviceManagementScripts.ReadWrite.All'
+            $scopes | Should -Not -Contain 'DeviceManagementApps.ReadWrite.All'
+        }
+    }
 }

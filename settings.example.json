@@ -28,6 +28,7 @@
         "deviceFilters": true,
         "conditionalAccess": true,
         "mobileApps": true,
+        "remediations": false,
         "cisBaselines": false
     },
     "mobileApps": {

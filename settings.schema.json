@@ -158,6 +158,11 @@
                     "default": true,
                     "description": "Import mobile apps. Windows apps use bundled WinGet-backed Win32 apps plus selected legacy fallback templates; macOS apps use bundled mobile app templates."
                 },
+                "remediations": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Import bundled, unassigned Proactive Windows Remediations."
+                },
                 "cisBaselines": {
                     "type": "boolean",
                     "default": false,

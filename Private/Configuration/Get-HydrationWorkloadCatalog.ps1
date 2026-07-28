@@ -58,6 +58,12 @@ function Get-HydrationWorkloadCatalog {
             PlatformNeutral = $false
         }
         [pscustomobject]@{
+            ImportKey = 'remediations'
+            FilterKey = 'Remediations'
+            Platforms = @('Windows')
+            PlatformNeutral = $false
+        }
+        [pscustomobject]@{
             ImportKey = 'notificationTemplates'
             FilterKey = $null
             Platforms = @()

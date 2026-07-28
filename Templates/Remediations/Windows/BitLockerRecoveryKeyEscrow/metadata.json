@@ -1,0 +1,11 @@
+{
+  "templateId": "windows-bitlocker-recovery-key-escrow",
+  "sortOrder": 40,
+  "displayName": "Windows - BitLocker Recovery Key Escrow",
+  "publisher": "Intune Hydration Kit",
+  "description": "Retries Microsoft Entra escrow for existing OS-drive BitLocker recovery-password protectors on Entra-joined devices. It never adds, removes, or changes protectors or encryption. Created unassigned.",
+  "runAsAccount": "system",
+  "runAs32Bit": false,
+  "detectionScript": "Detect-BitLockerRecoveryKeyEscrow.ps1",
+  "remediationScript": "Remediate-BitLockerRecoveryKeyEscrow.ps1"
+}

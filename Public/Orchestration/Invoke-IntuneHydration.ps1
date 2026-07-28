@@ -60,6 +60,8 @@ function Invoke-IntuneHydration {
         Process Conditional Access starter pack policies
     .PARAMETER MobileApps
         Process mobile app templates
+    .PARAMETER Remediations
+        Process bundled, unassigned Proactive Windows Remediations.
     .PARAMETER All
         Enable all targets
     .PARAMETER Platform
@@ -192,6 +194,10 @@ function Invoke-IntuneHydration {
 
         [Parameter(ParameterSetName = 'Interactive')]
         [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [switch]$Remediations,
+
+        [Parameter(ParameterSetName = 'Interactive')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [switch]$CISBaselines,
 
         [Parameter(ParameterSetName = 'Interactive')]
@@ -279,6 +285,7 @@ function Invoke-IntuneHydration {
             DeviceFilters         = $DeviceFilters
             ConditionalAccess     = $ConditionalAccess
             MobileApps            = $MobileApps
+            Remediations          = $Remediations
             CISBaselines          = $CISBaselines
             All                   = $All
             ReportOutputPath      = $ReportOutputPath
@@ -665,6 +672,15 @@ function Invoke-IntuneHydration {
                 $windowsFallbackMobileAppResults = @((Import-IntuneMobileApp @windowsFallbackMobileAppParams) | Where-Object { $null -ne $_ })
                 $allResults += $windowsFallbackMobileAppResults
             }
+        }
+
+        # Step 12: Proactive Remediations
+        if ($settings.imports.remediations) {
+            $stepAction = if ($RemoveExisting) { 'Deleting' } else { 'Importing' }
+            Write-HydrationLog -Message "Step 12: $stepAction Proactive Remediations" -Level Info
+
+            $remediationResults = @((Import-IntuneRemediation -RemoveExisting:$RemoveExisting -WhatIf:$effectiveWhatIfEnabled -Verbose:$effectiveVerboseEnabled) | Where-Object { $null -ne $_ })
+            $allResults += $remediationResults
         }
 
         $summaryParams = @{
