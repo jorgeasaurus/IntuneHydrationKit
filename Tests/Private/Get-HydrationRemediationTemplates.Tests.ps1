@@ -7,12 +7,12 @@ BeforeAll {
 
 Describe 'Get-HydrationRemediationTemplates' {
     BeforeEach {
-        $script:templateRoot = Join-Path TestDrive: 'Remediations'
+        $script:templateRoot = Join-Path -Path $TestDrive -ChildPath 'Remediations'
         if (Test-Path -LiteralPath $script:templateRoot) {
             Remove-Item -LiteralPath $script:templateRoot -Recurse -Force
         }
         New-Item -Path $script:templateRoot -ItemType Directory -Force | Out-Null
-        Set-Content -LiteralPath (Join-Path TestDrive: 'outside.ps1') -Value 'Write-Output outside' -Encoding utf8
+        Set-Content -LiteralPath (Join-Path -Path $TestDrive -ChildPath 'outside.ps1') -Value 'Write-Output outside' -Encoding utf8
     }
 
     It 'Rejects a detection script path that escapes its template directory' {
