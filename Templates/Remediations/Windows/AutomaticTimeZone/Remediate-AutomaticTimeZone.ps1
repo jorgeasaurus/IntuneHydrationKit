@@ -7,6 +7,12 @@ if ($service.StartMode -eq 'Disabled') {
     }
 }
 
-Start-Service -Name 'tzautoupdate' -ErrorAction SilentlyContinue
+try {
+    Start-Service -Name 'tzautoupdate' -ErrorAction Stop
+} catch {
+    Write-Error 'Failed to start the automatic time zone service.'
+    exit 1
+}
+
 Write-Output 'Automatic time zone service enabled. Location Services policy controls whether Windows can determine the time zone.'
 exit 0

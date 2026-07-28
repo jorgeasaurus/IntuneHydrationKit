@@ -83,12 +83,15 @@ Describe 'Import-IntuneRemediation' {
 
             $bitLockerRemediation = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($bodiesByName['[IHD] Windows - BitLocker Recovery Key Escrow'].remediationScriptContent))
             $defenderRemediation = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($bodiesByName['[IHD] Windows - Defender Signature Freshness'].remediationScriptContent))
+            $automaticTimeZoneRemediation = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($bodiesByName['[IHD] Windows - Automatic Time Zone'].remediationScriptContent))
             $winReRemediation = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($bodiesByName['[IHD] Windows - Recovery Environment Health'].remediationScriptContent))
 
             $bitLockerRemediation | Should -Match 'BackupToAAD-BitLockerKeyProtector'
             $bitLockerRemediation | Should -Not -Match '(?i)(Add|Remove)-BitLockerKeyProtector'
             $defenderRemediation | Should -Match 'Update-MpSignature'
             $defenderRemediation | Should -Not -Match '(?i)Set-MpPreference'
+            $automaticTimeZoneRemediation | Should -Match "Start-Service -Name 'tzautoupdate' -ErrorAction Stop"
+            $automaticTimeZoneRemediation | Should -Match 'Failed to start the automatic time zone service'
             $winReRemediation | Should -Match '\$reAgentExecutable\s+/enable'
             $winReRemediation | Should -Not -Match '(?i)(/disable|/setreimage|bcdedit|diskpart)'
         }
