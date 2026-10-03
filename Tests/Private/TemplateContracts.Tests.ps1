@@ -119,18 +119,20 @@ Describe 'Bundled template contracts' {
             @($template.filters)
         }
         $expectedFilters = @{
-            'Windows - Windows 11 24H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.26100")' }
-            'Windows - Windows 11 25H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.26200")' }
-            'Windows - Windows 11 26H1 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.osVersion -startsWith "10.0.28000")' }
-            'iOS - iOS 26 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.osVersion -startsWith "26.")' }
-            'iOS - iOS 18 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.osVersion -startsWith "18.")' }
-            'macOS - macOS 27 Golden Gate Devices' = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "27.")' }
-            'macOS - macOS 26 Tahoe Devices'       = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "26.")' }
-            'macOS - macOS 15 Sequoia Devices'     = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "15.")' }
-            'macOS - macOS 14 Sonoma Devices'      = @{ Platform = 'macOS'; Rule = '(device.osVersion -startsWith "14.")' }
+            'Windows - Windows 11 24H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.operatingSystemVersion -ge 10.0.26100.0) and (device.operatingSystemVersion -lt 10.0.26101.0)' }
+            'Windows - Windows 11 25H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.operatingSystemVersion -ge 10.0.26200.0) and (device.operatingSystemVersion -lt 10.0.26201.0)' }
+            'Windows - Windows 11 26H1 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.operatingSystemVersion -ge 10.0.28000.0) and (device.operatingSystemVersion -lt 10.0.28001.0)' }
+            'Windows - Windows 11 26H2 Devices'    = @{ Platform = 'windows10AndLater'; Rule = '(device.operatingSystemVersion -ge 10.0.26300.0) and (device.operatingSystemVersion -lt 10.0.26301.0)' }
+            'iOS - iOS 27 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.operatingSystemVersion -ge 27.0.0.0) and (device.operatingSystemVersion -lt 28.0.0.0)' }
+            'iOS - iOS 26 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.operatingSystemVersion -ge 26.0.0.0) and (device.operatingSystemVersion -lt 27.0.0.0)' }
+            'iOS - iOS 18 Devices'                 = @{ Platform = 'iOS'; Rule = '(device.operatingSystemVersion -ge 18.0.0.0) and (device.operatingSystemVersion -lt 19.0.0.0)' }
+            'macOS - macOS 27 Golden Gate Devices' = @{ Platform = 'macOS'; Rule = '(device.operatingSystemVersion -ge 27.0.0.0) and (device.operatingSystemVersion -lt 28.0.0.0)' }
+            'macOS - macOS 26 Tahoe Devices'       = @{ Platform = 'macOS'; Rule = '(device.operatingSystemVersion -ge 26.0.0.0) and (device.operatingSystemVersion -lt 27.0.0.0)' }
+            'macOS - macOS 15 Sequoia Devices'     = @{ Platform = 'macOS'; Rule = '(device.operatingSystemVersion -ge 15.0.0.0) and (device.operatingSystemVersion -lt 16.0.0.0)' }
+            'macOS - macOS 14 Sonoma Devices'      = @{ Platform = 'macOS'; Rule = '(device.operatingSystemVersion -ge 14.0.0.0) and (device.operatingSystemVersion -lt 15.0.0.0)' }
         }
 
-        $filters | Should -HaveCount 42
+        $filters | Should -HaveCount 44
         foreach ($name in $expectedFilters.Keys) {
             $filter = $filters | Where-Object { $_.displayName -eq $name }
             $filter | Should -HaveCount 1

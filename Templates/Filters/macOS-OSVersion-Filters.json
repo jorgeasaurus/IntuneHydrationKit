@@ -4,25 +4,25 @@
             "displayName": "macOS - macOS 27 Golden Gate Devices",
             "description": "Filter for macOS 27 (Golden Gate) devices",
             "platform": "macOS",
-            "rule": "(device.osVersion -startsWith \"27.\")"
+            "rule": "(device.operatingSystemVersion -ge 27.0.0.0) and (device.operatingSystemVersion -lt 28.0.0.0)"
         },
         {
             "displayName": "macOS - macOS 26 Tahoe Devices",
             "description": "Filter for macOS 26 (Tahoe) devices",
             "platform": "macOS",
-            "rule": "(device.osVersion -startsWith \"26.\")"
+            "rule": "(device.operatingSystemVersion -ge 26.0.0.0) and (device.operatingSystemVersion -lt 27.0.0.0)"
         },
         {
             "displayName": "macOS - macOS 15 Sequoia Devices",
             "description": "Filter for macOS 15 (Sequoia) devices",
             "platform": "macOS",
-            "rule": "(device.osVersion -startsWith \"15.\")"
+            "rule": "(device.operatingSystemVersion -ge 15.0.0.0) and (device.operatingSystemVersion -lt 16.0.0.0)"
         },
         {
             "displayName": "macOS - macOS 14 Sonoma Devices",
             "description": "Filter for macOS 14 (Sonoma) devices",
             "platform": "macOS",
-            "rule": "(device.osVersion -startsWith \"14.\")"
+            "rule": "(device.operatingSystemVersion -ge 14.0.0.0) and (device.operatingSystemVersion -lt 15.0.0.0)"
         }
     ]
 }
