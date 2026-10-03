@@ -53,7 +53,7 @@ These counts reflect the bundled template set at the time of the latest validate
 | Dynamic Groups | 62 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, join type, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
 | Device Filters | 42 | Platform, OS-version, architecture, manufacturer, VM, and join-type filters (Windows, macOS, iOS, Android) |
-| OpenIntuneBaseline | 99 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
+| OpenIntuneBaseline | 102 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
 | CIS Baselines | 728 | Bundled [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) CIS benchmark-derived policies across Windows, macOS, iOS, Android, Edge, Chrome, and related administrative template workloads |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
