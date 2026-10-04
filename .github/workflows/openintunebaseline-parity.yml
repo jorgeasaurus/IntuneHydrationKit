@@ -56,7 +56,7 @@ jobs:
             cp "$file" "$destination"
           done < <(find "$upstream_path" -type f -name '*.json' -print0)
 
-          # Make new upstream files visible to git diff without staging content.
+          # Include new files; compare against HEAD below to include staged deletions too.
           git add -N -- "$BASELINE_PATH"
 
       - name: Evaluate comparison result
@@ -65,15 +65,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          git diff --stat -- "$BASELINE_PATH" | tee build/openintunebaseline.diffstat
-          git diff --name-status -- "$BASELINE_PATH" | tee build/openintunebaseline.name-status
-          git diff -- "$BASELINE_PATH" > build/openintunebaseline.diff
+          git diff HEAD --stat -- "$BASELINE_PATH" | tee build/openintunebaseline.diffstat
+          git diff HEAD --name-status -- "$BASELINE_PATH" | tee build/openintunebaseline.name-status
+          git diff HEAD -- "$BASELINE_PATH" > build/openintunebaseline.diff
 
-          if git diff --quiet -- "$BASELINE_PATH"; then
+          if git diff HEAD --quiet -- "$BASELINE_PATH"; then
             echo "has_differences=false" >> "$GITHUB_OUTPUT"
             echo "difference_count=0" >> "$GITHUB_OUTPUT"
           else
-            difference_count="$(git diff --name-only -- "$BASELINE_PATH" | wc -l | tr -d ' ')"
+            difference_count="$(git diff HEAD --name-only -- "$BASELINE_PATH" | wc -l | tr -d ' ')"
             echo "has_differences=true" >> "$GITHUB_OUTPUT"
             echo "difference_count=$difference_count" >> "$GITHUB_OUTPUT"
           fi

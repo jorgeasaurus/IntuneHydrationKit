@@ -549,6 +549,7 @@ function Import-CISBaseline {
             Write-HydrationLog @logParams
 
             foreach ($policyToCreate in $policiesToCreate) {
+                Write-HydrationLog -Message "  WouldCreate: $($policyToCreate.Name)" -Level Info
                 $results += New-HydrationResult -Name $policyToCreate.Name -Path $policyToCreate.Path -Type $policyToCreate.Type -Action 'WouldCreate' -Status 'DryRun'
             }
         }

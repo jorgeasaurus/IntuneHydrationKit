@@ -82,6 +82,10 @@ These counts reflect the bundled template set at the time of the latest validate
 3. **Review enabled targets** - Start with a small TUI workload selection before selecting everything
 4. **Have a rollback plan** - Know how to remove configurations if needed
 
+### Updating Bundled Templates
+
+Existing kit-tagged filters with matching names are skipped; importing updated templates does not update their rules. Retired OpenIntuneBaseline policies remain in the tenant because deletion is scoped to names in the current templates; review existing policies and assignments when upgrading.
+
 ### Deletion Safety
 
 When using delete mode (`-Delete` parameter or `"delete": true` in settings), the kit will **only delete objects that it created**:
