@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.3.1'
+    ModuleVersion     = '1.4.0'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,10 +85,12 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.3.1
+## v1.4.0
 
-- **WinGet detection:** Prevented bootstrap log messages from corrupting the WinGet executable path.
-- **OIB Settings Catalog:** Added a guarded assignment script that targets managed policies, preserves direct assignments, and fails closed on filtered or policy-set-owned targets.
+- Refresh bundled OpenIntuneBaseline policies to Windows v4.0 (102 importable policies).
+- Add Windows 11 26H2 and iOS 27 filters; correct Windows, macOS, and iOS version ranges (44 filters).
+- Show individual planned OIB and CIS creations during dry runs.
+- Include deleted templates in upstream parity reports and document template upgrade behavior.
 
 '@
         }

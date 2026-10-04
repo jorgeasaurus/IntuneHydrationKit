@@ -52,8 +52,8 @@ These counts reflect the bundled template set at the time of the latest validate
 | ---------- | ------- | ------------- |
 | Dynamic Groups | 62 | Device and user targeting groups (OS, manufacturer, Autopilot, ownership, VMs, join type, license-based) |
 | Static Groups | 5 | Update ring groups (Pilot, UAT) and Autopilot device preparation group |
-| Device Filters | 42 | Platform, OS-version, architecture, manufacturer, VM, and join-type filters (Windows, macOS, iOS, Android) |
-| OpenIntuneBaseline | 99 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
+| Device Filters | 44 | Platform, OS-version, architecture, manufacturer, VM, and join-type filters (Windows, macOS, iOS, Android) |
+| OpenIntuneBaseline | 102 | [OpenIntuneBaseline](https://github.com/jorgeasaurus/OpenIntuneBaseline) policies (Windows, macOS, iOS, Android) - bundled, no download required |
 | CIS Baselines | 728 | Bundled [IntuneBaselines](https://github.com/jorgeasaurus/IntuneBaselines) CIS benchmark-derived policies across Windows, macOS, iOS, Android, Edge, Chrome, and related administrative template workloads |
 | Compliance Policies | 10 | Multi-platform compliance (Windows, macOS, iOS, Android, Linux) |
 | App Protection | 8 | MAM policies following [Microsoft's App Protection Framework](https://learn.microsoft.com/en-us/intune/intune-service/apps/app-protection-framework) (Level 1-3 for iOS and Android) |
@@ -81,6 +81,10 @@ These counts reflect the bundled template set at the time of the latest validate
 2. **Always preview changes first** - Use dry-run create in the TUI, or `-WhatIf` in automation mode
 3. **Review enabled targets** - Start with a small TUI workload selection before selecting everything
 4. **Have a rollback plan** - Know how to remove configurations if needed
+
+### Updating Bundled Templates
+
+Existing kit-tagged filters with matching names are skipped; importing updated templates does not update their rules. Retired OpenIntuneBaseline policies remain in the tenant because deletion is scoped to names in the current templates; review existing policies and assignments when upgrading.
 
 ### Deletion Safety
 

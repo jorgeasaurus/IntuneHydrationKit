@@ -4,19 +4,25 @@
             "displayName": "Windows - Windows 11 24H2 Devices",
             "description": "Filter for Windows 11 24H2 devices (build 26100)",
             "platform": "windows10AndLater",
-            "rule": "(device.osVersion -startsWith \"10.0.26100\")"
+            "rule": "(device.operatingSystemVersion -ge 10.0.26100.0) and (device.operatingSystemVersion -lt 10.0.26101.0)"
         },
         {
             "displayName": "Windows - Windows 11 25H2 Devices",
             "description": "Filter for Windows 11 25H2 devices (build 26200)",
             "platform": "windows10AndLater",
-            "rule": "(device.osVersion -startsWith \"10.0.26200\")"
+            "rule": "(device.operatingSystemVersion -ge 10.0.26200.0) and (device.operatingSystemVersion -lt 10.0.26201.0)"
         },
         {
             "displayName": "Windows - Windows 11 26H1 Devices",
             "description": "Filter for Windows 11 26H1 devices (build 28000)",
             "platform": "windows10AndLater",
-            "rule": "(device.osVersion -startsWith \"10.0.28000\")"
+            "rule": "(device.operatingSystemVersion -ge 10.0.28000.0) and (device.operatingSystemVersion -lt 10.0.28001.0)"
+        },
+        {
+            "displayName": "Windows - Windows 11 26H2 Devices",
+            "description": "Filter for Windows 11 26H2 devices (build 26300)",
+            "platform": "windows10AndLater",
+            "rule": "(device.operatingSystemVersion -ge 10.0.26300.0) and (device.operatingSystemVersion -lt 10.0.26301.0)"
         }
     ]
 }

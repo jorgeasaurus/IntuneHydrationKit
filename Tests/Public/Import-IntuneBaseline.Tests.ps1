@@ -193,13 +193,16 @@ Describe 'Import-IntuneBaseline' {
             Mock Get-GraphPagedResults { return @() } -ModuleName IntuneHydrationKit
         }
 
-        It 'Should return WouldCreate results without calling Graph' {
+        It 'Should log planned creations and return WouldCreate results without batch writes' {
             Mock Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit
 
             $result = Import-IntuneBaseline -BaselinePath (Join-Path 'TestDrive:' 'WhatIfBaseline') -Platform Windows -TenantId '00000000-0000-0000-0000-000000000001' -WhatIf
 
             $result | Should -Not -BeNullOrEmpty
             $result[0].Action | Should -Be 'WouldCreate'
+            Should -Invoke Write-HydrationLog -ModuleName IntuneHydrationKit -Times 1 -Exactly -ParameterFilter {
+                $Message -eq '  WouldCreate: [IHD] WhatIf Test Policy' -and $Level -eq 'Info'
+            }
             Should -Invoke Invoke-GraphBatchOperation -ModuleName IntuneHydrationKit -Times 0
         }
 

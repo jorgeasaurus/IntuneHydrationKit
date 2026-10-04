@@ -1,16 +1,22 @@
 {
     "filters": [
         {
+            "displayName": "iOS - iOS 27 Devices",
+            "description": "Filter for iOS/iPadOS 27 devices",
+            "platform": "iOS",
+            "rule": "(device.operatingSystemVersion -ge 27.0.0.0) and (device.operatingSystemVersion -lt 28.0.0.0)"
+        },
+        {
             "displayName": "iOS - iOS 26 Devices",
             "description": "Filter for iOS/iPadOS 26 devices",
             "platform": "iOS",
-            "rule": "(device.osVersion -startsWith \"26.\")"
+            "rule": "(device.operatingSystemVersion -ge 26.0.0.0) and (device.operatingSystemVersion -lt 27.0.0.0)"
         },
         {
             "displayName": "iOS - iOS 18 Devices",
             "description": "Filter for iOS/iPadOS 18 devices",
             "platform": "iOS",
-            "rule": "(device.osVersion -startsWith \"18.\")"
+            "rule": "(device.operatingSystemVersion -ge 18.0.0.0) and (device.operatingSystemVersion -lt 19.0.0.0)"
         }
     ]
 }
