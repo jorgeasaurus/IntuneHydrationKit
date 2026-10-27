@@ -226,6 +226,28 @@ Describe 'Bundled template contracts' {
         } $openIntuneTemplates
     }
 
+    It 'Should warn that the script file association policy breaks user-context Intune PowerShell' {
+        $templatePath = Join-Path $modulePath 'Templates/OpenIntuneBaseline/WINDOWS/IntuneManagement/SettingsCatalog/Win - OIB - SC - Device Security - D - Script File Associations - v4.0.json'
+        $template = Get-Content -Path $templatePath -Raw | ConvertFrom-Json -Depth 20
+
+        $template.description | Should -Match 'WARNING: Deploying will break running any PowerShell scripts from Intune in the User context'
+        $template.description | Should -Match 'Amend policy if this functionality is required'
+        $template.description | Should -Match 'OIBID:887CEFEC-6882-49E0-A237-91F8D02B2CAB'
+    }
+
+    It 'Should record the bundled OpenIntuneBaseline release catalog' {
+        $releasesPath = Join-Path $modulePath 'Templates/OpenIntuneBaseline/releases.json'
+        $releases = Get-Content -Path $releasesPath -Raw | ConvertFrom-Json -Depth 20
+        $windows = @($releases.platforms | Where-Object { $_.id -eq 'windows' })
+
+        $releases.manifestVersion | Should -Be '1.0'
+        $windows | Should -HaveCount 1
+        $windows[0].status | Should -Be 'available'
+        $windows[0].releases[0].version | Should -Be '4.0'
+        $windows[0].releases[0].tag | Should -Be 'windows-v4.0'
+        $windows[0].releases[0].channel | Should -Be 'stable'
+    }
+
     It 'Should keep CIS templates routable by shared metadata or importer fallback rules' {
         $cisTemplates = $script:CisTemplates
 
