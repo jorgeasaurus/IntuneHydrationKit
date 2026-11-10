@@ -104,7 +104,7 @@ function Import-IntuneBaseline {
     # OpenIntuneBaseline uses OS-based folder structure:
     # - OS/IntuneManagement/ - Exported by IntuneManagement tool (requires Windows GUI to import)
     # - OS/NativeImport/ - Settings Catalog policies that can be imported via Graph API
-    # - BYOD/AppProtection/ - App protection policies
+    # - BYOD/IntuneManagement/AppProtection/ - App protection policies (routed by @odata.type)
 
     $importMetadata = Get-BaselineImportMetadata -Kind 'OpenIntune'
     $endpointMap = $importMetadata.EndpointMap

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Carry the upstream warning on the Windows script file association policy: deploying it breaks Intune PowerShell scripts that run in the user context.
 - Bundle the OpenIntuneBaseline `releases.json` catalog alongside the Windows v4.0 templates.
+- Refresh bundled OpenIntuneBaseline to Windows v4.0.1 (Administrator Protection v4.0.1, Config Refresh update) and BYOD v2.0 (Android/iOS `App Protection - U - BYOD L2+ - v2.0`, replacing the previous BYOD app protection templates).
 
 ## [1.4.0] - 2026-10-03
 
