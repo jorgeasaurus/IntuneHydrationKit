@@ -60,6 +60,7 @@ Describe 'Build configuration' {
 
         $newLine = "`r`n"
         $functionListText = ($expectedExports | ForEach-Object { "        '$_'" }) -join ",$newLine"
+        $moduleFunctionListText = ($expectedExports | ForEach-Object { "    '$_'" }) -join ",$newLine"
         $manifestContent = @(
             '@{'
             '    FunctionsToExport = @('
@@ -73,7 +74,7 @@ Describe 'Build configuration' {
         ) -join $newLine
         $moduleContent = @(
             '$publicFunctions = @('
-            $functionListText
+            $moduleFunctionListText
             ')'
             ''
             '# Export functions'

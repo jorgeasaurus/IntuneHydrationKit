@@ -14,11 +14,11 @@ Describe 'Get-HydrationWinGetAppTemplates' {
         $null = New-Item -Path $appsPath, $presetsPath, $schemasPath -ItemType Directory -Force
 
         @{
-            '$schema'              = 'https://json-schema.org/draft/2020-12/schema'
-            type                   = 'object'
-            required               = @('templateId', 'displayName', 'packageIdentifier')
-            additionalProperties   = $true
-            properties             = @{
+            '$schema'            = 'https://json-schema.org/draft/2020-12/schema'
+            type                 = 'object'
+            required             = @('templateId', 'displayName', 'packageIdentifier')
+            additionalProperties = $true
+            properties           = @{
                 templateId        = @{ type = 'string' }
                 displayName       = @{ type = 'string' }
                 packageIdentifier = @{ type = 'string' }
@@ -26,11 +26,11 @@ Describe 'Get-HydrationWinGetAppTemplates' {
         } | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $schemasPath 'winGetAppTemplate.schema.json') -Encoding utf8
 
         @{
-            '$schema'              = 'https://json-schema.org/draft/2020-12/schema'
-            type                   = 'object'
-            required               = @('appIds')
-            additionalProperties   = $true
-            properties             = @{
+            '$schema'            = 'https://json-schema.org/draft/2020-12/schema'
+            type                 = 'object'
+            required             = @('appIds')
+            additionalProperties = $true
+            properties           = @{
                 appIds = @{
                     type  = 'array'
                     items = @{ type = 'string' }

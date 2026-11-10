@@ -39,8 +39,8 @@ Describe 'Get-HydrationDeleteCandidates' {
         Mock Invoke-MgGraphRequest {}
 
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
 
         $result | Should -HaveCount 1
         $result[0].Name | Should -Be '[IHD] Test Policy'
@@ -58,8 +58,8 @@ Describe 'Get-HydrationDeleteCandidates' {
 
         $emptyNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames $emptyNames)
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames $emptyNames)
 
         $result | Should -BeNullOrEmpty
         Should -Invoke Invoke-MgGraphRequest -Times 0
@@ -78,8 +78,8 @@ Describe 'Get-HydrationDeleteCandidates' {
         }
 
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
 
         $result | Should -HaveCount 1
         $result[0].Name | Should -Be '[IHD] Test Policy'
@@ -99,8 +99,8 @@ Describe 'Get-HydrationDeleteCandidates' {
         }
 
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
 
         $result | Should -BeNullOrEmpty
     }
@@ -114,8 +114,8 @@ Describe 'Get-HydrationDeleteCandidates' {
         Mock Invoke-MgGraphRequest {}
 
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy'))
 
         $result | Should -BeNullOrEmpty
         Should -Invoke Invoke-MgGraphRequest -Times 0
@@ -131,9 +131,9 @@ Describe 'Get-HydrationDeleteCandidates' {
         Mock Invoke-MgGraphRequest {}
 
         $result = @(Get-HydrationDeleteCandidates `
-            -Endpoint 'beta/deviceManagement/deviceConfigurations' `
-            -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy') `
-            -CandidateFilter { param($candidate) [string]$candidate.'@odata.type' -eq '#microsoft.graph.expectedType' })
+                -Endpoint 'beta/deviceManagement/deviceConfigurations' `
+                -KnownTemplateNames (Get-TestTemplateNameSet -Name 'Test Policy') `
+                -CandidateFilter { param($candidate) [string]$candidate.'@odata.type' -eq '#microsoft.graph.expectedType' })
 
         $result | Should -HaveCount 1
         $result[0].Id | Should -Be 'policy-1'

@@ -20,9 +20,9 @@ Describe 'Deduplicate-HydrationDeleteCandidates' {
 
     It 'Should treat names as case-insensitive duplicates' {
         $result = @(Deduplicate-HydrationDeleteCandidates -Candidates @(
-            @{ Name = 'Policy A'; Id = '1'; Url = '/one' }
-            @{ Name = 'policy a'; Id = '2'; Url = '/two' }
-        ))
+                @{ Name = 'Policy A'; Id = '1'; Url = '/one' }
+                @{ Name = 'policy a'; Id = '2'; Url = '/two' }
+            ))
 
         $result | Should -HaveCount 1
         $result[0].Name | Should -Be 'Policy A'

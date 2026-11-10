@@ -180,8 +180,8 @@ function Import-IntuneCompliancePolicy {
             # If the filename scoped the template to a non-Linux platform, do not let contradictory JSON route it to Linux.
             $templateTechnologies = @($template.technologies | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
             $isLinuxCompliance = (-not $filenamePlatform -or $filenamePlatform -eq 'Linux') -and
-                $templatePlatformValues.Count -eq 1 -and $templatePlatformValues[0] -eq 'linux' -and
-                $templateTechnologies.Count -eq 1 -and $templateTechnologies[0] -eq 'linuxMdm'
+            $templatePlatformValues.Count -eq 1 -and $templatePlatformValues[0] -eq 'linux' -and
+            $templateTechnologies.Count -eq 1 -and $templateTechnologies[0] -eq 'linuxMdm'
             $endpoint = if ($isLinuxCompliance) {
                 "deviceManagement/compliancePolicies"
             } else {

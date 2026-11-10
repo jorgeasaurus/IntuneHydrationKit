@@ -52,93 +52,96 @@ $intentionalHelperExports = @(
 
 $publicFunctions = @(
     Get-ChildItem -Path $publicPath -Filter '*.ps1' -File -Recurse |
-    Sort-Object -Property BaseName |
-    ForEach-Object { $_.BaseName }
-    $intentionalHelperExports
-) | Sort-Object -Unique
+        Sort-Object -Property BaseName |
+        ForEach-Object { $_.BaseName }
+        $intentionalHelperExports
+    ) | Sort-Object -Unique
 
-if ($publicFunctions.Count -eq 0) {
-    throw 'No public function files were found under Public/.'
-}
-
-$manifestContent = Get-Content -Path $manifestPath -Raw -Encoding utf8
-$moduleContent = Get-Content -Path $modulePath -Raw -Encoding utf8
-
-function Get-TextNewLine {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Content
-    )
-
-    if ($Content.Contains("`r`n")) {
-        return "`r`n"
+    if ($publicFunctions.Count -eq 0) {
+        throw 'No public function files were found under Public/.'
     }
 
-    return "`n"
-}
+    $manifestContent = Get-Content -Path $manifestPath -Raw -Encoding utf8
+    $moduleContent = Get-Content -Path $modulePath -Raw -Encoding utf8
 
-function Join-ExportLine {
-    param(
-        [Parameter(Mandatory)]
-        [string[]]$FunctionName,
+    function Get-TextNewLine {
+        param(
+            [Parameter(Mandatory)]
+            [string]$Content
+        )
 
-        [Parameter(Mandatory)]
-        [string]$NewLine
-    )
+        if ($Content.Contains("`r`n")) {
+            return "`r`n"
+        }
 
-    return ($FunctionName | ForEach-Object { "        '$_'" }) -join ",$NewLine"
-}
+        return "`n"
+    }
 
-$manifestNewLine = Get-TextNewLine -Content $manifestContent
-$moduleNewLine = Get-TextNewLine -Content $moduleContent
-$manifestFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $manifestNewLine
-$moduleFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $moduleNewLine
+    function Join-ExportLine {
+        param(
+            [Parameter(Mandatory)]
+            [string[]]$FunctionName,
 
-$manifestPattern = 'FunctionsToExport\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n\s*# Cmdlets to export from this module'
-$manifestReplacement = @(
-    'FunctionsToExport = @('
-    $manifestFunctionListText
-    '    )'
-    ''
-    '    # Cmdlets to export from this module'
-) -join $manifestNewLine
+            [Parameter(Mandatory)]
+            [string]$NewLine,
 
-$modulePattern = '\$publicFunctions\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n# Export functions'
-$moduleReplacement = @(
-    '$publicFunctions = @('
-    $moduleFunctionListText
-    ')'
-    ''
-    '# Export functions'
-) -join $moduleNewLine
+            [Parameter(Mandatory)]
+            [string]$Indent
+        )
 
-if (-not [regex]::IsMatch($manifestContent, $manifestPattern)) {
-    throw "Could not locate FunctionsToExport block in module manifest: $manifestPath"
-}
+        return ($FunctionName | ForEach-Object { "$Indent'$_'" }) -join ",$NewLine"
+    }
 
-if (-not [regex]::IsMatch($moduleContent, $modulePattern)) {
-    throw "Could not locate publicFunctions export block in module file: $modulePath"
-}
+    $manifestNewLine = Get-TextNewLine -Content $manifestContent
+    $moduleNewLine = Get-TextNewLine -Content $moduleContent
+    $manifestFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $manifestNewLine -Indent (' ' * 8)
+    $moduleFunctionListText = Join-ExportLine -FunctionName $publicFunctions -NewLine $moduleNewLine -Indent (' ' * 4)
 
-$newManifestContent = [regex]::Replace($manifestContent, $manifestPattern, $manifestReplacement)
-$newModuleContent = [regex]::Replace($moduleContent, $modulePattern, $moduleReplacement)
-$newManifestContent = $newManifestContent.TrimEnd("`r", "`n") + $manifestNewLine
-$newModuleContent = $newModuleContent.TrimEnd("`r", "`n") + $moduleNewLine
+    $manifestPattern = 'FunctionsToExport\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n\s*# Cmdlets to export from this module'
+    $manifestReplacement = @(
+        'FunctionsToExport = @('
+        $manifestFunctionListText
+        '    )'
+        ''
+        '    # Cmdlets to export from this module'
+    ) -join $manifestNewLine
 
-if ($newManifestContent -eq $manifestContent -and $newModuleContent -eq $moduleContent) {
-    Write-Information 'Public function exports are already in sync.' -InformationAction Continue
-    return
-}
+    $modulePattern = '\$publicFunctions\s*=\s*@\((?s:.*?)\)\s*\r?\n\s*\r?\n# Export functions'
+    $moduleReplacement = @(
+        '$publicFunctions = @('
+        $moduleFunctionListText
+        ')'
+        ''
+        '# Export functions'
+    ) -join $moduleNewLine
 
-if ($CheckOnly) {
-    Write-Information 'Public function exports are out of sync. Run scripts/Sync-PublicFunctionExports.ps1 to apply updates.' -InformationAction Continue
-    exit 1
-}
+    if (-not [regex]::IsMatch($manifestContent, $manifestPattern)) {
+        throw "Could not locate FunctionsToExport block in module manifest: $manifestPath"
+    }
 
-if ($PSCmdlet.ShouldProcess($manifestPath, 'Update FunctionsToExport list') -and
-    $PSCmdlet.ShouldProcess($modulePath, 'Update $publicFunctions export list')) {
-    # -NoNewline keeps the write byte-identical to the compared string (idempotent check)
-    Set-Content -Path $manifestPath -Value $newManifestContent -Encoding utf8 -NoNewline
-    Set-Content -Path $modulePath -Value $newModuleContent -Encoding utf8 -NoNewline
-    Write-Information 'Updated IntuneHydrationKit.psd1 and IntuneHydrationKit.psm1 from Public/**/*.ps1.' -InformationAction Continue
-}
+    if (-not [regex]::IsMatch($moduleContent, $modulePattern)) {
+        throw "Could not locate publicFunctions export block in module file: $modulePath"
+    }
+
+    $newManifestContent = [regex]::Replace($manifestContent, $manifestPattern, $manifestReplacement)
+    $newModuleContent = [regex]::Replace($moduleContent, $modulePattern, $moduleReplacement)
+    $newManifestContent = $newManifestContent.TrimEnd("`r", "`n") + $manifestNewLine
+    $newModuleContent = $newModuleContent.TrimEnd("`r", "`n") + $moduleNewLine
+
+    if ($newManifestContent -eq $manifestContent -and $newModuleContent -eq $moduleContent) {
+        Write-Information 'Public function exports are already in sync.' -InformationAction Continue
+        return
+    }
+
+    if ($CheckOnly) {
+        Write-Information 'Public function exports are out of sync. Run scripts/Sync-PublicFunctionExports.ps1 to apply updates.' -InformationAction Continue
+        exit 1
+    }
+
+    if ($PSCmdlet.ShouldProcess($manifestPath, 'Update FunctionsToExport list') -and
+        $PSCmdlet.ShouldProcess($modulePath, 'Update $publicFunctions export list')) {
+        # -NoNewline keeps the write byte-identical to the compared string (idempotent check)
+        Set-Content -Path $manifestPath -Value $newManifestContent -Encoding utf8 -NoNewline
+        Set-Content -Path $modulePath -Value $newModuleContent -Encoding utf8 -NoNewline
+        Write-Information 'Updated IntuneHydrationKit.psd1 and IntuneHydrationKit.psm1 from Public/**/*.ps1.' -InformationAction Continue
+    }
