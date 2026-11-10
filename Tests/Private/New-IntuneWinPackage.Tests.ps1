@@ -64,6 +64,8 @@ Describe 'New-IntuneWinPackage' {
     }
 
     It 'Should not fail successful packaging when working directory cleanup fails' {
+        # Pester 6 no longer falls back to the real command when only filtered mocks exist.
+        Mock Remove-Item { & (Get-Command -Name Remove-Item -CommandType Cmdlet) @PesterBoundParameters }
         Mock Remove-Item {
             throw 'locked working directory'
         } -ParameterFilter { $Path -like (Join-Path $script:artifactRoot '.winget-packaging-*') }

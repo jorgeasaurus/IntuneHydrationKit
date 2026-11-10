@@ -108,8 +108,7 @@ function Show-HydrationTuiSelect {
                 }
             }
         }
-    }
-    finally {
+    } finally {
         try { [Console]::CursorVisible = $true } catch { $null = $_ }
     }
 }

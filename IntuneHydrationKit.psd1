@@ -2,7 +2,7 @@
     # Module manifest for IntuneHydrationKit
 
     # Version number of this module
-    ModuleVersion     = '1.4.0'
+    ModuleVersion     = '1.4.1'
 
     # ID used to uniquely identify this module
     GUID              = 'f755f41b-d5fc-48db-8b11-62b7ed71b1cd'
@@ -85,12 +85,12 @@
             # Release notes for this module
             ReleaseNotes = @'
 
-## v1.4.0
+## v1.4.1
 
-- Refresh bundled OpenIntuneBaseline policies to Windows v4.0 (102 importable policies).
-- Add Windows 11 26H2 and iOS 27 filters; correct Windows, macOS, and iOS version ranges (44 filters).
-- Show individual planned OIB and CIS creations during dry runs.
-- Include deleted templates in upstream parity reports and document template upgrade behavior.
+- Refresh bundled OpenIntuneBaseline to Windows v4.0.1 (Administrator Protection v4.0.1, Config Refresh update) and BYOD v2.0 (Android/iOS App Protection - U - BYOD L2+ - v2.0, replacing the previous BYOD app protection templates).
+- Carry the upstream warning on the Windows script file association policy: deploying it breaks Intune PowerShell scripts that run in the user context.
+- Bundle the OpenIntuneBaseline releases.json catalog.
+- Keep Pester tests compatible with Pester 6.
 
 '@
         }

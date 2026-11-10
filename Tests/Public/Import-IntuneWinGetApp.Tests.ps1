@@ -121,7 +121,7 @@ Describe 'Import-IntuneWinGetApp' {
                     publisher         = 'Contoso Template Publisher'
                     description       = 'WinGet packaged Contoso app'
                     TemplatePath      = 'Templates/MobileApps/Windows/WinGet/Apps/contoso-app.json'
-                    resolvedPackage  = New-TestResolvedWinGetPackage -PackageIdentifier 'Contoso.App' -PackageVersion '2.0.0' -InstallerUrl 'https://downloads.contoso.test/app.exe'
+                    resolvedPackage   = New-TestResolvedWinGetPackage -PackageIdentifier 'Contoso.App' -PackageVersion '2.0.0' -InstallerUrl 'https://downloads.contoso.test/app.exe'
                     package           = [pscustomobject]@{
                         match = [pscustomobject]@{
                             architectures = @('x64')
@@ -267,7 +267,7 @@ Describe 'Import-IntuneWinGetApp' {
                     publisher         = 'voidtools'
                     description       = 'WinGet packaged Everything'
                     TemplatePath      = $script:everythingTemplatePath
-                    resolvedPackage  = New-TestResolvedWinGetPackage -PackageIdentifier 'voidtools.Everything' -PackageVersion '1.4.1.1032' -InstallerUrl 'https://www.voidtools.com/Everything-1.4.1.1032.x64.msi' -InstallerType 'wix'
+                    resolvedPackage   = New-TestResolvedWinGetPackage -PackageIdentifier 'voidtools.Everything' -PackageVersion '1.4.1.1032' -InstallerUrl 'https://www.voidtools.com/Everything-1.4.1.1032.x64.msi' -InstallerType 'wix'
                     package           = [pscustomobject]@{
                         match = [pscustomobject]@{
                             architectures = @('x64', 'x86', 'arm64')
@@ -760,7 +760,7 @@ Describe 'Import-IntuneWinGetApp' {
                         publisher         = 'Valid Publisher'
                         description       = 'Valid app description'
                         TemplatePath      = 'Templates/MobileApps/Windows/WinGet/Apps/valid-template.json'
-                        resolvedPackage  = New-TestResolvedWinGetPackage -PackageIdentifier 'Valid.App' -PackageVersion '1.0.0' -InstallerUrl 'https://downloads.valid.test/app.exe'
+                        resolvedPackage   = New-TestResolvedWinGetPackage -PackageIdentifier 'Valid.App' -PackageVersion '1.0.0' -InstallerUrl 'https://downloads.valid.test/app.exe'
                         package           = [pscustomobject]@{
                             match = [pscustomobject]@{
                                 architectures = @('x64')

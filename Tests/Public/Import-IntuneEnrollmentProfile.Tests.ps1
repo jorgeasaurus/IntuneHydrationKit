@@ -317,9 +317,9 @@ Describe 'Import-IntuneEnrollmentProfile' {
                     return @{
                         value = @(
                             @{
-                                id           = 'existing-legacy-esp-id'
-                                displayName  = 'Default ESP Profile'
-                                description  = 'Imported by Intune Hydration Kit'
+                                id            = 'existing-legacy-esp-id'
+                                displayName   = 'Default ESP Profile'
+                                description   = 'Imported by Intune Hydration Kit'
                                 '@odata.type' = '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
                             }
                         )
@@ -357,9 +357,9 @@ Describe 'Import-IntuneEnrollmentProfile' {
                     return @{
                         value = @(
                             @{
-                                id           = 'existing-esp-id'
-                                displayName  = 'Default ESP Profile'
-                                description  = 'Manually created ESP'
+                                id            = 'existing-esp-id'
+                                displayName   = 'Default ESP Profile'
+                                description   = 'Manually created ESP'
                                 '@odata.type' = '#microsoft.graph.windows10EnrollmentCompletionPageConfiguration'
                             }
                         )
@@ -637,9 +637,9 @@ Describe 'Import-IntuneEnrollmentProfile' {
                     return @{
                         value = @(
                             @{
-                                id           = 'limit-config-1'
-                                displayName  = 'ESP 1'
-                                description  = 'Imported by Intune Hydration Kit'
+                                id            = 'limit-config-1'
+                                displayName   = 'ESP 1'
+                                description   = 'Imported by Intune Hydration Kit'
                                 '@odata.type' = '#microsoft.graph.deviceEnrollmentLimitConfiguration'
                             }
                         )

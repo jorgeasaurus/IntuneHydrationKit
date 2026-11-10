@@ -4,69 +4,69 @@ function Get-HydrationWorkloadCatalog {
 
     @(
         [pscustomobject]@{
-            ImportKey = 'dynamicGroups'
-            FilterKey = 'Groups'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android')
+            ImportKey       = 'dynamicGroups'
+            FilterKey       = 'Groups'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'staticGroups'
-            FilterKey = 'Groups'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android')
+            ImportKey       = 'staticGroups'
+            FilterKey       = 'Groups'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'deviceFilters'
-            FilterKey = 'DeviceFilters'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android')
+            ImportKey       = 'deviceFilters'
+            FilterKey       = 'DeviceFilters'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'openIntuneBaseline'
-            FilterKey = 'Baseline'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android')
+            ImportKey       = 'openIntuneBaseline'
+            FilterKey       = 'Baseline'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'cisBaselines'
-            FilterKey = 'CISBaseline'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
+            ImportKey       = 'cisBaselines'
+            FilterKey       = 'CISBaseline'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'complianceTemplates'
-            FilterKey = 'Compliance'
-            Platforms = @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
+            ImportKey       = 'complianceTemplates'
+            FilterKey       = 'Compliance'
+            Platforms       = @('Windows', 'macOS', 'iOS', 'Android', 'Linux')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'appProtection'
-            FilterKey = 'AppProtection'
-            Platforms = @('iOS', 'Android')
+            ImportKey       = 'appProtection'
+            FilterKey       = 'AppProtection'
+            Platforms       = @('iOS', 'Android')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'enrollmentProfiles'
-            FilterKey = 'EnrollmentProfiles'
-            Platforms = @('Windows', 'macOS')
+            ImportKey       = 'enrollmentProfiles'
+            FilterKey       = 'EnrollmentProfiles'
+            Platforms       = @('Windows', 'macOS')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'mobileApps'
-            FilterKey = 'MobileApps'
-            Platforms = @('Windows', 'macOS')
+            ImportKey       = 'mobileApps'
+            FilterKey       = 'MobileApps'
+            Platforms       = @('Windows', 'macOS')
             PlatformNeutral = $false
         }
         [pscustomobject]@{
-            ImportKey = 'notificationTemplates'
-            FilterKey = $null
-            Platforms = @()
+            ImportKey       = 'notificationTemplates'
+            FilterKey       = $null
+            Platforms       = @()
             PlatformNeutral = $true
         }
         [pscustomobject]@{
-            ImportKey = 'conditionalAccess'
-            FilterKey = $null
-            Platforms = @()
+            ImportKey       = 'conditionalAccess'
+            FilterKey       = $null
+            Platforms       = @()
             PlatformNeutral = $true
         }
     )

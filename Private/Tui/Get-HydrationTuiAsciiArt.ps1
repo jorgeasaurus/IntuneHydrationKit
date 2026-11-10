@@ -1,4 +1,4 @@
-﻿function Get-HydrationTuiAsciiArt {
+function Get-HydrationTuiAsciiArt {
     [CmdletBinding()]
     [OutputType([string[]])]
     param()

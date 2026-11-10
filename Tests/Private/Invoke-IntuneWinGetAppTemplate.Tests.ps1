@@ -293,10 +293,10 @@ Describe 'Invoke-IntuneWinGetAppTemplate' {
                     resolvedPackage   = [pscustomobject]@{
                         packageVersion = 'latest'
                         manifestSource = [pscustomobject]@{
-                            repository  = 'microsoft/winget-pkgs'
-                            ref         = 'master'
-                            packagePath = 'manifests/t/Test/App'
-                            versionPath = 'manifests/t/Test/App'
+                            repository    = 'microsoft/winget-pkgs'
+                            ref           = 'master'
+                            packagePath   = 'manifests/t/Test/App'
+                            versionPath   = 'manifests/t/Test/App'
                             installerFile = $null
                             localeFile    = $null
                         }
@@ -347,9 +347,9 @@ Describe 'Invoke-IntuneWinGetAppTemplate' {
                 }
                 Mock New-IntuneWinPackage {
                     [pscustomobject]@{
-                        OutputPath       = Join-Path $WorkingRoot 'test-app.intunewin'
-                        SetupFile        = 'Install-WinGetPackage.ps1'
-                        UnencryptedSize  = 1024
+                        OutputPath      = Join-Path $WorkingRoot 'test-app.intunewin'
+                        SetupFile       = 'Install-WinGetPackage.ps1'
+                        UnencryptedSize = 1024
                     }
                 } -ParameterFilter { $PackagingContext }
                 Mock New-WinGetOwnershipNotes { '' }

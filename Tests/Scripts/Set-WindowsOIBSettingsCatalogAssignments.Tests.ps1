@@ -85,7 +85,7 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
             Mock Get-ConfigurationPolicyAssignment {
                 @([PSCustomObject]@{
                         target = [PSCustomObject]@{
-                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
+                            '@odata.type'                              = '#microsoft.graph.allLicensedUsersAssignmentTarget'
                             deviceAndAppManagementAssignmentFilterType = 'none'
                         }
                     })
@@ -105,9 +105,9 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
             Mock Get-ConfigurationPolicyAssignment {
                 @([PSCustomObject]@{
                         target = [PSCustomObject]@{
-                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
+                            '@odata.type'                              = '#microsoft.graph.allLicensedUsersAssignmentTarget'
                             deviceAndAppManagementAssignmentFilterType = 'include'
-                            deviceAndAppManagementAssignmentFilterId = 'filter-id'
+                            deviceAndAppManagementAssignmentFilterId   = 'filter-id'
                         }
                     })
             }
@@ -125,11 +125,11 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
             }
             Mock Get-ConfigurationPolicyAssignment {
                 @([PSCustomObject]@{
-                        source = 'policySets'
+                        source   = 'policySets'
                         sourceId = 'policy-set-id'
-                        target = [PSCustomObject]@{
+                        target   = [PSCustomObject]@{
                             '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
-                            groupId = 'existing-group'
+                            groupId       = 'existing-group'
                         }
                     })
             }
@@ -147,10 +147,10 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
             }
             Mock Get-ConfigurationPolicyAssignment {
                 @([PSCustomObject]@{
-                        source = 'policySets'
+                        source   = 'policySets'
                         sourceId = 'policy-set-id'
-                        target = [PSCustomObject]@{
-                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
+                        target   = [PSCustomObject]@{
+                            '@odata.type'                              = '#microsoft.graph.allLicensedUsersAssignmentTarget'
                             deviceAndAppManagementAssignmentFilterType = 'none'
                         }
                     })
@@ -183,7 +183,7 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
                     return @([PSCustomObject]@{
                             target = [PSCustomObject]@{
                                 '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
-                                groupId = 'existing-group'
+                                groupId       = 'existing-group'
                             }
                         })
                 }
@@ -192,12 +192,12 @@ Describe 'Set-WindowsOIBSettingsCatalogAssignments' {
                     [PSCustomObject]@{
                         target = [PSCustomObject]@{
                             '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
-                            groupId = 'existing-group'
+                            groupId       = 'existing-group'
                         }
                     }
                     [PSCustomObject]@{
                         target = [PSCustomObject]@{
-                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
+                            '@odata.type'                              = '#microsoft.graph.allDevicesAssignmentTarget'
                             deviceAndAppManagementAssignmentFilterType = 'none'
                         }
                     }

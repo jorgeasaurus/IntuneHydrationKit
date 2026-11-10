@@ -134,6 +134,8 @@ Describe 'Publish-IntuneWin32AppContent' {
     }
 
     It 'Should not fail a successful publish when temporary encrypted content cleanup fails' {
+        # Pester 6 no longer falls back to the real command when only filtered mocks exist.
+        Mock Remove-Item { & (Get-Command -Name Remove-Item -CommandType Cmdlet) @PesterBoundParameters }
         Mock Remove-Item {
             throw 'locked encrypted content'
         } -ParameterFilter { $Path -eq (Join-Path $script:artifactRoot 'app.bin') }

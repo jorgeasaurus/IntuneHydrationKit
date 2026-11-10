@@ -68,17 +68,17 @@ Describe 'Get-HydrationWorkloadCatalog' {
 Describe 'Resolve-HydrationWorkloadPlan' {
     It 'Should disable imports whose selected platforms are unsupported' {
         $imports = @{
-            mobileApps             = $true
-            deviceFilters          = $true
-            appProtection          = $true
-            enrollmentProfiles     = $true
-            openIntuneBaseline     = $true
-            dynamicGroups          = $true
-            staticGroups           = $true
-            complianceTemplates    = $true
-            cisBaselines           = $true
-            notificationTemplates  = $true
-            conditionalAccess      = $true
+            mobileApps            = $true
+            deviceFilters         = $true
+            appProtection         = $true
+            enrollmentProfiles    = $true
+            openIntuneBaseline    = $true
+            dynamicGroups         = $true
+            staticGroups          = $true
+            complianceTemplates   = $true
+            cisBaselines          = $true
+            notificationTemplates = $true
+            conditionalAccess     = $true
         }
 
         $result = Resolve-HydrationWorkloadPlan -Imports $imports -Platforms Linux
@@ -101,7 +101,7 @@ Describe 'Resolve-HydrationWorkloadPlan' {
 
     It 'Should keep supported imports enabled' {
         $imports = @{
-            mobileApps = $true
+            mobileApps    = $true
             appProtection = $true
         }
 
@@ -115,7 +115,7 @@ Describe 'Resolve-HydrationWorkloadPlan' {
     It 'Should keep All as the platform filter for platform-scoped workloads' {
         $imports = @{
             deviceFilters = $true
-            mobileApps = $true
+            mobileApps    = $true
         }
 
         $result = Resolve-HydrationWorkloadPlan -Imports $imports -Platforms All
@@ -129,8 +129,8 @@ Describe 'Resolve-HydrationWorkloadPlan' {
     It 'Should disable platform-neutral workloads during platform-scoped delete' {
         $imports = @{
             notificationTemplates = $true
-            conditionalAccess = $true
-            complianceTemplates = $true
+            conditionalAccess     = $true
+            complianceTemplates   = $true
         }
 
         $result = Resolve-HydrationWorkloadPlan -Imports $imports -Platforms Linux -DeleteEnabled $true
@@ -143,7 +143,7 @@ Describe 'Resolve-HydrationWorkloadPlan' {
     It 'Should keep platform-neutral workloads enabled during platform-scoped create' {
         $imports = @{
             notificationTemplates = $true
-            conditionalAccess = $true
+            conditionalAccess     = $true
         }
 
         $result = Resolve-HydrationWorkloadPlan -Imports $imports -Platforms Linux

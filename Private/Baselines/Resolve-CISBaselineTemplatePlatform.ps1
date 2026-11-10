@@ -24,19 +24,19 @@ function Resolve-CISBaselineTemplatePlatform {
     }
 
     $odataTypePlatformMap = @{
-        '#microsoft.graph.windows10CompliancePolicy'             = 'Windows'
-        '#microsoft.graph.windows81CompliancePolicy'             = 'Windows'
-        '#microsoft.graph.windows10CustomConfiguration'           = 'Windows'
+        '#microsoft.graph.windows10CompliancePolicy'                = 'Windows'
+        '#microsoft.graph.windows81CompliancePolicy'                = 'Windows'
+        '#microsoft.graph.windows10CustomConfiguration'             = 'Windows'
         '#microsoft.graph.windowsDeliveryOptimizationConfiguration' = 'Windows'
-        '#microsoft.graph.windowsHealthMonitoringConfiguration'   = 'Windows'
-        '#microsoft.graph.sharedPCConfiguration'                  = 'Windows'
-        '#microsoft.graph.groupPolicyConfiguration'               = 'Windows'
-        '#microsoft.graph.macOSCompliancePolicy'                  = 'macOS'
-        '#microsoft.graph.iosCompliancePolicy'                    = 'iOS'
-        '#microsoft.graph.androidCompliancePolicy'                = 'Android'
-        '#microsoft.graph.androidWorkProfileCompliancePolicy'     = 'Android'
-        '#microsoft.graph.androidDeviceOwnerCompliancePolicy'     = 'Android'
-        '#microsoft.graph.deviceManagementCompliancePolicy'       = 'Linux'
+        '#microsoft.graph.windowsHealthMonitoringConfiguration'     = 'Windows'
+        '#microsoft.graph.sharedPCConfiguration'                    = 'Windows'
+        '#microsoft.graph.groupPolicyConfiguration'                 = 'Windows'
+        '#microsoft.graph.macOSCompliancePolicy'                    = 'macOS'
+        '#microsoft.graph.iosCompliancePolicy'                      = 'iOS'
+        '#microsoft.graph.androidCompliancePolicy'                  = 'Android'
+        '#microsoft.graph.androidWorkProfileCompliancePolicy'       = 'Android'
+        '#microsoft.graph.androidDeviceOwnerCompliancePolicy'       = 'Android'
+        '#microsoft.graph.deviceManagementCompliancePolicy'         = 'Linux'
     }
 
     $odataType = [string]$TemplateContent.'@odata.type'

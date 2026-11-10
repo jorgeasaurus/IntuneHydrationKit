@@ -93,15 +93,15 @@ Describe 'Bundled template contracts' {
             @($template.groups)
         }
         $expectedGroups = @{
-            'Intune - Windows 11 24H2 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26100") and (device.managementType -eq "MDM")' }
-            'Intune - Windows 11 25H2 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26200") and (device.managementType -eq "MDM")' }
-            'Intune - Windows 11 26H1 Devices'   = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.28000") and (device.managementType -eq "MDM")' }
+            'Intune - Windows 11 24H2 Devices'      = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26100") and (device.managementType -eq "MDM")' }
+            'Intune - Windows 11 25H2 Devices'      = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.26200") and (device.managementType -eq "MDM")' }
+            'Intune - Windows 11 26H1 Devices'      = @{ Platform = 'Windows'; Rule = '(device.deviceOSType -eq "Windows") and (device.deviceOSVersion -startsWith "10.0.28000") and (device.managementType -eq "MDM")' }
             'Intune - macOS 27 Golden Gate Devices' = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "27.")' }
-            'Intune - macOS 26 Tahoe Devices'    = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "26.")' }
-            'Intune - macOS 15 Sequoia Devices'  = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "15.")' }
-            'Intune - macOS 14 Sonoma Devices'   = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "14.")' }
-            'Intune - iOS iPadOS 26 Devices'     = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "26.")' }
-            'Intune - iOS iPadOS 18 Devices'     = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "18.")' }
+            'Intune - macOS 26 Tahoe Devices'       = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "26.")' }
+            'Intune - macOS 15 Sequoia Devices'     = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "15.")' }
+            'Intune - macOS 14 Sonoma Devices'      = @{ Platform = 'macOS'; Rule = '(device.deviceOSType -eq "MacMDM") and (device.deviceOSVersion -startsWith "14.")' }
+            'Intune - iOS iPadOS 26 Devices'        = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "26.")' }
+            'Intune - iOS iPadOS 18 Devices'        = @{ Platform = 'iOS'; Rule = '((device.deviceOSType -eq "iOS") or (device.deviceOSType -eq "iPad")) and (device.deviceOSVersion -startsWith "18.")' }
         }
 
         $groups | Should -HaveCount 62
@@ -151,11 +151,11 @@ Describe 'Bundled template contracts' {
             @($template.filters)
         }
         $expectedFilters = @{
-            'Windows - x64 Devices'           = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "amd64")' }
-            'Windows - ARM64 Devices'         = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "arm64")' }
-            'Windows - x86 Devices'           = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "x86")' }
-            'macOS - Apple Silicon Devices'   = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "arm64")' }
-            'macOS - Intel Devices'           = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "x64")' }
+            'Windows - x64 Devices'         = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "amd64")' }
+            'Windows - ARM64 Devices'       = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "arm64")' }
+            'Windows - x86 Devices'         = @{ Platform = 'windows10AndLater'; Rule = '(device.cpuArchitecture -eq "x86")' }
+            'macOS - Apple Silicon Devices' = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "arm64")' }
+            'macOS - Intel Devices'         = @{ Platform = 'macOS'; Rule = '(device.cpuArchitecture -eq "x64")' }
         }
 
         $filters | Should -HaveCount $expectedFilters.Count
@@ -183,9 +183,9 @@ Describe 'Bundled template contracts' {
             'Intune - Entra Registered Devices'    = @{ Platform = 'Windows'; Rule = '(device.deviceTrustType -eq "Workplace")' }
         }
         $expectedFilters = @{
-            'Windows - Entra Joined'           = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD joined")' }
-            'Windows - Hybrid Entra Joined'    = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Hybrid Azure AD joined")' }
-            'Windows - Entra Registered'       = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD registered")' }
+            'Windows - Entra Joined'            = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD joined")' }
+            'Windows - Hybrid Entra Joined'     = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Hybrid Azure AD joined")' }
+            'Windows - Entra Registered'        = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Azure AD registered")' }
             'Windows - Unknown Entra Join Type' = @{ Platform = 'windows10AndLater'; Rule = '(device.deviceTrustType -eq "Unknown")' }
         }
 
